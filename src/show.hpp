@@ -47,8 +47,8 @@ namespace show
         
         std::shared_ptr< R > current_response;
         
-        virtual bool         has_next_chunk();
-        virtual std::string& get_next_chunk();
+        virtual       bool         has_next_chunk();
+        virtual const std::string& get_next_chunk();
     };
     
     typedef server< std::string       > basic_server;
@@ -89,7 +89,7 @@ namespace show
     {
         return *current_response != current_response -> end();
     }
-    template< typename R > std::string& server< R >::get_next_chunk()
+    template< typename R > const std::string& server< R >::get_next_chunk()
     {
         return *( ( *current_response )++ );
     }
@@ -100,7 +100,7 @@ namespace show
     {
         return current_response != nullptr;
     }
-    template<> std::string& server< std::string >::get_next_chunk()
+    template<> const std::string& server< std::string >::get_next_chunk()
     {
         std::shared_ptr< std::string > s( current_response );
         current_response = nullptr;
