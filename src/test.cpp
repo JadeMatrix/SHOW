@@ -6,65 +6,174 @@
 
 #include <sstream>
 
-std::stringbuf test_handler()
-{
-    std::string foo = "Hello World";
-    return std::stringbuf( foo, std::ios_base::binary | std::ios_base::in );
-}
+// std::stringbuf test_handler()
+// {
+//     std::string foo = "Hello World";
+//     return std::stringbuf( foo, std::ios_base::binary | std::ios_base::in );
+// }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace show
 {
-    typedef std::stringbuf ( * handler_t )();
-    
     const size_t BUFFER_SIZE = 1024;
     
-    class Server
-    {
-    public:
-        virtual void serve() = 0;
-        // virtual void serve( unsigned int timeout ) = 0;
-    };
     
-    template< typename B > class RealServer {};
-    
-    template<> class RealServer< std::stringbuf > : public Server
+    void serve( std::streambuf& generator )
     {
-    protected:
-        handler_t handler;
-    public:
-        RealServer( handler_t handler ) : handler( handler )
-        {}
-        void serve()
+        std::istream ostream( &generator );
+        
+        std::cout << "-- BEGIN STREAM --\n";
         {
-            std::cout << "-- BEGIN STREAM --\n";
-            
-            std::stringbuf result( handler() );
-            std::istream result_stream( &result );
-            
-            char result_buffer[ show::BUFFER_SIZE ];
+            char outbut_buffer[ show::BUFFER_SIZE ];
             
             do
             {
-                result_stream.read( result_buffer, show::BUFFER_SIZE );
-                std::cout.write( result_buffer, result_stream.gcount() );
+                ostream.read( outbut_buffer, show::BUFFER_SIZE );
+                std::cout.write( outbut_buffer, ostream.gcount() );
                 std::cout << "\n";
-            } while( result_stream.good() );
+            } while( ostream.good() );
             
-            std::cout << "-- END STREAM --\n";
+            // for(
+            //     auto to_read;
+            //     ( to_read = generator.in_avail() ) > -1;
+                
+            // )
+            // {
+                
+            // }
+        }
+        std::cout << "-- END STREAM --\n";
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////
+    
+    typedef std::string (* simple_serve_handler )();
+    
+    void simpleServe( simple_serve_handler handler )
+    {
+        std::stringbuf generator(
+            handler(),
+            std::ios_base::binary | std::ios_base::in
+        );
+        serve( generator );
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////
+    
+    // https://artofcode.wordpress.com/2010/12/12/deriving-from-stdstreambuf/
+    // http://www.mr-edd.co.uk/blog/beginners_guide_streambuf
+    
+    class Handler : public std::streambuf
+    {
+    public:
+        Handler() : chunk_position( 0 ), eof( false ) {}
+    protected:
+        virtual bool get_chunk( std::string& ) = 0;
+    private:
+        std::string current_chunk;
+        std::streamsize chunk_position;
+        bool eof;
+        
+        void chunk_sync()
+        {
+            if( chunk_position >= current_chunk.length() )
+            {
+                if( !get_chunk( current_chunk ) )
+                    eof = true;
+                chunk_position = 0;
+            }
+        }
+        
+        int_type underflow()
+        {
+            chunk_sync();
+            
+            if( eof )
+                return traits_type::eof();
+            
+            return traits_type::to_int_type( current_chunk[ chunk_position ] );
+        }
+        int_type uflow()
+        {
+            chunk_sync();
+            
+            if( eof )
+                return traits_type::eof();
+            
+            return traits_type::to_int_type( current_chunk[ chunk_position++ ] );
+        }
+        int_type pbackfail( int_type ch )
+        {
+            if(
+                chunk_position <= 0
+                || (
+                    ch != traits_type::eof()
+                    && ch != current_chunk[ chunk_position - 1 ]
+                )
+            )
+                return traits_type::eof();
+            
+            return traits_type::to_int_type( current_chunk[ --chunk_position ] );
+        }
+        std::streamsize showmanyc()
+        {
+            return current_chunk.length() - chunk_position;
         }
     };
-    
-    std::shared_ptr< Server > makeServer( handler_t handler )
-    {
-        return std::shared_ptr< Server >( new show::RealServer< std::stringbuf >( handler ) );
-    }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+#include <vector>
+#include <queue>
+
+class testHandler : public show::Handler
+{
+private:
+    std::queue< std::string > chunk_queue;
+public:
+    testHandler( std::vector< std::string >& chunks )
+    {
+        for(
+            auto iter = chunks.begin();
+            iter != chunks.end();
+            ++iter
+        )
+            chunk_queue.push( *iter );
+    }
+protected:
+    bool get_chunk( std::string& buffer )
+    {
+        if( chunk_queue.empty() )
+            return false;
+        
+        buffer = chunk_queue.front();
+        chunk_queue.pop();
+        
+        return true;
+    }
+};
 
 int main( int argc, char* argv[] )
 {
-    auto server = show::makeServer( test_handler );
-    server -> serve();
+    // std::stringbuf generator(
+    //     "Hello World",
+    //     std::ios_base::binary | std::ios_base::in
+    // );
+    
+    // show::serve( generator );
+    
+    // show::simpleServe( []() -> std::string { return "Hello World, again"; } );
+    
+    std::vector< std::string > chunks = {
+        "Hello World!",
+        "Goodbye."
+    };
+    
+    testHandler test_handler( chunks );
+    
+    show::serve( test_handler );
+    
     return 0;
 }
