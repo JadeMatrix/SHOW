@@ -12,24 +12,24 @@
 
 namespace show
 {
-    class response_iterator : public std::iterator<
-        std::input_iterator_tag,
-        std::string
-    >
-    {
-    public:
-        virtual response_iterator& operator++();
-        virtual response_iterator  operator++( int );
-        virtual bool               operator==( response_iterator ) const;
-        virtual bool               operator!=( response_iterator ) const;
-        virtual reference          operator* () const;
+    // class response_iterator : public std::iterator<
+    //     std::input_iterator_tag,
+    //     std::string
+    // >
+    // {
+    // public:
+    //     virtual response_iterator& operator++();
+    //     virtual response_iterator  operator++( int );
+    //     virtual bool               operator==( const response_iterator& ) const;
+    //     virtual bool               operator!=( const response_iterator& ) const;
+    //     virtual reference          operator* () const;
         
-        virtual const response_iterator& begin() const;
-        virtual const response_iterator& end() const;
+    //     virtual const response_iterator& begin() const;
+    //     virtual const response_iterator& end() const;
     
-    protected:
-        response_iterator();
-    };
+    // protected:
+    //     response_iterator();
+    // };
     
     template< typename R > class server
     {
@@ -52,7 +52,7 @@ namespace show
     };
     
     typedef server< std::string       > basic_server;
-    typedef server< response_iterator > streaming_server;
+    // typedef server< response_iterator > streaming_server;
     
     // Common server implementations ///////////////////////////////////////////
     
