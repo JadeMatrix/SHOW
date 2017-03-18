@@ -12,26 +12,24 @@
 
 namespace show
 {
-    // typedef std::iterator<
-    //     std::input_iterator_tag,
-    //     std::string
-    // > response_iterator;
-    
-    // class response_iterator : public std::iterator<
-    //     std::input_iterator_tag,
-    //     std::string
-    // >
-    // {
-    // public:
-    //     static response_iterator begin();
-    //     static response_iterator end();
+    class response_iterator : public std::iterator<
+        std::input_iterator_tag,
+        std::string
+    >
+    {
+    public:
+        virtual response_iterator& operator++();
+        virtual response_iterator  operator++( int );
+        virtual bool               operator==( response_iterator ) const;
+        virtual bool               operator!=( response_iterator ) const;
+        virtual reference          operator* () const;
         
-    //     virtual response_iterator& operator++();
-    //     virtual response_iterator  operator++( int );
-    //     virtual bool               operator==( response_iterator ) const;
-    //     virtual bool               operator!=( response_iterator ) const;
-    //     virtual reference          operator* () const;
-    // };
+        virtual const response_iterator& begin() const;
+        virtual const response_iterator& end() const;
+    
+    protected:
+        response_iterator();
+    };
     
     template< typename R > class server
     {
@@ -53,14 +51,10 @@ namespace show
         virtual std::string& get_next_chunk();
     };
     
-    // Forward declarations for template specializations
-    // template<> class server< std::string       >;
-    // template<> class server< response_iterator >;
-    
     typedef server< std::string       > basic_server;
-    // typedef server< response_iterator > streaming_server;
+    typedef server< response_iterator > streaming_server;
     
-    ////////////////////////////////////////////////////////////////////////////
+    // Common server implementations ///////////////////////////////////////////
     
     template< typename R > server< R >::server(
         server< R >::handler_t handler,
@@ -91,7 +85,16 @@ namespace show
         current_response = nullptr;
     }
     
-    ////////////////////////////////////////////////////////////////////////////
+    template< typename R > bool server< R >::has_next_chunk()
+    {
+        return *current_response != current_response -> end();
+    }
+    template< typename R > std::string& server< R >::get_next_chunk()
+    {
+        return *( ( *current_response )++ );
+    }
+    
+    // Server specializations //////////////////////////////////////////////////
     
     template<> bool server< std::string >::has_next_chunk()
     {
@@ -103,15 +106,6 @@ namespace show
         current_response = nullptr;
         return *s;
     }
-    
-    // template<> bool server< response_iterator >::has_next_chunk()
-    // {
-    //     return *current_response != response_iterator::end();
-    // }
-    // template<> std::string& server< response_iterator >::get_next_chunk()
-    // {
-    //     return *( ( *current_response )++ );
-    // }
 }
 
 
