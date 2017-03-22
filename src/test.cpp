@@ -8,8 +8,17 @@
 
 std::shared_ptr< std::string > message( new std::string( "Hello World!" ) );
 
-std::shared_ptr< std::string > serve_s1(  )
+std::shared_ptr< std::string > serve_s1( show::request& req )
 {
+    std::cout << req.method << " /";
+    for( int i = 0; i < req.path.size(); ++i )
+    {
+        std::cout << req.path[ i ];
+        if( i + 1 < req.path.size() )
+            std::cout << '/';
+    }
+    std::cout << '\n';
+    
     return message;
 }
 
@@ -95,11 +104,11 @@ int main( int argc, char* argv[] )
 {
     try
     {
-        show::basic_server s1( serve_s1, 8080 );
+        show::basic_server s1( serve_s1, 80 );
         s1.serve();
         
-        show::server< message_iterator > s2( serve_s2, 8080 );
-        s2.serve();
+        // show::server< message_iterator > s2( serve_s2, 8080 );
+        // s2.serve();
     }
     catch( ... )
     {
