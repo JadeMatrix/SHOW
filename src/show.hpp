@@ -537,22 +537,6 @@ namespace show
     
     std::streamsize request::showmanyc()
     {
-        // http://en.cppreference.com/w/cpp/io/basic_streambuf/showmanyc
-        
-        /*
-        Estimates the number of characters available for input in the associated
-        character sequence. `underflow()` is guaranteed not to return
-        `Traits::eof()` until at least that many characters are extracted.
-        
-        Return value:
-        The number of characters that are certainly available in the associated
-        character sequence, or -1 if `showmanyc` can determine, without
-        blocking, that no characters are available. If `showmanyc` returns -1,
-        `underflow()` and `uflow()` will definitely return `Traits::eof`.
-        The base class version returns ​0​, which has the meaning of "unsure if
-        there are characters available in the associated sequence".
-        */
-        
         if( known_content_length && eof )
             return -1;
         else
@@ -561,31 +545,6 @@ namespace show
     
     request::int_type request::underflow()
     {
-        // http://en.cppreference.com/w/cpp/io/basic_streambuf/underflow
-        
-        /*
-        Ensures that at least one character is available in the input area by
-        updating the pointers to the input area (if needed) and reading more
-        data in from the input sequence (if applicable). Returns the value of
-        that character (converted to `int_type` with `Traits::to_int_type(c)`)
-        on success or `Traits::eof()` on failure.
-        The function may update `gptr`, `egptr` and `eback` pointers to define
-        the location of newly loaded data (if any). On failure, the function
-        ensures that either `gptr() == nullptr` or `gptr() == egptr`.
-        The base class version of the function does nothing. The derived classes
-        may override this function to allow updates to the get area in the case
-        of exhaustion.
-        
-        Return value:
-        The value of the character pointed to by the get pointer after the call
-        on success, or `Traits::eof()` otherwise.
-        The base class version of the function returns `traits::eof()`.
-        
-        Note:
-        The public functions of `std::streambuf` call this function only if
-        `gptr() == nullptr` or `gptr() >= egptr()`.
-        */
-        
         // DEBUG:
         std::cout << "request::int_type request::underflow()\n";
         
@@ -682,51 +641,8 @@ namespace show
         return traits_type::to_int_type( *gptr() );
     }
     
-    // request::int_type request::uflow()
-    // {
-        // http://en.cppreference.com/w/cpp/io/basic_streambuf/uflow
-        
-        /*
-        Ensures that at least one character is available in the input area by
-        updating the pointers to the input area (if needed). On success returns
-        the value of that character and advances the value of the get pointer by
-        one character. On failure returns `traits::eof()`.
-        The function may update `gptr`, `egptr` and `eback` pointers to define
-        the location of newly loaded data (if any). On failure, the function
-        ensures that either `gptr() == nullptr` or `gptr() == egptr`.
-        The base class version of the function calls `underflow()` and
-        increments `gptr()`.
-        
-        Return value:
-        The value of the character that was pointed to by the get pointer before
-        it was advanced by one, or `traits::eof()` otherwise.
-        The base class version of the function returns the value returned by
-        `underflow()`.
-        
-        Note:
-        The public functions of `std::streambuf` call this function only if
-        `gptr() == nullptr` or `gptr() >= egptr()`.
-        The custom `streambuf` classes that do not use the get area and do not
-        set the get area pointers in `basic_streambuf` are required to override
-        this function.
-        */
-    // }
-    
     std::streamsize request::xsgetn( request::char_type* s, std::streamsize count )
     {
-        // http://en.cppreference.com/w/cpp/io/basic_streambuf/sgetn
-        
-        /*
-        Reads `count` characters from the input sequence and stores them into a
-        character array pointed to by `s`. The characters are read as if by
-        repeated calls to `sbumpc()`. That is, if less than `count` characters
-        are immediately available, the function calls `uflow()` to provide more
-        until `traits::eof()` is returned.
-        
-        Return value:
-        The number of characters successfully read.
-        */
-        
         // TODO: copy in available chunks rather than ~i calls to `sbumpc()`?
         
         std::streamsize i = 0;
@@ -748,41 +664,6 @@ namespace show
     
     request::int_type request::pbackfail( request::int_type c )
     {
-        // http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
-        
-        /*
-        This protected virtual function is called by the public functions
-        `sungetc()` and `sputbackc()` (which, in turn, are called by
-        `basic_istream::unget` and `basic_istream::putback`) when either:
-            1) There is no putback position in the get area (`pbackfail()` is
-               called with no arguments). In this situation, the purpose of
-               `pbackfail()` is to back up the get area by one character, if the
-               associated character sequence allows this (e.g. a file-backed
-               `streambuf` may reload the buffer from a file, starting one
-               character earlier).
-            2) The caller attempts to putback a different character from the one
-               retrieved earlier (`pbackfail()` is called with the character
-               that needs to be put back). In this situation, the purpose of
-               `pbackfail()` is to place the character `c` into the get area at
-               the position just before `basic_streambuf::gptr()`, and, if
-               possible, to modify the associated character sequence to reflect
-               this change. This may involve backing up the get area as in the
-               first variant.
-        The default base class version of this function does nothing and returns
-        `Traits::eof()` in all situations. This function is overridden by the
-        derived classes: `basic_stringbuf::pbackfail`,
-        `basic_filebuf::pbackfail`, `strstreambuf::pbackfail`, and is expected
-        to be overridden by user-defined and third-party library stream classes.
-        
-        Parameters:
-        `ch` - character to put back or `Traits::eof()` if only back out is
-            requested
-        
-        Return value:
-        `Traits::eof()` in case of failure, some other value to indicate
-        success. The base class version always fails.
-        */
-        
         /*
         Parameters:
         `c` - character to put back or `Traits::eof()` if only back out is
@@ -912,24 +793,6 @@ namespace show
         std::streamsize count
     )
     {
-        // http://en.cppreference.com/w/cpp/io/basic_streambuf/sputn
-        
-        // IMPLEMENT:
-        
-        /*
-        Writes `count` characters to the output sequence from the character
-        array whose first element is pointed to by `s`. The characters are
-        written as if by repeated calls to `sputc()`. Writing stops when either
-        count characters are written or a call to `sputc()` would have returned
-        `Traits::eof()`.
-        If the put area becomes full (`pptr() == epptr()`), this function may
-        call `overflow()`, or achieve the effect of calling `overflow()` by some
-        other, unspecified, means.
-        
-        Return value:
-        The number of characters successfully written.
-        */
-        
         std::streamsize chars_written = 0;
         
         while(
@@ -945,35 +808,6 @@ namespace show
     
     response::int_type response::overflow( response::int_type ch )
     {
-        // http://en.cppreference.com/w/cpp/io/basic_streambuf/overflow
-        
-        /*
-        Ensures that there is space at the put area for at least one character
-        by saving some initial subsequence of characters starting at `pbase()`
-        to the output sequence and updating the pointers to the put area (if
-        needed). If `ch` is not `Traits::eof()` (i.e.
-        `Traits::eq_int_type(ch, Traits::eof()) != true`), it is either put to
-        the put area or directly saved to the output sequence.
-        The function may update `pptr`, `epptr` and `pbase` pointers to define
-        the location to write more data. On failure, the function ensures that
-        either `pptr() == nullptr` or `pptr() == epptr`.
-        The base class version of the function does nothing. The derived classes
-        may override this function to allow updates to the put area in the case
-        of exhaustion.
-        
-        Parameters:
-        `ch` - the character to store in the put area
-        
-        Return value:
-        Returns unspecified value not equal to `Traits::eof()` on success,
-        `Traits::eof()` on failure.
-        The base class version of the function returns `Traits::eof()`.
-        
-        Note:
-        The `sputc()` and `sputn()` call this function in case of an overflow
-        (`pptr() == nullptr` or `pptr() >= epptr()`).
-        */
-        
         try
         {
             flush();
