@@ -202,6 +202,7 @@ namespace show
             request& r,
             response_code& code,
             headers_t& headers
+            // TODO: Protocol
         ) noexcept;
         ~response()
         #ifdef SHOW_NOEXCEPT
@@ -794,15 +795,15 @@ namespace show
     ) noexcept :
         serve_socket( r.serve_socket )
     {
-        std::string headers_str;
-        std::stringstream headers_stream( headers_str );
+        std::stringstream headers_stream;
         
         // Marshall response code & description
         headers_stream
             << code.code
             << " "
             << code.description
-            << "\n"
+            << " HTTP/1.0"
+            << "\r\n"
         ;
         
         // Marshall headers
@@ -827,7 +828,7 @@ namespace show
                 ;
             }
         }
-        headers_str += "\n\n";
+        headers_stream << "\r\n\r\n";
         
         setp(
             buffer,
@@ -835,8 +836,8 @@ namespace show
         );
         
         sputn(
-            headers_str.c_str(),
-            headers_str.size()
+            headers_stream.str().c_str(),
+            headers_stream.str().size()
         );
     }
     
@@ -975,8 +976,20 @@ namespace show
     {
         // TODO: Move most of this stuff to server::serve()
         
+        // DEBUG:
+        std::cout << "initializing server\n";
+        
         // Force use of POSIX function socket() rather than show::socket
-        listen_socket = ::socket( AF_INET, SOCK_STREAM, 0 );
+        // listen_socket = ::socket( AF_INET, SOCK_STREAM, 0 );
+        listen_socket = ::socket(
+            AF_INET,
+            SOCK_STREAM,
+            getprotobyname( "TCP" ) -> p_proto
+            // 0
+        );
+        
+        // DEBUG:
+        std::cout << "called ::socket()\n";
         
         if( listen_socket == 0 )
             throw socket_error(
@@ -984,20 +997,23 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
+        // DEBUG:
+        std::cout << "server timeout set\n";
+        
         int opt_reuse = 1;
         
-        if( setsockopt(
-            listen_socket,
-            // SOL_SOCKET,
-            getprotobyname( "TCP" ) -> p_proto,
-            SO_REUSEADDR | SO_REUSEPORT,
-            &opt_reuse,
-            sizeof( opt_reuse )
-        ) == -1 )
-            throw socket_error(
-                "failed to set listen socket reuse options: "
-                + std::string( std::strerror( errno ) )
-            );
+        // if( setsockopt(
+        //     listen_socket,
+        //     SOL_SOCKET,
+        //     // getprotobyname( "TCP" ) -> p_proto,
+        //     SO_REUSEADDR | SO_REUSEPORT,
+        //     &opt_reuse,
+        //     sizeof( opt_reuse )
+        // ) == -1 )
+        //     throw socket_error(
+        //         "failed to set listen socket reuse options: "
+        //         + std::string( std::strerror( errno ) )
+        //     );
         
         if( timeout >= 0 )
         {
@@ -1007,8 +1023,8 @@ namespace show
             
             if( setsockopt(
                 listen_socket,
-                // SOL_SOCKET,
-                getprotobyname( "TCP" ) -> p_proto,
+                SOL_SOCKET,
+                // getprotobyname( "TCP" ) -> p_proto,
                 SO_RCVTIMEO,
                 ( void* )&timeout_tv,
                 sizeof( timeout_tv )
@@ -1019,27 +1035,49 @@ namespace show
                 );
         }
         
+        // DEBUG:
+        std::cout << "server timeout set\n";
+        
         // https://stackoverflow.com/questions/15673846/how-to-give-to-a-client-specific-ip-address-in-c
         sockaddr_in socket_address;
+        memset(&socket_address, 0, sizeof(socket_address));
         socket_address.sin_family      = AF_INET;
-        socket_address.sin_addr.s_addr = INADDR_ANY;
-        // socket_address.sin_addr.s_addr = inet_addr( address.c_str() );
+        // socket_address.sin_addr.s_addr = INADDR_ANY;
+        socket_address.sin_addr.s_addr = inet_addr( address.c_str() );
         socket_address.sin_port        = htons( port );
+        
+        // DEBUG:
+        std::cout
+            << "socket details set to "
+            << address
+            << ":"
+            << port
+            << "\n"
+        ;
         
         if( bind(
             listen_socket,
-            ( sockaddr* )&address,
-            sizeof( address )
+            ( sockaddr* )&socket_address,
+            sizeof( socket_address )
         ) == -1 )
             throw socket_error(
                 "failed to bind listen socket: "
                 + std::string( std::strerror( errno ) )
             );
+        
+        // DEBUG:
+        std::cout << "socket bound\n";
     }
     
     server::~server()
     {
+        // DEBUG:
+        std::cout << "closing server socket\n";
+        
         close( listen_socket );
+        
+        // DEBUG:
+        std::cout << "server socket closed\n";
     }
     
     void server::serve()
