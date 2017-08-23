@@ -38,7 +38,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 2, 0, "0.2.0" };
+    } version = { "SHOW", 0, 2, 5, "0.2.5" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -146,11 +146,20 @@ namespace show
         
     public:
         
+        enum content_length_flag_type
+        {
+            NO = 0,
+            YES,
+            MAYBE
+        };
+        
         const http_protocol             & protocol;
         const std::string               & method;
         const std::vector< std::string >& path;
         const query_args_t              & query_args;
         const headers_t                 & headers;
+        const content_length_flag_type  & unknown_content_length;
+        unsigned long long              & content_length;
         
     protected:
         
@@ -165,9 +174,9 @@ namespace show
         std::vector< std::string > _path;
         query_args_t               _query_args;
         headers_t                  _headers;
+        content_length_flag_type   _unknown_content_length;
+        unsigned long long         _content_length;
         
-        bool known_content_length;
-        unsigned long long content_length;
         unsigned long long read_content;
         bool eof;
         
@@ -311,12 +320,14 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     request::request( socket_fd s ) :
-        protocol(     _protocol   ),
-        method(       _method     ),
-        path(         _path       ),
-        query_args(   _query_args ),
-        headers(      _headers    ),
-        eof(          false       )
+        protocol(               _protocol                  ),
+        method(                 _method                    ),
+        path(                   _path                      ),
+        query_args(             _query_args                ),
+        headers(                _headers                   ),
+        unknown_content_length( _unknown_content_length    ),
+        content_length(         _content_length            ),
+        eof(                    false                      )
     {
         // TODO: client address
         
@@ -475,48 +486,46 @@ namespace show
         
         // TODO: pre-C++11
         auto content_length_header = _headers.find( "Content-Length" );
-        known_content_length = content_length_header != _headers.end();
-        if( known_content_length )
-            try
-            {
-                // TODO: Let server handle ambiguous "Content-Length"s
-                // possibly `enum{ NO = 0, YES, MAYBE } unknown_content_length`?
-                
-                if( content_length_header -> second.size() > 1 )
-                    throw request_parse_error(
-                        "multiple \"Content-Length\" headers"
-                    );
-                
-                // TODO: pre-C++11
-                content_length = std::stoull(
-                    content_length_header -> second[ 0 ],
-                    nullptr,
-                    0
-                );
-                
-                if( content_length < read_content )
+        
+        _unknown_content_length = YES;
+        
+        if( content_length_header != _headers.end() )
+        {
+            if( content_length_header -> second.size() > 1 )
+                _unknown_content_length = MAYBE;
+            else
+                try
                 {
-                    // Avoid issues when the client sends more than it claims
-                    read_content = content_length;
-                    setg(
-                        eback(),
-                        gptr(),
-                        gptr() + content_length
+                    // TODO: pre-C++11
+                    _content_length = std::stoull(
+                        content_length_header -> second[ 0 ],
+                        nullptr,
+                        0
                     );
-                    eof = true;
+                    _unknown_content_length = NO;
+                    
+                    if( _content_length < read_content )
+                    {
+                        // Avoid issues when the client sends more than it claims
+                        read_content = _content_length;
+                        setg(
+                            eback(),
+                            gptr(),
+                            gptr() + _content_length
+                        );
+                        eof = true;
+                    }
                 }
-            }
-            catch( std::invalid_argument& e )
-            {
-                throw request_parse_error(
-                    "non-numeric \"Content-Length\" header"
-                );
-            }
+                catch( std::invalid_argument& e )
+                {
+                    _unknown_content_length = MAYBE;
+                }
+        }
     }
     
     std::streamsize request::showmanyc()
     {
-        if( known_content_length && eof )
+        if( !unknown_content_length && eof )
             return -1;
         else
             return egptr() - gptr();
@@ -534,7 +543,7 @@ namespace show
             {
                 posix_buffer_size_t to_get = buffer_size;
                 
-                if( known_content_length )
+                if( !unknown_content_length )
                 {
                     unsigned long long remaining_content = (
                         content_length - read_content

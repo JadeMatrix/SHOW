@@ -16,79 +16,68 @@ void basic_request_hander( show::request& request )
 {
     std::cout << "\n\nvvvv IN REQUEST HANDLER vvvv\n\n";
     
-    show::response_code rc = {
-        200,
-        "OK"
-    };
-    show::headers_t headers;
-    
-    std::istream request_stream( &request );
-    char iobuff[ 256 ];
-    
-    // auto content_len_header = request.headers.find( "content-length" );
-    // if(
-    //     content_len_header != request.headers.end()
-    //     && content_len_header -> second.size() >= 1
-    // )
-    // {
-    //     unsigned long long remaining_content = std::stoull(
-    //         content_len_header -> second[ 0 ]
-    //     );
+    if( request.unknown_content_length )
+    {
+        show::response_code rc = {
+            400,
+            "Bad Request"
+        };
+        show::headers_t headers;
         
-    //     show::response response(
-    //         request,
-    //         rc,
-    //         headers
-    //     );
-    //     std::ostream response_stream( &response );
+        std::string message = "Missing \"Content-Length\" header";
         
-    //     headers[ "Content-Length" ].push_back(
-    //         std::to_string( remaining_content )
-    //     );
+        headers[ "Content-Length" ].push_back(
+            std::to_string( message.size() )
+        );
+        headers[ "Content-Type" ].push_back( "text/plain" );
         
-    //     while( remaining_content > 0 )
-    //     {
-    //         std::streamsize read_count = request_stream.readsome(
-    //             iobuff,
-    //             remaining_content < 256 ? remaining_content : 256
-    //         );
+        show::response response(
+            request,
+            rc,
+            headers
+        );
+        std::ostream response_stream( &response );
+        response_stream << message;
+    }
+    else
+    {
+        show::response_code rc = {
+            200,
+            "OK"
+        };
+        show::headers_t headers;
+        
+        std::istream request_stream( &request );
+        char iobuff[ 256 ];
+        
+        unsigned long long remaining_content = request.content_length;
+        
+        headers[ "Content-Length" ].push_back(
+            std::to_string( remaining_content )
+        );
+        
+        show::response response(
+            request,
+            rc,
+            headers
+        );
+        std::ostream response_stream( &response );
+        
+        while( remaining_content > 0 )
+        {
+            std::streamsize read_count = request_stream.readsome(
+                iobuff,
+                remaining_content < 256 ? remaining_content : 256
+            );
             
-    //         response_stream.write(
-    //             iobuff,
-    //             read_count
-    //         );
+            response_stream.write(
+                iobuff,
+                read_count
+            );
             
-    //         remaining_content -= read_count;
-    //     }
-    // }
-    // else
-    // {
-    //     show::response response(
-    //         request,
-    //         rc,
-    //         headers
-    //     );
-    //     std::ostream response_stream( &response );
-        
-    //     while( request_stream.good() )
-    //         response_stream.write(
-    //             iobuff,
-    //             request_stream.readsome( iobuff, 256 )
-    //         );
-    // }
-    
-    std::string request_content;
-    request_stream >> request_content;
-    
-    std::cout << request_content << "\n";
-    
-    show::response response(
-        request,
-        rc,
-        headers
-    );
-    std::ostream response_stream( &response );
-    response_stream << "Hello World";
+            remaining_content -= read_count;
+        }
+    }
     
     std::cout << "\n\n^^^^ IN REQUEST HANDLER ^^^^\n\n";
 }
