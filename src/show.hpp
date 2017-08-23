@@ -321,7 +321,6 @@ namespace show
         path(         _path       ),
         query_args(   _query_args ),
         headers(      _headers    ),
-        read_content( 0           ),
         eof(          false       )
     {
         // TODO: client address
@@ -422,7 +421,7 @@ namespace show
                             if( ++seq_newlines >= 2 )
                             {
                                 parse_state = GETTING_CONTENT;
-                                reading = false;
+                                // reading = false;
                             }
                             current_header_name = "";
                             break;
@@ -462,6 +461,22 @@ namespace show
                     }
                     break;
                 case GETTING_CONTENT:
+                    // DEBUG:
+                    std::cout
+                        << "\n\nsetting buffer pointers to "
+                        << ( unsigned long )buffer
+                        << "|"
+                        << ( unsigned long )( buffer + i )
+                        << "|"
+                        << ( unsigned long )( buffer + bytes_read )
+                        << "\n"
+                    ;
+                    setg(
+                        buffer,
+                        buffer + i,
+                        buffer + bytes_read
+                    );
+                    read_content = bytes_read - i;
                     reading = false;
                     break;
                 }
@@ -499,6 +514,18 @@ namespace show
                     nullptr,
                     0
                 );
+                
+                if( content_length < read_content )
+                {
+                    // Avoid issues when the client sends more than it claims
+                    read_content = content_length;
+                    setg(
+                        eback(),
+                        gptr(),
+                        gptr() + content_length
+                    );
+                    eof = true;
+                }
             }
             catch( std::invalid_argument& e )
             {
@@ -506,12 +533,6 @@ namespace show
                     "non-numeric \"Content-Length\" header"
                 );
             }
-        
-        setg(
-            buffer,
-            buffer,
-            buffer
-        );
     }
     
     std::streamsize request::showmanyc()
@@ -565,29 +586,61 @@ namespace show
         `gptr() == nullptr` or `gptr() >= egptr()`.
         */
         
+        // DEBUG:
+        std::cout << "request::int_type request::underflow()\n";
+        
         if( gptr() >= egptr() )
         {
+            // DEBUG:
+            std::cout << "gptr() >= egptr()\n";
+            
             std::streamsize in_buffer = showmanyc();
             
             if( in_buffer < 0 )
+            {
+                // DEBUG:
+                std::cout << "in_buffer < 0 so returning traits_type::eof()\n";
+                
                 return traits_type::eof();
+            }
             else if( in_buffer == 0 )
             {
+                // DEBUG:
+                std::cout << "in_buffer == 0\n";
+                
                 posix_buffer_size_t to_get = buffer_size;
                 
-                unsigned long long remaining_content = (
-                    content_length - read_content
-                );
+                if( known_content_length )
+                {
+                    // DEBUG:
+                    std::cout
+                        << "content_length = "
+                        << content_length
+                        << ", read_content = "
+                        << read_content
+                        << "\n"
+                    ;
+                    
+                    unsigned long long remaining_content = (
+                        content_length - read_content
+                    );
+                    
+                    // DEBUG:
+                    std::cout << "remaining_content = " << remaining_content << "\n";
+                    
+                    if( remaining_content < buffer_size )
+                        to_get = ( posix_buffer_size_t )remaining_content;
+                }
                 
-                if(
-                    known_content_length
-                    && remaining_content < buffer_size
-                )
-                    to_get = ( posix_buffer_size_t )remaining_content;
+                // DEBUG:
+                std::cout << "getting " << to_get << " bytes...\n";
                 
                 if( to_get > 0 )
                 {
                     posix_buffer_size_t bytes_read = 0;
+                    
+                    // DEBUG:
+                    std::cout << "reading...\n";
                     
                     while( bytes_read < 1 )
                         // TODO: block instead of spin
@@ -596,6 +649,9 @@ namespace show
                             eback(),
                             to_get
                         );
+                    
+                    // DEBUG:
+                    std::cout << "read " << bytes_read << " bytes\n";
                     
                     read_content += bytes_read;
                     
@@ -607,6 +663,9 @@ namespace show
                 }
                 else
                 {
+                    // DEBUG:
+                    std::cout << "to_get <= 0, so returning traits_type::eof()\n";
+                    
                     eof = true;
                     
                     setg(
@@ -614,6 +673,8 @@ namespace show
                         eback(),
                         eback()
                     );
+                    
+                    return traits_type::eof();
                 }
             }
         }

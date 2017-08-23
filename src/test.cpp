@@ -14,26 +14,7 @@ clang++ -std=c++11 -stdlib=libc++ -Oz src/test.cpp -o make/build/test
 
 void basic_request_hander( show::request& request )
 {
-    std::cout << "vvvv IN REQUEST HANDLER vvvv\n\n";
-    
-    std::string response_message = "Hello World";
-    
-    for(
-        auto iter1 = request.headers.begin();
-        iter1 != request.headers.end();
-        ++iter1
-    )
-        for(
-            auto iter2 = iter1 -> second.begin();
-            iter2 != iter1 -> second.end();
-            ++iter2
-        )
-            std::cout
-                << iter1 -> first
-                << ": "
-                << *iter2
-                << "\n"
-            ;
+    std::cout << "\n\nvvvv IN REQUEST HANDLER vvvv\n\n";
     
     show::response_code rc = {
         200,
@@ -41,21 +22,75 @@ void basic_request_hander( show::request& request )
     };
     show::headers_t headers;
     
-    headers[ "Content-Length" ].push_back(
-        std::to_string( response_message.size() )
-    );
+    std::istream request_stream( &request );
+    char iobuff[ 256 ];
+    
+    // auto content_len_header = request.headers.find( "content-length" );
+    // if(
+    //     content_len_header != request.headers.end()
+    //     && content_len_header -> second.size() >= 1
+    // )
+    // {
+    //     unsigned long long remaining_content = std::stoull(
+    //         content_len_header -> second[ 0 ]
+    //     );
+        
+    //     show::response response(
+    //         request,
+    //         rc,
+    //         headers
+    //     );
+    //     std::ostream response_stream( &response );
+        
+    //     headers[ "Content-Length" ].push_back(
+    //         std::to_string( remaining_content )
+    //     );
+        
+    //     while( remaining_content > 0 )
+    //     {
+    //         std::streamsize read_count = request_stream.readsome(
+    //             iobuff,
+    //             remaining_content < 256 ? remaining_content : 256
+    //         );
+            
+    //         response_stream.write(
+    //             iobuff,
+    //             read_count
+    //         );
+            
+    //         remaining_content -= read_count;
+    //     }
+    // }
+    // else
+    // {
+    //     show::response response(
+    //         request,
+    //         rc,
+    //         headers
+    //     );
+    //     std::ostream response_stream( &response );
+        
+    //     while( request_stream.good() )
+    //         response_stream.write(
+    //             iobuff,
+    //             request_stream.readsome( iobuff, 256 )
+    //         );
+    // }
+    
+    std::string request_content;
+    request_stream >> request_content;
+    
+    std::cout << request_content << "\n";
     
     show::response response(
         request,
         rc,
         headers
     );
-    
     std::ostream response_stream( &response );
+    response_stream << "Hello World";
     
-    response_stream << response_message;
-    
-    std::cout << "\n^^^^ IN REQUEST HANDLER ^^^^\n";
+    std::cout << "\n\n^^^^ IN REQUEST HANDLER ^^^^\n\n";
 }
 
 
