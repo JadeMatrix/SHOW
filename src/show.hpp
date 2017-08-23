@@ -286,6 +286,32 @@ namespace show
     #endif
     
     
+    // Functions ///////////////////////////////////////////////////////////////
+    
+    
+    std::string url_encode(
+        const std::string& o,
+        bool use_plus_space = true
+    ) noexcept;
+    std::string url_decode( const std::string& )
+    #ifdef SHOW_NOEXCEPT
+    noexcept
+    #endif
+    ;
+    std::string base64_encode(
+        const std::string& o,
+        const char* chars = base64_chars_standard
+    ) noexcept;
+    std::string base64_decode(
+        const std::string& o,
+        const char* chars = base64_chars_standard
+    )
+    #ifdef SHOW_NOEXCEPT
+    noexcept
+    #endif
+    ;
+    
+    
     // Implementations /////////////////////////////////////////////////////////
     
     request::request( socket_fd s ) :
@@ -1070,6 +1096,301 @@ namespace show
             request this_request( serve_socket );
             handler( this_request );
         }
+    }
+    
+    std::string url_encode(
+        const std::string& o,
+        bool use_plus_space
+    ) noexcept
+    {
+        std::stringstream encoded;
+        
+        encoded << std::hex;
+        
+        std::string plus = use_plus_space ? "+" : "%20";
+        
+        for( std::string::size_type i = 0; i < o.size(); ++i )
+        {
+            if( o[ i ] == ' ' )
+                encoded << plus;
+            else if (
+                   ( o[ i ] >= 'A' && o[ i ] <= 'Z' )
+                || ( o[ i ] >= 'a' && o[ i ] <= 'z' )
+                || o[ i ] == '-'
+                || o[ i ] == '_'
+                || o[ i ] == '.'
+                || o[ i ] == '~'
+            )
+                encoded << o[ i ];
+            else
+                encoded
+                    << '%'
+                    << std::uppercase
+                    << std::setfill( '0' )
+                    << std::setw( 2 )
+                    << ( unsigned int )( unsigned char )o[ i ]
+                    << std::nouppercase
+                ;
+        }
+        
+        return encoded.str();
+    }
+    
+    std::string url_decode( const std::string& o )
+    #ifdef SHOW_NOEXCEPT
+    noexcept
+    #endif
+    {
+        std::string decoded;
+        std::string hex_convert_space = "00";
+        
+        for( std::string::size_type i = 0; i < o.size(); ++i )
+        {
+            if( o[ i ] == '%' )
+            {
+                if( o.size() < i + 3 )
+                {
+                    #if SHOW_NOEXCEPT == IGNORE
+                    break;
+                    #elif SHOW_NOEXCEPT == AS_IS
+                    decoded += '%';
+                    #else
+                    throw url_decode_error();
+                    #endif
+                }
+                else
+                {
+                    try
+                    {
+                        hex_convert_space[ 0 ] = o[ i + 1 ];
+                        hex_convert_space[ 1 ] = o[ i + 2 ];
+                        
+                        decoded += ( char )std::stoi(
+                            hex_convert_space,
+                            0,
+                            16
+                        );
+                        
+                        i += 2;
+                    }
+                    catch( std::invalid_argument& e )
+                    {
+                        #if SHOW_NOEXCEPT == IGNORE
+                        i += 2;
+                        #elif SHOW_NOEXCEPT == AS_IS
+                        decoded += '%';
+                        #else
+                        throw url_decode_error();
+                        #endif
+                    }
+                }
+            }
+            else if( o[ i ] == '+' )
+                decoded += ' ';
+            else
+                decoded += o[ i ];
+        }
+        
+        return decoded;
+    }
+    
+    std::string base64_encode(
+        const std::string& o,
+        const char* chars
+    ) noexcept
+    {
+        unsigned char current_sextet;
+        std::string encoded;
+        
+        std::string::size_type b64_size = ( ( o.size() + 2 ) / 3 ) * 4;
+        
+        for(
+            std::string::size_type i = 0, j = 0;
+            i < b64_size;
+            ++i
+        )
+        {
+            switch( i % 4 )
+            {
+            case 0:
+                // j
+                // ******** ******** ********
+                // ^^^^^^
+                // i
+                current_sextet = ( o[ j ] >> 2 ) & 0x3F /* 00111111 */;
+                encoded += chars[ current_sextet ];
+                break;
+            case 1:
+                // j        j++
+                // ******** ******** ********
+                //       ^^ ^^^^
+                //       i
+                current_sextet = ( o[ j ] << 4 ) & 0x30 /* 00110000 */;
+                ++j;
+                if( j < o.size() )
+                    current_sextet |= ( o[ j ] >> 4 ) & 0x0F /* 00001111 */;
+                encoded += chars[ current_sextet ];
+                break;
+            case 2:
+                //          j        j++
+                // ******** ******** ********
+                //              ^^^^ ^^
+                //              i
+                if( j < o.size() )
+                {
+                    current_sextet = ( o[ j ] << 2 ) & 0x3C /* 00111100 */;
+                    ++j;
+                    if( j < o.size() )
+                        current_sextet |= ( o[ j ] >> 6 ) & 0x03 /* 00000011 */;
+                    encoded += chars[ current_sextet ];
+                }
+                else
+                    encoded += '=';
+                break;
+            case 3:
+                //                   j
+                // ******** ******** ********
+                //                     ^^^^^^
+                //                     i
+                if( j < o.size() )
+                {
+                    current_sextet = o[ j ] & 0x3F /* 00111111 */;
+                    ++j;
+                    encoded += chars[ current_sextet ];
+                }
+                else
+                    encoded += '=';
+                break;
+            }
+        }
+        
+        return encoded;
+    }
+    
+    std::string base64_decode( const std::string& o, const char* chars )
+    #ifdef SHOW_NOEXCEPT
+    noexcept
+    #endif
+    {
+        /*unsigned*/ char current_octet;
+        std::string decoded;
+        
+        std::string::size_type unpadded_len = o.size();
+        
+        for(
+            std::string::const_reverse_iterator r_iter = o.rbegin();
+            r_iter != o.rend();
+            ++r_iter
+        )
+        {
+            if( *r_iter == '=' )
+                --unpadded_len;
+            else
+                break;
+        }
+        
+        std::string::size_type b64_size = unpadded_len;
+        
+        if( b64_size % 4 )
+            b64_size += 4 - ( b64_size % 4 );
+        
+        #ifndef SHOW_NOEXCEPT
+        if( b64_size > o.size() )
+            // Missing required padding
+            throw base64_decode_error();
+        #endif
+        
+        std::map< char, /*unsigned*/ char > reverse_lookup;
+        for( /*unsigned*/ char i = 0; i < 64; ++i )
+            reverse_lookup[ chars[ i ] ] = i;
+        reverse_lookup[ '=' ] = 0;
+        
+        for( std::string::size_type i = 0; i < b64_size; ++i )
+        {
+            if( o[ i ] == '=' )
+            {
+                if(
+                    i < unpadded_len
+                    && i >= unpadded_len - 2
+                )
+                    break;
+                else
+                    #if SHOW_NOEXCEPT == IGNORE
+                    continue;
+                    #elif SHOW_NOEXCEPT == AS_IS
+                    return o;
+                    #else
+                    throw base64_decode_error();
+                    #endif
+            }
+            
+            std::map< char, /*unsigned*/ char >::iterator first, second;
+            
+            first = reverse_lookup.find( o[ i ] );
+            if( first == reverse_lookup.end() )
+                #if SHOW_NOEXCEPT == IGNORE
+                break;
+                #elif SHOW_NOEXCEPT == AS_IS
+                return o;
+                #else
+                throw base64_decode_error();
+                #endif
+            
+            if( i + 1 < o.size() )
+            {
+                second = reverse_lookup.find( o[ i + 1 ] );
+                if( second == reverse_lookup.end() )
+                    #if SHOW_NOEXCEPT == IGNORE
+                    break;
+                    #elif SHOW_NOEXCEPT == AS_IS
+                    return o;
+                    #else
+                    throw base64_decode_error();
+                    #endif
+            }
+            
+            switch( i % 4 )
+            {
+            case 0:
+                // i
+                // ****** ****** ****** ******
+                // ^^^^^^ ^^
+                current_octet = first -> second << 2;
+                if( i + 1 < o.size() )
+                    current_octet |= (
+                        second -> second >> 4
+                    ) & 0x03 /* 00000011 */;
+                decoded += current_octet;
+                break;
+            case 1:
+                //        i
+                // ****** ****** ****** ******
+                //          ^^^^ ^^^^
+                current_octet = first -> second << 4;
+                if( i + 1 < o.size() )
+                    current_octet |= (
+                        second -> second >> 2
+                    ) & 0x0F /* 00001111 */;
+                decoded += current_octet;
+                break;
+            case 2:
+                //               i
+                // ****** ****** ****** ******
+                //                   ^^ ^^^^^^
+                current_octet = ( first -> second << 6 ) & 0xC0 /* 11000000 */;
+                if( i + 1 < o.size() )
+                    current_octet |= second -> second & 0x3F /* 00111111 */;
+                decoded += current_octet;
+                break;
+            case 3:
+                //                      i
+                // ****** ****** ****** ******
+                // -
+                break;
+            }
+        }
+        
+        return decoded;
     }
 }
 
