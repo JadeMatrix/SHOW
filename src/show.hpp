@@ -26,12 +26,7 @@ Control some compile-time behavior by defining these:
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-// DEBUG:
 #include <netdb.h>
-
-
-// DEBUG:
-#include <iostream>
 
 
 namespace show
@@ -345,9 +340,6 @@ namespace show
             GETTING_CONTENT
         } parse_state = READING_METHOD;
         
-        // DEBUG:
-        std::cout << "Reading request...\n";
-        
         std::string protocol_string;
         
         // FIXME: Parsing request assumes it is well-formed for now
@@ -355,9 +347,6 @@ namespace show
         while( reading )
         {
             bytes_read = read( serve_socket -> fd, buffer, buffer_size - 1 );
-            
-            // DEBUG:
-            std::cout.write( buffer, bytes_read );
             
             for( int i = 0; reading && i < bytes_read; ++i )
             {
@@ -461,16 +450,6 @@ namespace show
                     }
                     break;
                 case GETTING_CONTENT:
-                    // DEBUG:
-                    std::cout
-                        << "\n\nsetting buffer pointers to "
-                        << ( unsigned long )buffer
-                        << "|"
-                        << ( unsigned long )( buffer + i )
-                        << "|"
-                        << ( unsigned long )( buffer + bytes_read )
-                        << "\n"
-                    ;
                     setg(
                         buffer,
                         buffer + i,
@@ -545,61 +524,29 @@ namespace show
     
     request::int_type request::underflow()
     {
-        // DEBUG:
-        std::cout << "request::int_type request::underflow()\n";
-        
         if( gptr() >= egptr() )
         {
-            // DEBUG:
-            std::cout << "gptr() >= egptr()\n";
-            
             std::streamsize in_buffer = showmanyc();
             
             if( in_buffer < 0 )
-            {
-                // DEBUG:
-                std::cout << "in_buffer < 0 so returning traits_type::eof()\n";
-                
                 return traits_type::eof();
-            }
             else if( in_buffer == 0 )
             {
-                // DEBUG:
-                std::cout << "in_buffer == 0\n";
-                
                 posix_buffer_size_t to_get = buffer_size;
                 
                 if( known_content_length )
                 {
-                    // DEBUG:
-                    std::cout
-                        << "content_length = "
-                        << content_length
-                        << ", read_content = "
-                        << read_content
-                        << "\n"
-                    ;
-                    
                     unsigned long long remaining_content = (
                         content_length - read_content
                     );
-                    
-                    // DEBUG:
-                    std::cout << "remaining_content = " << remaining_content << "\n";
                     
                     if( remaining_content < buffer_size )
                         to_get = ( posix_buffer_size_t )remaining_content;
                 }
                 
-                // DEBUG:
-                std::cout << "getting " << to_get << " bytes...\n";
-                
                 if( to_get > 0 )
                 {
                     posix_buffer_size_t bytes_read = 0;
-                    
-                    // DEBUG:
-                    std::cout << "reading...\n";
                     
                     while( bytes_read < 1 )
                         // TODO: block instead of spin
@@ -608,9 +555,6 @@ namespace show
                             eback(),
                             to_get
                         );
-                    
-                    // DEBUG:
-                    std::cout << "read " << bytes_read << " bytes\n";
                     
                     read_content += bytes_read;
                     
@@ -622,9 +566,6 @@ namespace show
                 }
                 else
                 {
-                    // DEBUG:
-                    std::cout << "to_get <= 0, so returning traits_type::eof()\n";
-                    
                     eof = true;
                     
                     setg(
@@ -871,11 +812,7 @@ namespace show
     {
         // TODO: Move most of this stuff to server::serve()
         
-        // DEBUG:
-        std::cout << "initializing server\n";
-        
         // Force use of POSIX function socket() rather than show::socket
-        // listen_socket = ::socket( AF_INET, SOCK_STREAM, 0 );
         listen_socket = ::socket(
             AF_INET,
             SOCK_STREAM,
@@ -883,17 +820,11 @@ namespace show
             // 0
         );
         
-        // DEBUG:
-        std::cout << "called ::socket()\n";
-        
         if( listen_socket == 0 )
             throw socket_error(
                 "failed to create listen socket: "
                 + std::string( std::strerror( errno ) )
             );
-        
-        // DEBUG:
-        std::cout << "server timeout set\n";
         
         int opt_reuse = 1;
         
@@ -930,9 +861,6 @@ namespace show
                 );
         }
         
-        // DEBUG:
-        std::cout << "server timeout set\n";
-        
         // https://stackoverflow.com/questions/15673846/how-to-give-to-a-client-specific-ip-address-in-c
         sockaddr_in socket_address;
         memset(&socket_address, 0, sizeof(socket_address));
@@ -940,15 +868,6 @@ namespace show
         // socket_address.sin_addr.s_addr = INADDR_ANY;
         socket_address.sin_addr.s_addr = inet_addr( address.c_str() );
         socket_address.sin_port        = htons( port );
-        
-        // DEBUG:
-        std::cout
-            << "socket details set to "
-            << address
-            << ":"
-            << port
-            << "\n"
-        ;
         
         if( bind(
             listen_socket,
@@ -959,20 +878,11 @@ namespace show
                 "failed to bind listen socket: "
                 + std::string( std::strerror( errno ) )
             );
-        
-        // DEBUG:
-        std::cout << "socket bound\n";
     }
     
     server::~server()
     {
-        // DEBUG:
-        std::cout << "closing server socket\n";
-        
         close( listen_socket );
-        
-        // DEBUG:
-        std::cout << "server socket closed\n";
     }
     
     void server::serve()
@@ -980,15 +890,6 @@ namespace show
         // https://stackoverflow.com/questions/9064735/use-of-listen-sys-call-in-a-multi-threaded-tcp-server
         
         // `errno == EWOULDBLOCK` if timeout reached
-        
-        // DEBUG:
-        std::cout
-            << "Serving forever"
-            // << "Serving forever on "
-            // << inet_ntoa( address.sin_addr )
-            // << ':'
-            // << ( int )ntohs( address.sin_port )
-            << "...\n"
         ;
         
         while( true )
@@ -998,9 +899,6 @@ namespace show
                     "could not listen on socket: "
                     + std::string( std::strerror( errno ) )
                 );
-            
-            // DEBUG:
-            std::cout << "Listening...\n";
             
             sockaddr_in client_address;
             socklen_t client_address_len = sizeof( client_address );
@@ -1016,15 +914,6 @@ namespace show
                     "could not create serve socket: "
                     + std::string( std::strerror( errno ) )
                 );
-            
-            // DEBUG:
-            std::cout
-                << "Got a request from "
-                << inet_ntoa( client_address.sin_addr )
-                << ':'
-                << ( int )ntohs( client_address.sin_port )
-                << " !\n"
-            ;
             
             request this_request( serve_socket );
             handler( this_request );
