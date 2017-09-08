@@ -4,6 +4,8 @@ Control some compile-time behavior by defining these:
     #define SHOW_NOEXCEPT AS_IS
 */
 
+// TODO: when supporting HTTP/1.1, support pipelining requests
+
 
 #pragma once
 #ifndef SHOW_HPP
@@ -38,7 +40,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 2, 5, "0.2.5" };
+    } version = { "SHOW", 0, 3, 0, "0.3.0" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -70,7 +72,7 @@ namespace show
         std::vector< std::string >
     > query_args_t;
     
-    struct less_ignore_case_ASCII
+    struct _less_ignore_case_ASCII
     {
     protected:
         // Locale-independent ASCII lowercase
@@ -113,7 +115,7 @@ namespace show
     typedef std::map<
         std::string,
         std::vector< std::string >,
-        less_ignore_case_ASCII
+        _less_ignore_case_ASCII
     > headers_t;
     
     // `int` instead of `size_t` because this is a buffer for POSIX `read()`
@@ -330,21 +332,21 @@ namespace show
         eof(                    false                      )
     {
         // TODO: client address
+        // TODO: protocol string
         
         serve_socket.reset( new socket( s ) );
         
         bool reading = true;
         int bytes_read;
         
-        // Start parsing headers with at lease one newline by definition
-        int seq_newlines = 1;
-        std::string current_header_name;
-        bool new_header_value;
+        int seq_newlines = 0;
+        std::string key_buffer, value_buffer;
         
-        // TODO: query args
         enum {
             READING_METHOD,
             READING_PATH,
+            READING_ARG_NAME,
+            READING_ARG_VALUE,
             READING_PROTOCOL,
             READING_HEADER_NAME,
             READING_HEADER_VALUE,
@@ -380,18 +382,154 @@ namespace show
                     {
                         switch( buffer[ i ] )
                         {
+                        case '?':
+                            parse_state = READING_ARG_NAME;
+                            break;
                         case ' ':
                             parse_state = READING_PROTOCOL;
                             break;
                         case '/':
                             if( _path.size() > 0 )
+                            {
+                                *_path.rbegin() = url_decode( *_path.rbegin() );
                                 _path.push_back( "" );
+                            }
                             break;
                         default:
                             if( _path.size() < 1 )
                                 _path.push_back( std::string( buffer + i, 1 ) );
                             else
                                 _path[ _path.size() - 1 ] += buffer[ i ];
+                            break;
+                        }
+                        
+                        if(
+                            parse_state != READING_PATH
+                            && _path.size() > 0
+                        )
+                            *_path.rbegin() = url_decode( *_path.rbegin() );
+                    }
+                    break;
+                case READING_ARG_NAME:
+                case READING_HEADER_NAME:
+                    {
+                        if( buffer[ i ] != '\r' && buffer[ i ] != '\n' )
+                            seq_newlines = 0;
+                        
+                        switch( buffer[ i ] )
+                        {
+                        case '\r':
+                            break;
+                        case '\n':
+                            ++seq_newlines;
+                            if( parse_state == READING_ARG_NAME )
+                                parse_state = READING_HEADER_NAME;
+                            else if( seq_newlines >= 2 )
+                                parse_state = GETTING_CONTENT;
+                            break;
+                        case ':':
+                            if( parse_state == READING_HEADER_NAME )
+                                parse_state = READING_HEADER_VALUE;
+                            else
+                                key_buffer += buffer[ i ];
+                            break;
+                        case ' ':
+                        case '&':
+                            if( parse_state == READING_ARG_NAME )
+                            {
+                                _query_args[
+                                    url_decode( key_buffer )
+                                ].push_back( "" );
+                                
+                                key_buffer = "";
+                                
+                                if( buffer[ i ] == ' ' )
+                                    parse_state = READING_PROTOCOL;
+                                // else continue on to add another key
+                            }
+                            else
+                                key_buffer += buffer[ i ];
+                            break;
+                        case '=':
+                            if( parse_state == READING_ARG_NAME )
+                            {
+                                parse_state = READING_ARG_VALUE;
+                                break;
+                            }
+                            // else fall through
+                        default:
+                            key_buffer += buffer[ i ];
+                            break;
+                        }
+                    }
+                    break;
+                case READING_ARG_VALUE:
+                    // TODO: support &arg1=arg2=val
+                case READING_HEADER_VALUE:
+                    {
+                        if( buffer[ i ] != '\r' && buffer[ i ] != '\n' )
+                            seq_newlines = 0;
+                        
+                        switch( buffer[ i ] )
+                        {
+                        case '\r':
+                            break;
+                        case '\n':
+                            ++seq_newlines;
+                            if( seq_newlines >= 2 )
+                            {
+                                parse_state = GETTING_CONTENT;
+                                break;
+                            }
+                            else if( parse_state == READING_HEADER_VALUE )
+                            {
+                                _headers[ key_buffer ].push_back(
+                                    value_buffer
+                                );
+                                
+                                key_buffer = "";
+                                value_buffer = "";
+                                
+                                parse_state = READING_HEADER_NAME;
+                                
+                                break;
+                            }
+                            // no case for READING_ARG_VALUE as falling through
+                            // would do the same thing
+                        case ' ':
+                            if(
+                                parse_state == READING_HEADER_VALUE
+                                && value_buffer.size() < 1
+                            )
+                                break;
+                        case '&':
+                            if( parse_state == READING_ARG_VALUE )
+                            {
+                                _query_args[
+                                    url_decode( key_buffer )
+                                ].push_back( url_decode( value_buffer ) );
+                                
+                                key_buffer = "";
+                                value_buffer = "";
+                                
+                                switch( buffer[ i ] )
+                                {
+                                case '&':
+                                    parse_state = READING_ARG_NAME;
+                                    break;
+                                case '\n':
+                                    parse_state = READING_HEADER_NAME;
+                                    break;
+                                default:
+                                    parse_state = READING_PROTOCOL;
+                                    break;
+                                }
+                                
+                                break;
+                            }
+                            // else fall through
+                        default:
+                            value_buffer += buffer[ i ];
                             break;
                         }
                     }
@@ -404,60 +542,14 @@ namespace show
                             break;
                         case '\n':
                             parse_state = READING_HEADER_NAME;
+                            // Start parsing headers with at lease one newline
+                            // by definition
+                            seq_newlines = 1;
                             break;
                         default:
                             protocol_string += buffer[ i ];
                             break;
                         }
-                    }
-                    break;
-                case READING_HEADER_NAME:
-                    {
-                        switch( buffer[ i ] )
-                        {
-                        case '\r':
-                            break;
-                        case '\n':
-                            if( ++seq_newlines >= 2 )
-                            {
-                                parse_state = GETTING_CONTENT;
-                                // reading = false;
-                            }
-                            current_header_name = "";
-                            break;
-                        case ':':
-                            seq_newlines = 0;
-                            parse_state = READING_HEADER_VALUE;
-                            new_header_value = true;
-                            break;
-                        default:
-                            seq_newlines = 0;
-                            current_header_name += buffer[ i ];
-                            break;
-                        }
-                    }
-                    break;
-                case READING_HEADER_VALUE:
-                    {
-                        std::vector< std::string >& header_values = _headers[ current_header_name ];
-                        
-                        if( new_header_value )
-                            header_values.push_back( "" );
-                        
-                        switch( buffer[ i ] )
-                        {
-                        case '\r':
-                            break;
-                        case '\n':
-                            --i;
-                            parse_state = READING_HEADER_NAME;
-                            break;
-                        default:
-                            header_values[ header_values.size() - 1 ] += buffer[ i ];
-                            break;
-                        }
-                        
-                        new_header_value = false;
                     }
                     break;
                 case GETTING_CONTENT:
@@ -504,9 +596,12 @@ namespace show
                     );
                     _unknown_content_length = NO;
                     
+                    // Avoid issues when the client sends more than it claims;
+                    // this has to be handled specially here as we've already
+                    // read those bytes from the socket
+                    // TODO: Have request::request() use itself as a stream?
                     if( _content_length < read_content )
                     {
-                        // Avoid issues when the client sends more than it claims
                         read_content = _content_length;
                         setg(
                             eback(),
