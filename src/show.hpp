@@ -40,7 +40,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 3, 0, "0.3.0" };
+    } version = { "SHOW", 0, 3, 1, "0.3.1" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -812,10 +812,11 @@ namespace show
                     << map_iter -> first
                     << ": "
                     << *vector_iter
+                    << "\r\n"
                 ;
             }
         }
-        headers_stream << "\r\n\r\n";
+        headers_stream << "\r\n";
         
         setp(
             buffer,
