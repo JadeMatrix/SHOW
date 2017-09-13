@@ -15,8 +15,9 @@ Control some compile-time behavior by defining these:
 #include <iomanip>
 #include <map>
 #include <memory>
-#include <streambuf>
 #include <sstream>
+#include <stack>
+#include <streambuf>
 #include <vector>
 
 #ifndef SHOW_NOEXCEPT
@@ -40,7 +41,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 3, 3, "0.3.3" };
+    } version = { "SHOW", 0, 3, 4, "0.3.4" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -343,17 +344,17 @@ namespace show
         bool in_endline_seq = false;
         // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
         bool check_for_multiline_header = false;
+        
+        std::stack< std::string > key_buffer_stack;
         std::string key_buffer, value_buffer;
         
         enum {
             READING_METHOD,
             READING_PATH,
-            READING_ARG_NAME,
-            READING_ARG_VALUE,
+            READING_QUERY_ARGS,
             READING_PROTOCOL,
             READING_HEADER_NAME,
-            READING_HEADER_VALUE/*,
-            GETTING_CONTENT*/
+            READING_HEADER_VALUE
         } parse_state = READING_METHOD;
         
         std::string protocol_string;
@@ -409,7 +410,7 @@ namespace show
                         switch( buffer[ i ] )
                         {
                         case '?':
-                            parse_state = READING_ARG_NAME;
+                            parse_state = READING_QUERY_ARGS;
                             break;
                         case ' ':
                             parse_state = READING_PROTOCOL;
@@ -437,58 +438,45 @@ namespace show
                     }
                     break;
                 
-                case READING_ARG_NAME:
+                case READING_QUERY_ARGS:
                     {
                         switch( buffer[ i ] )
                         {
-                        case '\n':
-                            parse_state = READING_HEADER_NAME;
-                            break;
-                        case ' ':
-                            parse_state = READING_PROTOCOL;
-                        case '&':
-                            _query_args[
-                                url_decode( key_buffer )
-                            ].push_back( "" );
-                            
-                            key_buffer = "";
-                            
-                            break;
                         case '=':
-                            parse_state = READING_ARG_VALUE;
+                            key_buffer_stack.push( "" );
                             break;
-                        default:
-                            key_buffer += buffer[ i ];
-                            break;
-                        }
-                    }
-                    break;
-                
-                case READING_ARG_VALUE:
-                    // TODO: support &arg1=arg2=val
-                    {
-                        switch( buffer[ i ] )
-                        {
                         case '\n':
-                            parse_state = READING_HEADER_NAME;
-                            break;
-                        // case '=':
-                        //     // TODO: push to keys stack
-                        //     break;
                         case ' ':
-                            parse_state = READING_PROTOCOL;
                         case '&':
-                            // TODO: push for each key in stack
-                            _query_args[
-                                url_decode( key_buffer )
-                            ].push_back( url_decode( value_buffer ) );
+                            if( key_buffer_stack.size() > 1 )
+                            {
+                                value_buffer = url_decode(
+                                    key_buffer_stack.top()
+                                );
+                                key_buffer_stack.pop();
+                            }
+                            else
+                                value_buffer = "";
                             
-                            key_buffer = "";
-                            value_buffer = "";
+                            while( !key_buffer_stack.empty() )
+                            {
+                                _query_args[
+                                    url_decode( key_buffer_stack.top() )
+                                ].push_back( value_buffer );
+                                
+                                key_buffer_stack.pop();
+                            }
+                            
+                            if( buffer[ i ] == '\n' )
+                                parse_state = READING_HEADER_NAME;
+                            else if( buffer[ i ] == ' ' )
+                                parse_state = READING_PROTOCOL;
                             
                             break;
                         default:
-                            value_buffer += buffer[ i ];
+                            if( key_buffer_stack.empty() )
+                                key_buffer_stack.push( "" );
+                            key_buffer_stack.top() += buffer[ i ];
                             break;
                         }
                     }
