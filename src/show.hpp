@@ -40,7 +40,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 3, 1, "0.3.1" };
+    } version = { "SHOW", 0, 3, 2, "0.3.2" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -340,6 +340,8 @@ namespace show
         int bytes_read;
         
         int seq_newlines = 0;
+        bool in_endline_seq = false;
+        bool check_for_multiline_header = false;
         std::string key_buffer, value_buffer;
         
         enum {
@@ -349,8 +351,8 @@ namespace show
             READING_ARG_VALUE,
             READING_PROTOCOL,
             READING_HEADER_NAME,
-            READING_HEADER_VALUE,
-            GETTING_CONTENT
+            READING_HEADER_VALUE/*,
+            GETTING_CONTENT*/
         } parse_state = READING_METHOD;
         
         std::string protocol_string;
@@ -363,9 +365,31 @@ namespace show
             
             for( int i = 0; reading && i < bytes_read; ++i )
             {
+                // \r\n does not make the FSM parser happy
+                if( in_endline_seq )
+                {
+                    if( buffer[ i ] == '\n' )
+                        in_endline_seq = false;
+                    else
+                        throw request_parse_error(
+                            "malformed HTTP line ending"
+                        );
+                }
+                
+                if( buffer[ i ] == '\n' )
+                    ++seq_newlines;
+                else if( buffer[ i ] == '\r' )
+                {
+                    in_endline_seq = true;
+                    continue;
+                }
+                else
+                    seq_newlines = 0;
+                
                 switch( parse_state )
                 {
                 case READING_METHOD:
+                    // TODO: Force uppercase
                     {
                         switch( buffer[ i ] )
                         {
@@ -378,6 +402,7 @@ namespace show
                         }
                     }
                     break;
+                
                 case READING_PATH:
                     {
                         switch( buffer[ i ] )
@@ -410,157 +435,150 @@ namespace show
                             *_path.rbegin() = url_decode( *_path.rbegin() );
                     }
                     break;
+                
                 case READING_ARG_NAME:
-                case READING_HEADER_NAME:
                     {
-                        if( buffer[ i ] != '\r' && buffer[ i ] != '\n' )
-                            seq_newlines = 0;
-                        
                         switch( buffer[ i ] )
                         {
-                        case '\r':
-                            break;
                         case '\n':
-                            ++seq_newlines;
-                            if( parse_state == READING_ARG_NAME )
-                                parse_state = READING_HEADER_NAME;
-                            else if( seq_newlines >= 2 )
-                                parse_state = GETTING_CONTENT;
-                            break;
-                        case ':':
-                            if( parse_state == READING_HEADER_NAME )
-                                parse_state = READING_HEADER_VALUE;
-                            else
-                                key_buffer += buffer[ i ];
+                            parse_state = READING_HEADER_NAME;
                             break;
                         case ' ':
+                            parse_state = READING_PROTOCOL;
                         case '&':
-                            if( parse_state == READING_ARG_NAME )
-                            {
-                                _query_args[
-                                    url_decode( key_buffer )
-                                ].push_back( "" );
-                                
-                                key_buffer = "";
-                                
-                                if( buffer[ i ] == ' ' )
-                                    parse_state = READING_PROTOCOL;
-                                // else continue on to add another key
-                            }
-                            else
-                                key_buffer += buffer[ i ];
+                            _query_args[
+                                url_decode( key_buffer )
+                            ].push_back( "" );
+                            
+                            key_buffer = "";
+                            
                             break;
                         case '=':
-                            if( parse_state == READING_ARG_NAME )
-                            {
-                                parse_state = READING_ARG_VALUE;
-                                break;
-                            }
-                            // else fall through
+                            parse_state = READING_ARG_VALUE;
+                            break;
                         default:
                             key_buffer += buffer[ i ];
                             break;
                         }
                     }
                     break;
+                
                 case READING_ARG_VALUE:
                     // TODO: support &arg1=arg2=val
-                case READING_HEADER_VALUE:
                     {
-                        if( buffer[ i ] != '\r' && buffer[ i ] != '\n' )
-                            seq_newlines = 0;
-                        
                         switch( buffer[ i ] )
                         {
-                        case '\r':
-                            break;
                         case '\n':
-                            ++seq_newlines;
-                            if( seq_newlines >= 2 )
-                            {
-                                parse_state = GETTING_CONTENT;
-                                break;
-                            }
-                            else if( parse_state == READING_HEADER_VALUE )
-                            {
-                                _headers[ key_buffer ].push_back(
-                                    value_buffer
-                                );
-                                
-                                key_buffer = "";
-                                value_buffer = "";
-                                
-                                parse_state = READING_HEADER_NAME;
-                                
-                                break;
-                            }
-                            // no case for READING_ARG_VALUE as falling through
-                            // would do the same thing
+                            parse_state = READING_HEADER_NAME;
+                            break;
+                        // case '=':
+                        //     // TODO: push to keys stack
+                        //     break;
                         case ' ':
-                            if(
-                                parse_state == READING_HEADER_VALUE
-                                && value_buffer.size() < 1
-                            )
-                                break;
+                            parse_state = READING_PROTOCOL;
                         case '&':
-                            if( parse_state == READING_ARG_VALUE )
-                            {
-                                _query_args[
-                                    url_decode( key_buffer )
-                                ].push_back( url_decode( value_buffer ) );
-                                
-                                key_buffer = "";
-                                value_buffer = "";
-                                
-                                switch( buffer[ i ] )
-                                {
-                                case '&':
-                                    parse_state = READING_ARG_NAME;
-                                    break;
-                                case '\n':
-                                    parse_state = READING_HEADER_NAME;
-                                    break;
-                                default:
-                                    parse_state = READING_PROTOCOL;
-                                    break;
-                                }
-                                
-                                break;
-                            }
-                            // else fall through
+                            // TODO: push for each key in stack
+                            _query_args[
+                                url_decode( key_buffer )
+                            ].push_back( url_decode( value_buffer ) );
+                            
+                            key_buffer = "";
+                            value_buffer = "";
+                            
+                            break;
                         default:
                             value_buffer += buffer[ i ];
                             break;
                         }
                     }
                     break;
+                
                 case READING_PROTOCOL:
+                    if( buffer[ i ] == '\n' )
+                        parse_state = READING_HEADER_NAME;
+                    else
+                        protocol_string += buffer[ i ];
+                    break;
+                
+                case READING_HEADER_NAME:
                     {
                         switch( buffer[ i ] )
                         {
-                        case '\r':
+                        case ':':
+                            parse_state = READING_HEADER_VALUE;
                             break;
                         case '\n':
-                            parse_state = READING_HEADER_NAME;
-                            // Start parsing headers with at lease one newline
-                            // by definition
-                            seq_newlines = 1;
-                            break;
+                            if( key_buffer.size() < 1 )
+                            {
+                                reading = false;
+                                break;
+                            }
                         default:
-                            protocol_string += buffer[ i ];
+                            if( !(
+                                ( buffer[ i ] >= 'a' && buffer[ i ] <= 'z' )
+                                || ( buffer[ i ] >= 'A' && buffer[ i ] <= 'Z' )
+                                || ( buffer[ i ] >= '0' && buffer[ i ] <= '9' )
+                                || buffer[ i ] == '-'
+                            ) )
+                                throw request_parse_error( "malformed header" );
+                            
+                            key_buffer += buffer[ i ];
                             break;
                         }
                     }
                     break;
-                case GETTING_CONTENT:
+                
+                case READING_HEADER_VALUE:
+                    {
+                        switch( buffer[ i ] )
+                        {
+                        case '\n':
+                            if( seq_newlines >= 2 )
+                            {
+                                if( check_for_multiline_header )
+                                    _headers[ key_buffer ].push_back(
+                                        value_buffer
+                                    );
+                                
+                                reading = false;
+                            }
+                            else
+                                check_for_multiline_header = true;
+                            break;
+                        default:
+                            if( check_for_multiline_header )
+                            {
+                                _headers[ key_buffer ].push_back(
+                                    value_buffer
+                                );
+                                
+                                // Start new key with current value
+                                key_buffer = buffer[ i ];
+                                value_buffer = "";
+                                check_for_multiline_header = false;
+                                
+                                parse_state = READING_HEADER_NAME;
+                                
+                                break;
+                            }
+                        case ' ':
+                        case '\t':
+                            value_buffer += buffer[ i ];
+                            check_for_multiline_header = false;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                
+                if( !reading )
+                {
                     setg(
                         buffer,
                         buffer + i,
                         buffer + bytes_read
                     );
                     read_content = bytes_read - i;
-                    reading = false;
-                    break;
                 }
             }
         }
