@@ -341,6 +341,7 @@ namespace show
         
         int seq_newlines = 0;
         bool in_endline_seq = false;
+        // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
         bool check_for_multiline_header = false;
         std::string key_buffer, value_buffer;
         
