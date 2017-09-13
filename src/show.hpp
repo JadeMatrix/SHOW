@@ -40,7 +40,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 3, 2, "0.3.2" };
+    } version = { "SHOW", 0, 3, 3, "0.3.3" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -575,9 +575,9 @@ namespace show
                 if( !reading )
                 {
                     setg(
-                        buffer,
-                        buffer + i,
-                        buffer + bytes_read
+                        buffer + 1,
+                        buffer + 1 + i,
+                        buffer + 1 + bytes_read
                     );
                     read_content = bytes_read - i;
                 }
