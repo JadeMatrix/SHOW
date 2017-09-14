@@ -42,7 +42,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 3, 5, "0.3.5" };
+    } version = { "SHOW", 0, 4, 0, "0.4.0" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -139,8 +139,16 @@ namespace show
     {
     public:
         const socket_fd fd;
+        
         socket( socket_fd fd ) : fd( fd ) {}
         ~socket() { close( fd ); }
+        
+        void setsockopt(
+            int optname,
+            void* value,
+            int value_size,
+            std::string description
+        );
     };
     
     class request : public std::streambuf
@@ -245,26 +253,35 @@ namespace show
         
         typedef void (* handler_type )( request& );
         
+        const std::string& address;
+        const in_port_t  & port;
+        
     protected:
         
-        handler_type handler;
-        socket_fd listen_socket;
+        std::string _address;
+        in_port_t   _port;
+        
+        int _timeout;
+        socket* listen_socket;
         
     public:
-        
-        server(
-            handler_type handler,
-            const std::string& address,
-            in_port_t port,
-            int timeout = 0
-        );
-        ~server();
         
         // TODO: temporal types?
         // `#if __cplusplus > 199711L` for C++98
         // `#if __cplusplus > 201103L` for C++11
         // `#if __cplusplus > 201402L` for C++14
-        void serve();
+        
+        server(
+            const std::string& address,
+            in_port_t port,
+            int timeout = -1
+        );
+        ~server();
+        
+        show::request serve();
+        
+        int timeout();
+        int timeout( int t );
     };
     
     #ifndef SHOW_NOEXCEPT
@@ -294,6 +311,11 @@ namespace show
     
     #endif
     
+    class connection_timeout
+    {
+        // TODO: information about which connection, etc.
+    };
+    
     
     // Functions ///////////////////////////////////////////////////////////////
     
@@ -322,6 +344,29 @@ namespace show
     
     
     // Implementations /////////////////////////////////////////////////////////
+    
+    
+    void socket::setsockopt(
+        int optname,
+        void* value,
+        int value_size,
+        std::string description
+    )
+    {
+        if( ::setsockopt(
+            fd,
+            SOL_SOCKET,
+            optname,
+            value,
+            value_size
+        ) == -1 )
+            throw socket_error(
+                "failed to set listen socket "
+                + description
+                + ": "
+                + std::string( std::strerror( errno ) )
+            );
+    }
     
     request::request( socket_fd s ) :
         protocol(               _protocol                  ),
@@ -917,103 +962,58 @@ namespace show
     }
     
     server::server(
-        server::handler_type handler,
-        const std::string& address,
-        in_port_t port,
-        int timeout
-    ) : handler( handler )
+        const std::string& a,
+        in_port_t p,
+        int t
+    ) :
+        _address( a ),
+        _port( p ),
+        _timeout( t ),
+        address( _address ),
+        port( _port )
     {
         // Force use of POSIX function socket() rather than show::socket
-        listen_socket = ::socket(
+        socket_fd listen_socket_fd = ::socket(
             AF_INET,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
-            // 0
         );
         
-        if( listen_socket == 0 )
+        if( listen_socket_fd == 0 )
             throw socket_error(
                 "failed to create listen socket: "
                 + std::string( std::strerror( errno ) )
             );
         
+        listen_socket = new socket( listen_socket_fd );
+        
         int opt_reuse = 1;
-        timeval timeout_tv;
         
         // Certain POSIX implementations don't support OR-ing option names
         // together
-        struct {
-            int optname;
-            void* value;
-            int value_size;
-            std::string description;
-        } socket_options[] = {
-            { SO_REUSEADDR, &opt_reuse,  sizeof( opt_reuse  ),   "address reuse" },
-            { SO_REUSEPORT, &opt_reuse,  sizeof( opt_reuse  ),      "port reuse" },
-            { SO_RCVTIMEO,  &timeout_tv, sizeof( timeout_tv ), "receive timeout" },
-            { SO_SNDTIMEO,  &timeout_tv, sizeof( timeout_tv ),    "send timeout" }
-        };
+        listen_socket -> setsockopt(
+            SO_REUSEADDR,
+            &opt_reuse,
+            sizeof( opt_reuse ),
+            "address reuse"
+        );
+        listen_socket -> setsockopt(
+            SO_REUSEPORT,
+            &opt_reuse,
+            sizeof( opt_reuse ),
+            "port reuse"
+        );
+        timeout( t );
         
-        int options_to_set =
-            sizeof( socket_options )
-            / sizeof( socket_options[ 0 ] )
-        ;
-        
-        if( timeout <= 0 )
-        {
-            timeout_tv.tv_sec = 0;
-            timeout_tv.tv_usec = 0;
-            
-            if( timeout == 0 )
-            {
-                fcntl(
-                    listen_socket,
-                    F_SETFL,
-                    ( fcntl( listen_socket, F_GETFL, 0 ) ) | O_NONBLOCK
-                );
-            }
-        }
-        else
-        {
-            fcntl(
-                listen_socket,
-                F_SETFL,
-                ( fcntl( listen_socket, F_GETFL, 0 ) ) & ~O_NONBLOCK
-            );
-            timeout_tv.tv_sec = timeout;
-            timeout_tv.tv_usec = 0;
-        }
-        
-        for( int i = 0; i < options_to_set; ++i )
-        {
-            if(
-                socket_options[ i ].value != NULL
-                && setsockopt(
-                    listen_socket,
-                    SOL_SOCKET,
-                    socket_options[ i ].optname,
-                    socket_options[ i ].value,
-                    socket_options[ i ].value_size
-                ) == -1
-            )
-                throw socket_error(
-                    "failed to set listen socket "
-                    + socket_options[ i ].description
-                    + ": "
-                    + std::string( std::strerror( errno ) )
-                );
-        }
-        
-        // https://stackoverflow.com/questions/15673846/how-to-give-to-a-client-specific-ip-address-in-c
         sockaddr_in socket_address;
         memset(&socket_address, 0, sizeof(socket_address));
         socket_address.sin_family      = AF_INET;
         // socket_address.sin_addr.s_addr = INADDR_ANY;
-        socket_address.sin_addr.s_addr = inet_addr( address.c_str() );
-        socket_address.sin_port        = htons( port );
+        socket_address.sin_addr.s_addr = inet_addr( _address.c_str() );
+        socket_address.sin_port        = htons( _port );
         
         if( bind(
-            listen_socket,
+            listen_socket -> fd,
             ( sockaddr* )&socket_address,
             sizeof( socket_address )
         ) == -1 )

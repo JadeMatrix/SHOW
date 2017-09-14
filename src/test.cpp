@@ -12,7 +12,7 @@ clang++ -std=c++11 -stdlib=libc++ -Oz src/test.cpp -o make/build/test
 ////////////////////////////////////////////////////////////////////////////////
 
 
-void basic_request_hander( show::request& request )
+void request_handler( show::request&& request )
 {
     std::cout << "\n\nvvvv IN REQUEST HANDLER vvvv\n\n";
     
@@ -144,13 +144,21 @@ int main( int argc, char* argv[] )
     try
     {
         show::server test_server(
-            basic_request_hander,
+            // request_handler,
             argv[ 1 ],
-            std::stoi( argv[ 2 ] ),
-            -1
+            std::stoi( argv[ 2 ] )
         );
         
-        test_server.serve();
+        while( true )
+            try
+            {
+                request_handler( test_server.serve() );
+            }
+            catch( show::connection_timeout& ct )
+            {
+                // TODO: log timeout info
+                continue;
+            }
     }
     catch( show::exception& e )
     {
