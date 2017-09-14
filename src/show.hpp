@@ -42,7 +42,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 4, 1, "0.4.1" };
+    } version = { "SHOW", 0, 5, 0, "0.5.0" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -168,6 +168,7 @@ namespace show
         };
         
         const http_protocol             & protocol;
+        const std::string               & protocol_string;
         const std::string               & method;
         const std::vector< std::string >& path;
         const query_args_t              & query_args;
@@ -184,6 +185,7 @@ namespace show
         std::shared_ptr< _socket > serve_socket;
         
         http_protocol              _protocol;
+        std::string                _protocol_string;
         std::string                _method;
         std::vector< std::string > _path;
         query_args_t               _query_args;
@@ -409,6 +411,7 @@ namespace show
     
     request::request( socket_fd s ) :
         protocol(               _protocol                  ),
+        protocol_string(        _protocol_string           ),
         method(                 _method                    ),
         path(                   _path                      ),
         query_args(             _query_args                ),
@@ -418,7 +421,6 @@ namespace show
         eof(                    false                      )
     {
         // TODO: client address
-        // TODO: protocol string
         
         serve_socket.reset( new _socket( s ) );
         
@@ -441,8 +443,6 @@ namespace show
             READING_HEADER_NAME,
             READING_HEADER_VALUE
         } parse_state = READING_METHOD;
-        
-        std::string protocol_string;
         
         // FIXME: Parsing request assumes it is well-formed for now
         // FIXME: This is also super-unoptimal
@@ -571,7 +571,7 @@ namespace show
                     if( buffer[ i ] == '\n' )
                         parse_state = READING_HEADER_NAME;
                     else
-                        protocol_string += buffer[ i ];
+                        _protocol_string += buffer[ i ];
                     break;
                 
                 case READING_HEADER_NAME:
@@ -657,13 +657,13 @@ namespace show
             }
         }
         
-        if( protocol_string == "HTTP/1.0" )
+        if( _protocol_string == "HTTP/1.0" )
             _protocol = HTTP_1_0;
-        else if( protocol_string == "HTTP/1.1" )
+        else if( _protocol_string == "HTTP/1.1" )
             _protocol = HTTP_1_1;
-        else if( protocol_string == "HTTP/2.0" )
+        else if( _protocol_string == "HTTP/2.0" )
             _protocol = HTTP_2_0;
-        else if( protocol_string == "" )
+        else if( _protocol_string == "" )
             _protocol = NONE;
         else
             _protocol = UNKNOWN;
