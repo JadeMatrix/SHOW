@@ -30,6 +30,7 @@ Control some compile-time behavior by defining these:
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <fcntl.h>
 
 
 namespace show
@@ -41,7 +42,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 3, 4, "0.3.4" };
+    } version = { "SHOW", 0, 3, 5, "0.3.5" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -251,10 +252,6 @@ namespace show
         
     public:
         
-        // TODO: temporal types?
-        // `#if __cplusplus > 199711L` for C++98
-        // `#if __cplusplus > 201103L` for C++11
-        // `#if __cplusplus > 201402L` for C++14
         server(
             handler_type handler,
             const std::string& address,
@@ -263,6 +260,10 @@ namespace show
         );
         ~server();
         
+        // TODO: temporal types?
+        // `#if __cplusplus > 199711L` for C++98
+        // `#if __cplusplus > 201103L` for C++11
+        // `#if __cplusplus > 201402L` for C++14
         void serve();
     };
     
@@ -922,8 +923,6 @@ namespace show
         int timeout
     ) : handler( handler )
     {
-        // TODO: Move most of this stuff to server::serve()
-        
         // Force use of POSIX function socket() rather than show::socket
         listen_socket = ::socket(
             AF_INET,
@@ -939,36 +938,68 @@ namespace show
             );
         
         int opt_reuse = 1;
+        timeval timeout_tv;
         
-        // if( setsockopt(
-        //     listen_socket,
-        //     SOL_SOCKET,
-        //     // getprotobyname( "TCP" ) -> p_proto,
-        //     SO_REUSEADDR | SO_REUSEPORT,
-        //     &opt_reuse,
-        //     sizeof( opt_reuse )
-        // ) == -1 )
-        //     throw socket_error(
-        //         "failed to set listen socket reuse options: "
-        //         + std::string( std::strerror( errno ) )
-        //     );
+        // Certain POSIX implementations don't support OR-ing option names
+        // together
+        struct {
+            int optname;
+            void* value;
+            int value_size;
+            std::string description;
+        } socket_options[] = {
+            { SO_REUSEADDR, &opt_reuse,  sizeof( opt_reuse  ),   "address reuse" },
+            { SO_REUSEPORT, &opt_reuse,  sizeof( opt_reuse  ),      "port reuse" },
+            { SO_RCVTIMEO,  &timeout_tv, sizeof( timeout_tv ), "receive timeout" },
+            { SO_SNDTIMEO,  &timeout_tv, sizeof( timeout_tv ),    "send timeout" }
+        };
         
-        if( timeout >= 0 )
+        int options_to_set =
+            sizeof( socket_options )
+            / sizeof( socket_options[ 0 ] )
+        ;
+        
+        if( timeout <= 0 )
         {
-            timeval timeout_tv;
-            timeout_tv.tv_sec = timeout;
+            timeout_tv.tv_sec = 0;
             timeout_tv.tv_usec = 0;
             
-            if( setsockopt(
+            if( timeout == 0 )
+            {
+                fcntl(
+                    listen_socket,
+                    F_SETFL,
+                    ( fcntl( listen_socket, F_GETFL, 0 ) ) | O_NONBLOCK
+                );
+            }
+        }
+        else
+        {
+            fcntl(
                 listen_socket,
-                SOL_SOCKET,
-                // getprotobyname( "TCP" ) -> p_proto,
-                SO_RCVTIMEO,
-                ( void* )&timeout_tv,
-                sizeof( timeout_tv )
-            ) == -1 )
+                F_SETFL,
+                ( fcntl( listen_socket, F_GETFL, 0 ) ) & ~O_NONBLOCK
+            );
+            timeout_tv.tv_sec = timeout;
+            timeout_tv.tv_usec = 0;
+        }
+        
+        for( int i = 0; i < options_to_set; ++i )
+        {
+            if(
+                socket_options[ i ].value != NULL
+                && setsockopt(
+                    listen_socket,
+                    SOL_SOCKET,
+                    socket_options[ i ].optname,
+                    socket_options[ i ].value,
+                    socket_options[ i ].value_size
+                ) == -1
+            )
                 throw socket_error(
-                    "failed to set listen socket timeout option: "
+                    "failed to set listen socket "
+                    + socket_options[ i ].description
+                    + ": "
                     + std::string( std::strerror( errno ) )
                 );
         }
@@ -990,6 +1021,12 @@ namespace show
                 "failed to bind listen socket: "
                 + std::string( std::strerror( errno ) )
             );
+        
+        if( listen( listen_socket, 3 ) == -1 )
+            throw socket_error(
+                "could not listen on socket: "
+                + std::string( std::strerror( errno ) )
+            );
     }
     
     server::~server()
@@ -999,19 +1036,8 @@ namespace show
     
     void server::serve()
     {
-        // https://stackoverflow.com/questions/9064735/use-of-listen-sys-call-in-a-multi-threaded-tcp-server
-        
-        // `errno == EWOULDBLOCK` if timeout reached
-        ;
-        
         while( true )
         {
-            if( listen( listen_socket, 3 ) == -1 )
-                throw socket_error(
-                    "could not listen on socket: "
-                    + std::string( std::strerror( errno ) )
-                );
-            
             sockaddr_in client_address;
             socklen_t client_address_len = sizeof( client_address );
             
@@ -1020,6 +1046,10 @@ namespace show
                 ( sockaddr* )&client_address,
                 &client_address_len
             );
+            
+            if( errno == EWOULDBLOCK )
+                // Listen timeout reached
+                return;
             
             if( serve_socket == -1 )
                 throw socket_error(
