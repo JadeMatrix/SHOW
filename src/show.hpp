@@ -42,7 +42,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 4, 0, "0.4.0" };
+    } version = { "SHOW", 0, 4, 1, "0.4.1" };
     
     
     // Basic types & forward declarations //////////////////////////////////////
@@ -135,13 +135,13 @@ namespace show
     // Classes /////////////////////////////////////////////////////////////////
     
     
-    class socket
+    class _socket
     {
     public:
         const socket_fd fd;
         
-        socket( socket_fd fd ) : fd( fd ) {}
-        ~socket() { close( fd ); }
+        _socket( socket_fd fd ) : fd( fd ) {}
+        ~_socket() { close( fd ); }
         
         void setsockopt(
             int optname,
@@ -149,6 +149,8 @@ namespace show
             int value_size,
             std::string description
         );
+        
+        void set_timeout( int );
     };
     
     class request : public std::streambuf
@@ -179,7 +181,7 @@ namespace show
         
         sockaddr_in client_address;
         // TODO: pre-C++11
-        std::shared_ptr< socket > serve_socket;
+        std::shared_ptr< _socket > serve_socket;
         
         http_protocol              _protocol;
         std::string                _method;
@@ -236,7 +238,7 @@ namespace show
         
         char buffer[ buffer_size ];
         // TODO: pre-C++11
-        std::shared_ptr< socket > serve_socket;
+        std::shared_ptr< _socket > serve_socket;
         
         virtual std::streamsize xsputn(
             const std::streambuf::char_type* s,
@@ -262,7 +264,7 @@ namespace show
         in_port_t   _port;
         
         int _timeout;
-        socket* listen_socket;
+        _socket* listen_socket;
         
     public:
         
@@ -346,7 +348,7 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     
-    void socket::setsockopt(
+    void _socket::setsockopt(
         int optname,
         void* value,
         int value_size,
@@ -368,6 +370,43 @@ namespace show
             );
     }
     
+    void _socket::set_timeout( int t )
+    {
+        timeval timeout_tv;
+        int flags = fcntl( fd, F_GETFL, 0 );
+        
+        if( t <= 0 )
+        {
+            timeout_tv.tv_sec = 0;
+            timeout_tv.tv_usec = 0;
+            
+            if( t == 0 )
+                flags |= O_NONBLOCK;
+            else
+                flags &= ~O_NONBLOCK;
+        }
+        else
+        {
+            flags &= ~O_NONBLOCK;
+            timeout_tv.tv_sec = t;
+            timeout_tv.tv_usec = 0;
+        }
+        
+        setsockopt(
+            SO_RCVTIMEO,
+            &timeout_tv,
+            sizeof( timeout_tv ),
+            "receive timeout"
+        );
+        setsockopt(
+            SO_SNDTIMEO,
+            &timeout_tv,
+            sizeof( timeout_tv ),
+            "send timeout"
+        );
+        fcntl( fd, F_SETFL, flags );
+    }
+    
     request::request( socket_fd s ) :
         protocol(               _protocol                  ),
         method(                 _method                    ),
@@ -381,7 +420,7 @@ namespace show
         // TODO: client address
         // TODO: protocol string
         
-        serve_socket.reset( new socket( s ) );
+        serve_socket.reset( new _socket( s ) );
         
         bool reading = true;
         int bytes_read;
@@ -972,8 +1011,7 @@ namespace show
         address( _address ),
         port( _port )
     {
-        // Force use of POSIX function socket() rather than show::socket
-        socket_fd listen_socket_fd = ::socket(
+        socket_fd listen_socket_fd = socket(
             AF_INET,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
@@ -985,7 +1023,7 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
-        listen_socket = new socket( listen_socket_fd );
+        listen_socket = new _socket( listen_socket_fd );
         
         int opt_reuse = 1;
         
@@ -1022,7 +1060,7 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
-        if( listen( listen_socket, 3 ) == -1 )
+        if( listen( listen_socket -> fd, 3 ) == -1 )
             throw socket_error(
                 "could not listen on socket: "
                 + std::string( std::strerror( errno ) )
@@ -1031,35 +1069,44 @@ namespace show
     
     server::~server()
     {
-        close( listen_socket );
+        delete listen_socket;
     }
     
-    void server::serve()
+    show::request server::serve()
     {
-        while( true )
+        sockaddr_in client_address;
+        socklen_t client_address_len = sizeof( client_address );
+        
+        socket_fd serve_socket = accept(
+            listen_socket -> fd,
+            ( sockaddr* )&client_address,
+            &client_address_len
+        );
+        
+        if( serve_socket == -1 )
         {
-            sockaddr_in client_address;
-            socklen_t client_address_len = sizeof( client_address );
-            
-            socket_fd serve_socket = accept(
-                listen_socket,
-                ( sockaddr* )&client_address,
-                &client_address_len
-            );
-            
-            if( errno == EWOULDBLOCK )
+            if( errno == EAGAIN || errno == EWOULDBLOCK )
                 // Listen timeout reached
-                return;
+                throw connection_timeout();
             
-            if( serve_socket == -1 )
-                throw socket_error(
-                    "could not create serve socket: "
-                    + std::string( std::strerror( errno ) )
-                );
-            
-            request this_request( serve_socket );
-            handler( this_request );
+            throw socket_error(
+                "could not create serve socket: "
+                + std::string( std::strerror( errno ) )
+            );
         }
+        
+        return request( serve_socket );
+    }
+    
+    int server::timeout()
+    {
+        return _timeout;
+    }
+    int server::timeout( int t )
+    {
+        listen_socket -> set_timeout( t );
+        _timeout = t;
+        return _timeout;
     }
     
     std::string url_encode(
