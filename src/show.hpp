@@ -1,9 +1,3 @@
-/*
-Control some compile-time behavior by defining these:
-    #define SHOW_NOEXCEPT IGNORE
-    #define SHOW_NOEXCEPT AS_IS
-*/
-
 // TODO: when supporting HTTP/1.1, support pipelining requests
 
 
@@ -12,6 +6,7 @@ Control some compile-time behavior by defining these:
 #define SHOW_HPP
 
 
+#include <exception>
 #include <iomanip>
 #include <map>
 #include <memory>
@@ -19,10 +14,6 @@ Control some compile-time behavior by defining these:
 #include <stack>
 #include <streambuf>
 #include <vector>
-
-#ifndef SHOW_NOEXCEPT
-#include <exception>
-#endif
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -197,9 +188,6 @@ namespace show
         bool eof;
         
         request( socket_fd )
-        // #ifdef SHOW_NOEXCEPT
-        // noexcept
-        // #endif
         ;
         
         virtual std::streamsize showmanyc();
@@ -224,17 +212,10 @@ namespace show
             headers_t& headers
             // TODO: Protocol
         ) noexcept;
-        ~response()
-        #ifdef SHOW_NOEXCEPT
-        noexcept
-        #endif
-        ;
+        ~response();
+        // TODO: warn that ~response() may try to flush
         
-        virtual void flush( bool force = false )
-        #ifdef SHOW_NOEXCEPT
-        noexcept
-        #endif
-        ;
+        virtual void flush( bool force = false );
         
     protected:
         
@@ -288,8 +269,6 @@ namespace show
         int timeout( int t );
     };
     
-    #ifndef SHOW_NOEXCEPT
-    
     class exception : public std::exception {};
     
     class socket_error : public exception
@@ -313,8 +292,8 @@ namespace show
     class        url_decode_error : public exception {};
     class     base64_decode_error : public exception {};
     
-    #endif
-    
+    // Does not inherit from std::exception as this isn't meant to signal a
+    // strict error state
     class connection_timeout
     {
         // TODO: information about which connection, etc.
@@ -328,11 +307,7 @@ namespace show
         const std::string& o,
         bool use_plus_space = true
     ) noexcept;
-    std::string url_decode( const std::string& )
-    #ifdef SHOW_NOEXCEPT
-    noexcept
-    #endif
-    ;
+    std::string url_decode( const std::string& );
     std::string base64_encode(
         const std::string& o,
         const char* chars = base64_chars_standard
@@ -340,11 +315,7 @@ namespace show
     std::string base64_decode(
         const std::string& o,
         const char* chars = base64_chars_standard
-    )
-    #ifdef SHOW_NOEXCEPT
-    noexcept
-    #endif
-    ;
+    );
     
     
     // Implementations /////////////////////////////////////////////////////////
@@ -981,16 +952,13 @@ namespace show
                 // TODO: pre-C++11
                 auto errno_copy = errno;
                 
+                // EINTR means the send() was interrupted and we just need to
+                // try again
                 if( errno_copy != EINTR )
-                    #ifdef SHOW_NOEXCEPT
-                    // Fail silently under no-except
-                    break;
-                    #else
                     throw socket_error(
                         "failure to send response: "
                         + std::string( std::strerror( errno_copy ) )
                     );
-                    #endif
             }
             
             setp(
@@ -1148,9 +1116,6 @@ namespace show
     }
     
     std::string url_decode( const std::string& o )
-    #ifdef SHOW_NOEXCEPT
-    noexcept
-    #endif
     {
         std::string decoded;
         std::string hex_convert_space = "00";
@@ -1160,15 +1125,7 @@ namespace show
             if( o[ i ] == '%' )
             {
                 if( o.size() < i + 3 )
-                {
-                    #if SHOW_NOEXCEPT == IGNORE
-                    break;
-                    #elif SHOW_NOEXCEPT == AS_IS
-                    decoded += '%';
-                    #else
                     throw url_decode_error();
-                    #endif
-                }
                 else
                 {
                     try
@@ -1186,13 +1143,7 @@ namespace show
                     }
                     catch( std::invalid_argument& e )
                     {
-                        #if SHOW_NOEXCEPT == IGNORE
-                        i += 2;
-                        #elif SHOW_NOEXCEPT == AS_IS
-                        decoded += '%';
-                        #else
                         throw url_decode_error();
-                        #endif
                     }
                 }
             }
@@ -1279,9 +1230,6 @@ namespace show
     }
     
     std::string base64_decode( const std::string& o, const char* chars )
-    #ifdef SHOW_NOEXCEPT
-    noexcept
-    #endif
     {
         /*unsigned*/ char current_octet;
         std::string decoded;
@@ -1305,11 +1253,10 @@ namespace show
         if( b64_size % 4 )
             b64_size += 4 - ( b64_size % 4 );
         
-        #ifndef SHOW_NOEXCEPT
         if( b64_size > o.size() )
             // Missing required padding
+            // TODO: add flag to explicitly ignore?
             throw base64_decode_error();
-        #endif
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
         for( /*unsigned*/ char i = 0; i < 64; ++i )
@@ -1326,38 +1273,20 @@ namespace show
                 )
                     break;
                 else
-                    #if SHOW_NOEXCEPT == IGNORE
-                    continue;
-                    #elif SHOW_NOEXCEPT == AS_IS
-                    return o;
-                    #else
                     throw base64_decode_error();
-                    #endif
             }
             
             std::map< char, /*unsigned*/ char >::iterator first, second;
             
             first = reverse_lookup.find( o[ i ] );
             if( first == reverse_lookup.end() )
-                #if SHOW_NOEXCEPT == IGNORE
-                break;
-                #elif SHOW_NOEXCEPT == AS_IS
-                return o;
-                #else
                 throw base64_decode_error();
-                #endif
             
             if( i + 1 < o.size() )
             {
                 second = reverse_lookup.find( o[ i + 1 ] );
                 if( second == reverse_lookup.end() )
-                    #if SHOW_NOEXCEPT == IGNORE
-                    break;
-                    #elif SHOW_NOEXCEPT == AS_IS
-                    return o;
-                    #else
                     throw base64_decode_error();
-                    #endif
             }
             
             switch( i % 4 )
