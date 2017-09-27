@@ -149,7 +149,29 @@ namespace show
     
     class server
     {
+    protected:
+        std::string _address;
+        in_port_t   _port;
         
+        _socket* listen_socket;
+        
+    public:
+        server(
+            const std::string& address,
+            unsigned int       port,
+            int                timeout = -1
+        );
+        ~server();
+        
+        // DEBUG:
+        // request serve();
+        std::shared_ptr< _socket > serve();
+        
+        const std::string& address();
+        unsigned int port();
+        
+        int timeout() const;
+        int timeout( int t );
     };
     
     class exception : public std::exception
