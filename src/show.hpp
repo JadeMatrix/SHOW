@@ -132,6 +132,26 @@ namespace show
     // Classes /////////////////////////////////////////////////////////////////
     
     
+    class _socket : public std::streambuf
+    {
+        
+    };
+    
+    class request : public std::streambuf
+    {
+        
+    };
+    
+    class response : public std::streambuf
+    {
+        
+    };
+    
+    class server
+    {
+        
+    };
+    
     class exception : public std::exception
     {
     protected:
