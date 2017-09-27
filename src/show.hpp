@@ -134,7 +134,58 @@ namespace show
     
     class _socket : public std::streambuf
     {
+        friend class server;
         
+    protected:
+        char         buffer[ buffer_size ];
+        std::string  _address;
+        unsigned int _port
+        timeval      _timeout;
+        
+        _socket(
+            socket_fd          fd,
+            const std::string& address,
+            unsigned int       port,
+            int                timeout
+        );
+        
+        void setsockopt(
+            int optname,
+            void* value,
+            int value_size,
+            std::string description
+        );
+        
+    public:
+        const socket_fd descriptor;
+        
+        ~_socket();
+        
+        const std::string& address() const;
+        unsigned int       port()    const;
+        
+        int timeout() const;
+        int timeout( int t );
+        
+        // std::streambuf get functions
+        virtual std::streamsize showmanyc();
+        virtual int_type        underflow();
+        virtual std::streamsize xsgetn(
+            char_type* s,
+            std::streamsize count
+        );
+        virtual int_type        pbackfail(
+            int_type c = std::char_traits< char >::eof()
+        );
+        
+        // std::streambuf put functions
+        virtual std::streamsize xsputn(
+            const char_type* s,
+            std::streamsize count
+        );
+        virtual int_type overflow(
+            int_type ch = std::char_traits< char >::eof()
+        );
     };
     
     class request : public std::streambuf
