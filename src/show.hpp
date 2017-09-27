@@ -270,6 +270,51 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     
+    _socket::_socket(
+        socket_fd          fd,
+        const std::string& address,
+        unsigned int       port,
+        int                timeout
+    ) :
+        fd(       fd      ),
+        _address( address ),
+        _port(    port    )
+        _timeout( timeout )
+    {
+        setg(
+            buffer,
+            buffer,
+            buffer
+        );
+    }
+    
+    void _socket::setsockopt(
+        int optname,
+        void* value,
+        int value_size,
+        std::string description
+    )
+    {
+        if( ::setsockopt(
+            fd,
+            SOL_SOCKET,
+            optname,
+            value,
+            value_size
+        ) == -1 )
+            throw socket_error(
+                "failed to set listen socket "
+                + description
+                + ": "
+                + std::string( std::strerror( errno ) )
+            );
+    }
+    
+    _socket::~_socket()
+    {
+        close( fd );
+    }
+    
     std::string url_encode(
         const std::string& o,
         bool use_plus_space
