@@ -141,9 +141,9 @@ namespace show
         _simple_socket( socket_fd fd );
         
         void setsockopt(
-            int optname,
-            void* value,
-            int value_size,
+            int         optname,
+            void*       value,
+            int         value_size,
             std::string description
         );
     
@@ -160,8 +160,8 @@ namespace show
         ~_simple_socket();
         
         wait_for_t wait_for(
-            wait_for_t wf,
-            int timeout,
+            wait_for_t         wf,
+            int                timeout,
             const std::string& purpose
         );
     };
@@ -178,8 +178,7 @@ namespace show
         char         put_buffer[ BUFFER_SIZE ];
         std::string  _address;
         unsigned int _port;
-        // TODO: respect -1, 0, and >0 timeouts
-        timespec     _timeout;
+        int          _timeout;
         
         _socket(
             socket_fd          fd,
@@ -235,8 +234,7 @@ namespace show
     protected:
         std::string _address;
         in_port_t   _port;
-        // TODO: respect -1, 0, and >0 timeouts
-        timespec    _timeout;
+        int         _timeout;
         
         _simple_socket* listen_socket;
         
@@ -316,9 +314,9 @@ namespace show
     }
     
     void _simple_socket::setsockopt(
-        int optname,
-        void* value,
-        int value_size,
+        int         optname,
+        void*       value,
+        int         value_size,
         std::string description
     )
     {
@@ -343,8 +341,8 @@ namespace show
     }
     
     _simple_socket::wait_for_t _simple_socket::wait_for(
-        wait_for_t wf,
-        int timeout,
+        wait_for_t         wf,
+        int                timeout,
         const std::string& purpose
     )
     {
@@ -444,14 +442,13 @@ namespace show
     
     int _socket::timeout() const
     {
-        return _timeout.tv_sec;
+        return _timeout;
     }
     
     int _socket::timeout( int t )
     {
-        _timeout.tv_sec  = t;
-        _timeout.tv_nsec = 0;
-        return _timeout.tv_sec;
+        _timeout = t;
+        return _timeout;
     }
     
     void _socket::flush()
@@ -460,10 +457,10 @@ namespace show
         
         while( pptr() - ( pbase() + send_offset ) > 0 )
         {
-            if( _timeout.tv_sec != 0 )
+            if( _timeout != 0 )
                 wait_for(
                     WRITE,
-                    _timeout.tv_sec,
+                    _timeout,
                     "response send"
                 );
             
@@ -511,10 +508,10 @@ namespace show
             
             while( bytes_read < 1 )
             {
-                if( _timeout.tv_sec != 0 )
+                if( _timeout != 0 )
                     wait_for(
                         READ,
-                        _timeout.tv_sec,
+                        _timeout,
                         "request read"
                     );
                 
@@ -753,10 +750,10 @@ namespace show
     // request server::serve()
     std::shared_ptr< _socket > server::serve()
     {
-        if( _timeout.tv_sec != 0 )
+        if( _timeout != 0 )
             listen_socket -> wait_for(
                 _simple_socket::wait_for_t::READ,
-                _timeout.tv_sec,
+                _timeout,
                 "listen"
             );
         
@@ -814,13 +811,12 @@ namespace show
     
     int server::timeout() const
     {
-        return _timeout.tv_sec;
+        return _timeout;
     }
     int server::timeout( int t )
     {
-        _timeout.tv_sec  = t;
-        _timeout.tv_nsec = 0;
-        return _timeout.tv_sec;
+        _timeout = t;
+        return _timeout;
     }
     
     std::string url_encode(
