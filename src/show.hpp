@@ -624,6 +624,155 @@ namespace show
             return traits_type::to_int_type( ASCII_ACK );
     }
     
+    server::server(
+        const std::string& address,
+        unsigned int       port,
+        int                timeout
+    ) :
+        _address( address ),
+        _port(    port    )
+    {
+        socket_fd listen_socket_fd = socket(
+            AF_INET,
+            SOCK_STREAM,
+            getprotobyname( "TCP" ) -> p_proto
+        );
+        
+        if( listen_socket_fd == 0 )
+            throw socket_error(
+                "failed to create listen socket: "
+                + std::string( std::strerror( errno ) )
+            );
+        
+        listen_socket = new _simple_socket( listen_socket_fd );
+        
+        int opt_reuse = 1;
+        
+        // Certain POSIX implementations don't support OR-ing option names
+        // together
+        listen_socket -> setsockopt(
+            SO_REUSEADDR,
+            &opt_reuse,
+            sizeof( opt_reuse ),
+            "address reuse"
+        );
+        listen_socket -> setsockopt(
+            SO_REUSEPORT,
+            &opt_reuse,
+            sizeof( opt_reuse ),
+            "port reuse"
+        );
+        this -> timeout( timeout );
+        
+        sockaddr_in socket_address;
+        memset(&socket_address, 0, sizeof(socket_address));
+        socket_address.sin_family      = AF_INET;
+        // socket_address.sin_addr.s_addr = INADDR_ANY;
+        socket_address.sin_addr.s_addr = inet_addr( _address.c_str() );
+        socket_address.sin_port        = htons( _port );
+        
+        if( bind(
+            listen_socket -> descriptor,
+            ( sockaddr* )&socket_address,
+            sizeof( socket_address )
+        ) == -1 )
+            throw socket_error(
+                "failed to bind listen socket: "
+                + std::string( std::strerror( errno ) )
+            );
+        
+        if( listen( listen_socket -> descriptor, 3 ) == -1 )
+            throw socket_error(
+                "could not listen on socket: "
+                + std::string( std::strerror( errno ) )
+            );
+    }
+    server::~server()
+    {
+        delete listen_socket;
+    }
+    
+    // DEBUG:
+    // request server::serve()
+    std::shared_ptr< _socket > server::serve()
+    {
+        fd_set descriptors;
+        FD_ZERO( &descriptors );
+        FD_SET( listen_socket -> descriptor, &descriptors );
+        
+        int select_result = pselect(
+            listen_socket -> descriptor + 1,
+            &descriptors,
+            NULL,
+            NULL,
+            &_timeout,
+            NULL
+        );
+        
+        if( select_result == -1 )
+            throw socket_error(
+                "failure to listen: "
+                + std::string( std::strerror( errno ) )
+            );
+        else if( select_result == 0 )
+            throw connection_timeout();
+        
+        sockaddr_in client_address;
+        socklen_t client_address_len = sizeof( client_address );
+        
+        socket_fd serve_socket = accept(
+            listen_socket -> descriptor,
+            ( sockaddr* )&client_address,
+            &client_address_len
+        );
+        
+        // TODO: write a inet_ntoa_r() replacement
+        char address_buffer[ 3 * 4 + 3 + 1 ] = "?.?.?.?";
+        
+        if(
+            serve_socket == -1
+            // || inet_ntoa_r(
+            //     client_address.sin_addr,
+            //     address_buffer,
+            //     3 * 4 + 3
+            // ) == NULL
+        )
+            throw socket_error(
+                "could not create serve socket: "
+                + std::string( std::strerror( errno ) )
+            );
+        
+        // DEBUG:
+        return std::shared_ptr< _socket >(
+            new _socket(
+                serve_socket,
+                std::string( address_buffer ),
+                client_address.sin_port,
+                timeout()
+            )
+        );
+    }
+    
+    const std::string& server::address() const
+    {
+        return _address;
+    }
+    unsigned int server::port() const
+    {
+        return _port;
+    }
+    
+    int server::timeout() const
+    {
+        return _timeout.tv_sec;
+    }
+    int server::timeout( int t )
+    {
+        _timeout.tv_sec  = t;
+        _timeout.tv_nsec = 0;
+        return _timeout.tv_sec;
+    }
+    
     std::string url_encode(
         const std::string& o,
         bool use_plus_space
