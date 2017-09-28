@@ -302,6 +302,8 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     
+    // _simple_socket ----------------------------------------------------------
+    
     _simple_socket::_simple_socket( socket_fd fd ) : descriptor( fd )
     {
         // Because we want non-blocking behavior on 0-second timeouts, all
@@ -402,6 +404,8 @@ namespace show
         else
             return WRITE;
     }
+    
+    // _socket -----------------------------------------------------------------
     
     _socket::_socket(
         socket_fd          fd,
@@ -677,6 +681,12 @@ namespace show
         else
             return traits_type::to_int_type( ASCII_ACK );
     }
+    
+    // request -----------------------------------------------------------------
+    
+    // response ----------------------------------------------------------------
+    
+    // server ------------------------------------------------------------------
     
     server::server(
         const std::string& address,
