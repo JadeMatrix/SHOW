@@ -48,6 +48,7 @@ namespace show
     // Forward declarations ////////////////////////////////////////////////////
     
     
+    class _simple_socket;
     class _socket;
     class server;
     class request;
@@ -131,7 +132,27 @@ namespace show
     // Classes /////////////////////////////////////////////////////////////////
     
     
-    class _socket : public std::streambuf
+    class _simple_socket
+    {
+        friend class server;
+        
+    protected:
+        _simple_socket( socket_fd fd );
+        
+        void setsockopt(
+            int optname,
+            void* value,
+            int value_size,
+            std::string description
+        );
+    
+    public:
+        const socket_fd descriptor;
+        
+        ~_simple_socket();
+    };
+    
+    class _socket : public _simple_socket, public std::streambuf
     {
         friend class server;
         
@@ -139,11 +160,11 @@ namespace show
         static const buffer_size_t BUFFER_SIZE =   1024;
         static const char          ASCII_ACK   = '\x06';
         
-        // TODO: Don't force buffers for i.e. serve sockets; base class w/ none?
         char         get_buffer[ BUFFER_SIZE ];
         char         put_buffer[ BUFFER_SIZE ];
         std::string  _address;
         unsigned int _port
+        // TODO: respect -1, 0, and >0 timeouts
         timespec     _timeout;
         
         _socket(
@@ -153,16 +174,7 @@ namespace show
             int                timeout
         );
         
-        void setsockopt(
-            int optname,
-            void* value,
-            int value_size,
-            std::string description
-        );
-        
     public:
-        const socket_fd descriptor;
-        
         ~_socket();
         
         const std::string& address() const;
@@ -276,29 +288,9 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     
-    _socket::_socket(
-        socket_fd          fd,
-        const std::string& address,
-        unsigned int       port,
-        int                timeout
-    ) :
-        fd(       fd      ),
-        _address( address ),
-        _port(    port    )
-    {
-        timeout( timeout );
-        setg(
-            get_buffer,
-            get_buffer,
-            get_buffer
-        );
-        setp(
-            put_buffer,
-            put_buffer + BUFFER_SIZE
-        );
-    }
+    _simple_socket::_simple_socket( socket_fd fd ) : fd( fd ) {}
     
-    void _socket::setsockopt(
+    void _simple_socket::setsockopt(
         int optname,
         void* value,
         int value_size,
@@ -320,10 +312,36 @@ namespace show
             );
     }
     
+    _simple_socket::~_simple_socket()
+    {
+        close( fd );
+    }
+    
+    _socket::_socket(
+        socket_fd          fd,
+        const std::string& address,
+        unsigned int       port,
+        int                timeout
+    ) :
+        _simple_socket( fd      ),
+        _address(       address ),
+        _port(          port    )
+    {
+        timeout( timeout );
+        setg(
+            get_buffer,
+            get_buffer,
+            get_buffer
+        );
+        setp(
+            put_buffer,
+            put_buffer + BUFFER_SIZE
+        );
+    }
+    
     _socket::~_socket()
     {
         flush();
-        close( fd );
     }
     
     const std::string& _socket::address() const
