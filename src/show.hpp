@@ -242,8 +242,6 @@ namespace show
         unsigned long long              & content_length;
         
     protected:
-        char buffer[ buffer_size ];
-        
         std::shared_ptr< _socket > serve_socket;
         
         http_protocol              _protocol;
