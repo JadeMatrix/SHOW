@@ -21,6 +21,7 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <unistd.h>
 
 
@@ -143,7 +144,7 @@ namespace show
         char         put_buffer[ BUFFER_SIZE ];
         std::string  _address;
         unsigned int _port
-        timeval      _timeout;
+        timespec     _timeout;
         
         _socket(
             socket_fd          fd,
@@ -284,8 +285,8 @@ namespace show
         fd(       fd      ),
         _address( address ),
         _port(    port    )
-        _timeout( timeout )
     {
+        timeout( timeout );
         setg(
             get_buffer,
             get_buffer,
@@ -340,9 +341,130 @@ namespace show
         return _timeout.tv_sec;
     }
     
+    int _socket::timeout( int t )
+    {
+        _timeout.tv_sec  = t;
+        _timeout.tv_nsec = 0;
+    }
+    
+    void _socket::flush()
+    {
+        socket_fd fd_array[ 2 ] = { 0 };
+        buffer_size_t send_offset = 0;
+        
+        while( pptr() - ( pbase() + send_offset ) > 0 )
+        {
+            fd_array[ 0 ] = fd;
+            
+            int select_result = pselect(
+                fd + 1,
+                NULL,
+                fd_array,
+                NULL,
+                &_timeout,
+                NULL
+            );
+            
+            if( select_result == -1 )
+                throw socket_error(
+                    "failure to send response: "
+                    + std::string( std::strerror( errno ) )
+                );
+            else if( select_result == 0 )
+                throw connection_timeout();
+            
+            buffer_size_t bytes_sent = send(
+                fd,
+                pbase() + send_offset,
+                pptr() - ( pbase() + send_offset ),
+                0
+            );
+            
+            if( bytes_sent == -1 )
+            {
+                auto errno_copy = errno;
+                
+                // EINTR means the send() was interrupted and we just need to
+                // try again
+                if( errno_copy != EINTR )
+                    throw socket_error(
+                        "failure to send response: "
+                        + std::string( std::strerror( errno_copy ) )
+                    );
+            }
+            else
+                send_offset += bytes_sent;
+        }
+        
+        setp(
+            pbase(),
+            epptr()
+        );
+    }
+    
     virtual std::streamsize _socket::showmanyc()
     {
         return egptr() - gptr();
+    }
+    
+    virtual int_type _socket::underflow()
+    {
+        socket_fd fd_array[ 2 ] = { 0 };
+        std::streamsize in_buffer = showmanyc();
+        
+        if( in_buffer <= 0 )
+        {
+            buffer_size_t bytes_read = 0;
+            
+            while( bytes_read < 1 )
+            {
+                fd_array[ 0 ] = fd;
+                
+                int select_result = pselect(
+                    fd + 1,
+                    fd_array,
+                    NULL,
+                    NULL,
+                    &_timeout,
+                    NULL
+                );
+                
+                if( select_result == -1 )
+                    throw socket_error(
+                        "failure to read request: "
+                        + std::string( std::strerror( errno ) )
+                    );
+                else if( select_result == 0 )
+                    throw connection_timeout();
+                
+                bytes_read = read(
+                    fd,
+                    eback(),
+                    BUFFER_SIZE
+                );
+                
+                if( bytes_read == -1 )
+                {
+                    auto errno_copy = errno;
+                    
+                    // EINTR means the read() was interrupted and we just need to
+                    // try again
+                    if( errno_copy != EINTR )
+                        throw socket_error(
+                            "failure to read request: "
+                            + std::string( std::strerror( errno_copy ) )
+                        );
+                }
+            }
+            
+            setg(
+                eback(),
+                eback(),
+                eback() + bytes_read
+            );
+        }
+        
+        return traits_type::to_int_type( *gptr() );
     }
     
     virtual std::streamsize _socket::xsgetn(
