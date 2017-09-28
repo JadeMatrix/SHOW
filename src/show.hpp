@@ -148,11 +148,22 @@ namespace show
         );
     
     public:
+        enum wait_for_t
+        {
+            READ       = 1,
+            WRITE      = 2,
+            READ_WRITE = 3
+        };
+        
         const socket_fd descriptor;
         
         ~_simple_socket();
         
-        // TODO: wait_for( [ READ | WRITE ] )
+        wait_for_t wait_for(
+            wait_for_t wf,
+            int timeout,
+            const std::string& purpose
+        );
     };
     
     class _socket : public _simple_socket, public std::streambuf
@@ -293,9 +304,16 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     
-    // TODO: set all sockets non-blocking even though we use pselect()
-    
-    _simple_socket::_simple_socket( socket_fd fd ) : descriptor( fd ) {}
+    _simple_socket::_simple_socket( socket_fd fd ) : descriptor( fd )
+    {
+        // Because we want non-blocking behavior on 0-second timeouts, all
+        // sockets are set to `O_NONBLOCK` even though `pselect()` is used.
+        fcntl(
+            descriptor,
+            F_SETFL,
+            fcntl( descriptor, F_GETFL, 0 ) | O_NONBLOCK
+        );
+    }
     
     void _simple_socket::setsockopt(
         int optname,
@@ -322,6 +340,69 @@ namespace show
     _simple_socket::~_simple_socket()
     {
         close( descriptor );
+    }
+    
+    _simple_socket::wait_for_t _simple_socket::wait_for(
+        wait_for_t wf,
+        int timeout,
+        const std::string& purpose
+    )
+    {
+        if( timeout == 0 )
+            // 0-second timeouts must be handled in the code that called
+            // `wait_for()`, and 0s will cause `pselect()` to error
+            throw socket_error(
+                "0-second timeouts can't be handled by wait_for()"
+            );
+        
+        fd_set read_descriptors, write_descriptors;
+        timespec timeout_spec = { timeout, 0 };
+        
+        bool r = wf & wait_for_t::READ;
+        bool w = wf & wait_for_t::WRITE;
+        
+        if( r )
+        {
+            FD_ZERO( &read_descriptors );
+            FD_SET( descriptor, &read_descriptors );
+        }
+        if( w )
+        {
+            FD_ZERO( &write_descriptors );
+            FD_SET( descriptor, &write_descriptors );
+        }
+        
+        int select_result = pselect(
+            descriptor + 1,
+            r ? &read_descriptors  : NULL,
+            w ? &write_descriptors : NULL,
+            NULL,
+            timeout > 0 ? &timeout_spec : NULL,
+            NULL
+        );
+        
+        if( select_result == -1 )
+            throw socket_error(
+                "failure to select on "
+                + purpose
+                + ": "
+                + std::string( std::strerror( errno ) )
+            );
+        else if( select_result == 0 )
+            throw connection_timeout();
+        
+        if( r )
+            r = FD_ISSET( descriptor, &read_descriptors );
+        if( w )
+            w = FD_ISSET( descriptor, &write_descriptors );
+        
+        // At least one of these must be true
+        if( w && r )
+            return READ_WRITE;
+        else if( r )
+            return READ;
+        else
+            return WRITE;
     }
     
     _socket::_socket(
@@ -375,30 +456,16 @@ namespace show
     
     void _socket::flush()
     {
-        fd_set descriptors;
-        FD_ZERO( &descriptors );
-        FD_SET( descriptor, &descriptors );
-        
         buffer_size_t send_offset = 0;
         
         while( pptr() - ( pbase() + send_offset ) > 0 )
         {
-            int select_result = pselect(
-                descriptor + 1,
-                NULL,
-                &descriptors,
-                NULL,
-                &_timeout,
-                NULL
-            );
-            
-            if( select_result == -1 )
-                throw socket_error(
-                    "failure to send response: "
-                    + std::string( std::strerror( errno ) )
+            if( _timeout.tv_sec != 0 )
+                wait_for(
+                    WRITE,
+                    _timeout.tv_sec,
+                    "response send"
                 );
-            else if( select_result == 0 )
-                throw connection_timeout();
             
             buffer_size_t bytes_sent = send(
                 descriptor,
@@ -411,9 +478,11 @@ namespace show
             {
                 auto errno_copy = errno;
                 
-                // EINTR means the send() was interrupted and we just need to
-                // try again
-                if( errno_copy != EINTR )
+                if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
+                    throw connection_timeout();
+                else if( errno_copy != EINTR )
+                    // EINTR means the send() was interrupted and we just need
+                    // to try again
                     throw socket_error(
                         "failure to send response: "
                         + std::string( std::strerror( errno_copy ) )
@@ -436,32 +505,18 @@ namespace show
     
     _socket::int_type _socket::underflow()
     {
-        fd_set descriptors;
-        FD_ZERO( &descriptors );
-        FD_SET( descriptor, &descriptors );
-        
         if( showmanyc() <= 0 )
         {
             buffer_size_t bytes_read = 0;
             
             while( bytes_read < 1 )
             {
-                int select_result = pselect(
-                    descriptor + 1,
-                    &descriptors,
-                    NULL,
-                    NULL,
-                    &_timeout,
-                    NULL
-                );
-                
-                if( select_result == -1 )
-                    throw socket_error(
-                        "failure to read request: "
-                        + std::string( std::strerror( errno ) )
+                if( _timeout.tv_sec != 0 )
+                    wait_for(
+                        READ,
+                        _timeout.tv_sec,
+                        "request read"
                     );
-                else if( select_result == 0 )
-                    throw connection_timeout();
                 
                 bytes_read = read(
                     descriptor,
@@ -473,9 +528,11 @@ namespace show
                 {
                     auto errno_copy = errno;
                     
-                    // EINTR means the read() was interrupted and we just need to
-                    // try again
-                    if( errno_copy != EINTR )
+                    if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
+                        throw connection_timeout();
+                    else if( errno_copy != EINTR )
+                        // EINTR means the read() was interrupted and we just
+                        // need to try again
                         throw socket_error(
                             "failure to read request: "
                             + std::string( std::strerror( errno_copy ) )
@@ -696,26 +753,12 @@ namespace show
     // request server::serve()
     std::shared_ptr< _socket > server::serve()
     {
-        fd_set descriptors;
-        FD_ZERO( &descriptors );
-        FD_SET( listen_socket -> descriptor, &descriptors );
-        
-        int select_result = pselect(
-            listen_socket -> descriptor + 1,
-            &descriptors,
-            NULL,
-            NULL,
-            &_timeout,
-            NULL
-        );
-        
-        if( select_result == -1 )
-            throw socket_error(
-                "failure to listen: "
-                + std::string( std::strerror( errno ) )
+        if( _timeout.tv_sec != 0 )
+            listen_socket -> wait_for(
+                _simple_socket::wait_for_t::READ,
+                _timeout.tv_sec,
+                "listen"
             );
-        else if( select_result == 0 )
-            throw connection_timeout();
         
         sockaddr_in client_address;
         socklen_t client_address_len = sizeof( client_address );
@@ -726,9 +769,6 @@ namespace show
             &client_address_len
         );
         
-        // TODO: write a inet_ntoa_r() replacement
-        char address_buffer[ 3 * 4 + 3 + 1 ] = "?.?.?.?";
-        
         if(
             serve_socket == -1
             // || inet_ntoa_r(
@@ -737,10 +777,20 @@ namespace show
             //     3 * 4 + 3
             // ) == NULL
         )
-            throw socket_error(
-                "could not create serve socket: "
-                + std::string( std::strerror( errno ) )
-            );
+        {
+            auto errno_copy = errno;
+            
+            if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
+                throw connection_timeout();
+            else
+                throw socket_error(
+                    "could not create serve socket: "
+                    + std::string( std::strerror( errno_copy ) )
+                );
+        }
+        
+        // TODO: write a inet_ntoa_r() replacement
+        char address_buffer[ 3 * 4 + 3 + 1 ] = "?.?.?.?";
         
         // DEBUG:
         return std::shared_ptr< _socket >(
