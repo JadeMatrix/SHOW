@@ -38,8 +38,6 @@ namespace show
         std::string string;
     } version = { "SHOW", 0, 6, 0, "0.6.0" };
     
-    const char ASCII_ACK = '\x06';
-    
     const char* base64_chars_standard =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     const char* base64_chars_urlsafe  =
@@ -137,7 +135,12 @@ namespace show
         friend class server;
         
     protected:
-        char         buffer[ buffer_size ];
+        static const buffer_size_t BUFFER_SIZE =   1024;
+        static const char          ASCII_ACK   = '\x06';
+        
+        // TODO: Don't force buffers for i.e. serve sockets; base class w/ none?
+        char         get_buffer[ BUFFER_SIZE ];
+        char         put_buffer[ BUFFER_SIZE ];
         std::string  _address;
         unsigned int _port
         timeval      _timeout;
@@ -166,6 +169,8 @@ namespace show
         
         int timeout() const;
         int timeout( int t );
+        
+        void flush();
         
         // std::streambuf get functions
         virtual std::streamsize showmanyc();
@@ -282,9 +287,13 @@ namespace show
         _timeout( timeout )
     {
         setg(
-            buffer,
-            buffer,
-            buffer
+            get_buffer,
+            get_buffer,
+            get_buffer
+        );
+        setp(
+            put_buffer,
+            put_buffer + BUFFER_SIZE
         );
     }
     
@@ -312,7 +321,159 @@ namespace show
     
     _socket::~_socket()
     {
+        flush();
         close( fd );
+    }
+    
+    const std::string& _socket::address() const
+    {
+        return _address;
+    }
+    
+    unsigned int _socket::port() const
+    {
+        return _port;
+    }
+    
+    int _socket::timeout() const
+    {
+        return _timeout.tv_sec;
+    }
+    
+    virtual std::streamsize _socket::showmanyc()
+    {
+        return egptr() - gptr();
+    }
+    
+    virtual std::streamsize _socket::xsgetn(
+        char_type* s,
+        std::streamsize count
+    )
+    {
+        // TODO: copy in available chunks rather than ~i calls to `sbumpc()`?
+        
+        std::streamsize i = 0;
+        
+        while( i < count )
+        {
+            request::int_type gotc = sbumpc();
+            
+            if( gotc == traits_type::eof() )
+                break;
+            else
+                s[ i ] = traits_type::to_char_type( gotc );
+            
+            ++i;
+        }
+        
+        return i;
+    }
+    
+    virtual int_type _socket::pbackfail( int_type c )
+    {
+        /*
+        Parameters:
+        `c` - character to put back or `Traits::eof()` if only back out is
+            requested
+        http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
+        */
+        if( traits_type::not_eof( c ) )
+        {
+            if( gptr() > eback() )
+            {
+                setg(
+                    eback(),
+                    gptr() - 1,
+                    egptr()
+                );
+            }
+            else if( egptr() < eback() + BUFFER_SIZE )
+            {
+                setg(
+                    eback(),
+                    gptr(),
+                    egptr() + 1
+                );
+                
+                for( char* i = eback(); i < egptr(); ++i )
+                    *( i + 1 ) = *i;
+            }
+            else
+                // No room to back up, can't reallocate buffer
+                return traits_type::eof();
+            
+            *( gptr() ) = traits_type::to_char_type( c );
+            
+            /*
+            Return value:
+            `Traits::eof()` in case of failure, some other value to indicate
+            success.
+            http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
+            */
+            return c;
+        }
+        else
+        {
+            if( gptr() > eback() )
+            {
+                setg(
+                    eback(),
+                    gptr() - 1,
+                    egptr()
+                );
+            }
+            else
+                // A buffer shift will only work if a character is being put
+                // back, so fail
+                return traits_type::eof();
+            
+            /*
+            Return value:
+            `Traits::eof()` in case of failure, some other value to indicate
+            success.
+            http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
+            */
+            return traits_type::to_int_type( ASCII_ACK );
+        }
+    }
+    
+    virtual std::streamsize _socket::xsputn(
+        const char_type* s,
+        std::streamsize count
+    )
+    {
+        std::streamsize chars_written = 0;
+        
+        while(
+            chars_written < count
+            && traits_type::not_eof(
+                sputc( traits_type::to_char_type( s[ chars_written ] ) )
+            )
+        )
+            ++chars_written;
+        
+        return chars_written;
+    }
+    
+    virtual int_type _socket::overflow( int_type ch )
+    {
+        try
+        {
+            flush();
+        }
+        catch( socket_error& e )
+        {
+            return traits_type::eof();
+        }
+        
+        if( traits_type::not_eof( ch ) )
+        {
+            *( pptr() ) = traits_type::to_char_type( ch );
+            pbump( 1 );
+            return ch;
+        }
+        else
+            return traits_type::to_int_type( ASCII_ACK );
     }
     
     std::string url_encode(
