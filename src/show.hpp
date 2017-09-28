@@ -221,7 +221,54 @@ namespace show
     
     class request : public std::streambuf
     {
+        friend class response;
+        friend class server;
+    
+    public:
+        enum content_length_flag_type
+        {
+            NO = 0,
+            YES,
+            MAYBE
+        };
         
+        const http_protocol             & protocol;
+        const std::string               & protocol_string;
+        const std::string               & method;
+        const std::vector< std::string >& path;
+        const query_args_t              & query_args;
+        const headers_t                 & headers;
+        const content_length_flag_type  & unknown_content_length;
+        unsigned long long              & content_length;
+        
+    protected:
+        char buffer[ buffer_size ];
+        
+        std::shared_ptr< _socket > serve_socket;
+        
+        http_protocol              _protocol;
+        std::string                _protocol_string;
+        std::string                _method;
+        std::vector< std::string > _path;
+        query_args_t               _query_args;
+        headers_t                  _headers;
+        content_length_flag_type   _unknown_content_length;
+        unsigned long long         _content_length;
+        
+        unsigned long long read_content;
+        bool eof;
+        
+        request( std::shared_ptr< _socket > );
+        
+        virtual std::streamsize showmanyc();
+        virtual int_type        underflow();
+        virtual std::streamsize xsgetn(
+            char_type* s,
+            std::streamsize count
+        );
+        virtual int_type        pbackfail(
+            int_type c = std::char_traits< char >::eof()
+        );
     };
     
     class response : public std::streambuf
@@ -683,6 +730,44 @@ namespace show
     }
     
     // request -----------------------------------------------------------------
+    
+    request::request( std::shared_ptr< _socket > s ) :
+        serve_socket(           s                          ),
+        protocol(               _protocol                  ),
+        protocol_string(        _protocol_string           ),
+        method(                 _method                    ),
+        path(                   _path                      ),
+        query_args(             _query_args                ),
+        headers(                _headers                   ),
+        unknown_content_length( _unknown_content_length    ),
+        content_length(         _content_length            ),
+        eof(                    false                      )
+    {
+        // IMPLEMENT:
+    }
+    
+    std::streamsize request::showmanyc()
+    {
+        // IMPLEMENT:
+    }
+    
+    request::int_type request::underflow()
+    {
+        // IMPLEMENT:
+    }
+    
+    std::streamsize request::xsgetn(
+        char_type* s,
+        std::streamsize count
+    )
+    {
+        // IMPLEMENT:
+    }
+    
+    request::int_type request::pbackfail( int_type c )
+    {
+        // IMPLEMENT:
+    }
     
     // response ----------------------------------------------------------------
     
