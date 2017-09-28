@@ -1,4 +1,5 @@
 // TODO: when supporting HTTP/1.1, support pipelining requests
+// TODO: IPv6
 
 
 #pragma once
@@ -150,6 +151,8 @@ namespace show
         const socket_fd descriptor;
         
         ~_simple_socket();
+        
+        // TODO: wait_for( [ READ | WRITE ] )
     };
     
     class _socket : public _simple_socket, public std::streambuf
@@ -163,7 +166,7 @@ namespace show
         char         get_buffer[ BUFFER_SIZE ];
         char         put_buffer[ BUFFER_SIZE ];
         std::string  _address;
-        unsigned int _port
+        unsigned int _port;
         // TODO: respect -1, 0, and >0 timeouts
         timespec     _timeout;
         
@@ -221,8 +224,10 @@ namespace show
     protected:
         std::string _address;
         in_port_t   _port;
+        // TODO: respect -1, 0, and >0 timeouts
+        timespec    _timeout;
         
-        _socket* listen_socket;
+        _simple_socket* listen_socket;
         
     public:
         server(
@@ -236,8 +241,8 @@ namespace show
         // request serve();
         std::shared_ptr< _socket > serve();
         
-        const std::string& address();
-        unsigned int port();
+        const std::string& address() const;
+        unsigned int       port()    const;
         
         int timeout() const;
         int timeout( int t );
@@ -248,15 +253,15 @@ namespace show
     protected:
         std::string message;
     public:
-        socket_error( const std::string& m ) noexcept : message( m ) {}
+        exception( const std::string& m ) noexcept : message( m ) {}
         virtual const char* what() const noexcept { return message.c_str(); };
     };
     
-    class            socket_error : public exception {};
-    class     request_parse_error : public exception {};
-    class response_marshall_error : public exception {};
-    class        url_decode_error : public exception {};
-    class     base64_decode_error : public exception {};
+    class            socket_error : public exception { using exception::exception; };
+    class     request_parse_error : public exception { using exception::exception; };
+    class response_marshall_error : public exception { using exception::exception; };
+    class        url_decode_error : public exception { using exception::exception; };
+    class     base64_decode_error : public exception { using exception::exception; };
     
     // Does not inherit from std::exception as this isn't meant to signal a
     // strict error state
@@ -288,7 +293,9 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     
-    _simple_socket::_simple_socket( socket_fd fd ) : fd( fd ) {}
+    // TODO: set all sockets non-blocking even though we use pselect()
+    
+    _simple_socket::_simple_socket( socket_fd fd ) : descriptor( fd ) {}
     
     void _simple_socket::setsockopt(
         int optname,
@@ -298,7 +305,7 @@ namespace show
     )
     {
         if( ::setsockopt(
-            fd,
+            descriptor,
             SOL_SOCKET,
             optname,
             value,
@@ -314,7 +321,7 @@ namespace show
     
     _simple_socket::~_simple_socket()
     {
-        close( fd );
+        close( descriptor );
     }
     
     _socket::_socket(
@@ -327,7 +334,7 @@ namespace show
         _address(       address ),
         _port(          port    )
     {
-        timeout( timeout );
+        this -> timeout( timeout );
         setg(
             get_buffer,
             get_buffer,
@@ -363,21 +370,23 @@ namespace show
     {
         _timeout.tv_sec  = t;
         _timeout.tv_nsec = 0;
+        return _timeout.tv_sec;
     }
     
     void _socket::flush()
     {
-        socket_fd fd_array[ 2 ] = { 0 };
+        fd_set descriptors;
+        FD_ZERO( &descriptors );
+        FD_SET( descriptor, &descriptors );
+        
         buffer_size_t send_offset = 0;
         
         while( pptr() - ( pbase() + send_offset ) > 0 )
         {
-            fd_array[ 0 ] = fd;
-            
             int select_result = pselect(
-                fd + 1,
+                descriptor + 1,
                 NULL,
-                fd_array,
+                &descriptors,
                 NULL,
                 &_timeout,
                 NULL
@@ -392,7 +401,7 @@ namespace show
                 throw connection_timeout();
             
             buffer_size_t bytes_sent = send(
-                fd,
+                descriptor,
                 pbase() + send_offset,
                 pptr() - ( pbase() + send_offset ),
                 0
@@ -420,27 +429,26 @@ namespace show
         );
     }
     
-    virtual std::streamsize _socket::showmanyc()
+    std::streamsize _socket::showmanyc()
     {
         return egptr() - gptr();
     }
     
-    virtual int_type _socket::underflow()
+    _socket::int_type _socket::underflow()
     {
-        socket_fd fd_array[ 2 ] = { 0 };
-        std::streamsize in_buffer = showmanyc();
+        fd_set descriptors;
+        FD_ZERO( &descriptors );
+        FD_SET( descriptor, &descriptors );
         
-        if( in_buffer <= 0 )
+        if( showmanyc() <= 0 )
         {
             buffer_size_t bytes_read = 0;
             
             while( bytes_read < 1 )
             {
-                fd_array[ 0 ] = fd;
-                
                 int select_result = pselect(
-                    fd + 1,
-                    fd_array,
+                    descriptor + 1,
+                    &descriptors,
                     NULL,
                     NULL,
                     &_timeout,
@@ -456,7 +464,7 @@ namespace show
                     throw connection_timeout();
                 
                 bytes_read = read(
-                    fd,
+                    descriptor,
                     eback(),
                     BUFFER_SIZE
                 );
@@ -485,7 +493,7 @@ namespace show
         return traits_type::to_int_type( *gptr() );
     }
     
-    virtual std::streamsize _socket::xsgetn(
+    std::streamsize _socket::xsgetn(
         char_type* s,
         std::streamsize count
     )
@@ -509,7 +517,7 @@ namespace show
         return i;
     }
     
-    virtual int_type _socket::pbackfail( int_type c )
+    _socket::int_type _socket::pbackfail( int_type c )
     {
         /*
         Parameters:
@@ -577,7 +585,7 @@ namespace show
         }
     }
     
-    virtual std::streamsize _socket::xsputn(
+    std::streamsize _socket::xsputn(
         const char_type* s,
         std::streamsize count
     )
@@ -595,7 +603,7 @@ namespace show
         return chars_written;
     }
     
-    virtual int_type _socket::overflow( int_type ch )
+    _socket::int_type _socket::overflow( int_type ch )
     {
         try
         {
@@ -664,7 +672,9 @@ namespace show
             if( o[ i ] == '%' )
             {
                 if( o.size() < i + 3 )
-                    throw url_decode_error();
+                    throw url_decode_error(
+                        "incomplete URL-encoded sequence"
+                    );
                 else
                 {
                     try
@@ -682,7 +692,9 @@ namespace show
                     }
                     catch( std::invalid_argument& e )
                     {
-                        throw url_decode_error();
+                        throw url_decode_error(
+                            "invalid URL-encoded sequence"
+                        );
                     }
                 }
             }
@@ -795,7 +807,7 @@ namespace show
         if( b64_size > o.size() )
             // Missing required padding
             // TODO: add flag to explicitly ignore?
-            throw base64_decode_error();
+            throw base64_decode_error( "missing required padding" );
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
         for( /*unsigned*/ char i = 0; i < 64; ++i )
@@ -812,20 +824,20 @@ namespace show
                 )
                     break;
                 else
-                    throw base64_decode_error();
+                    throw base64_decode_error( "premature padding" );
             }
             
             std::map< char, /*unsigned*/ char >::iterator first, second;
             
             first = reverse_lookup.find( o[ i ] );
             if( first == reverse_lookup.end() )
-                throw base64_decode_error();
+                throw base64_decode_error( "invalid base64 character" );
             
             if( i + 1 < o.size() )
             {
                 second = reverse_lookup.find( o[ i + 1 ] );
                 if( second == reverse_lookup.end() )
-                    throw base64_decode_error();
+                    throw base64_decode_error( "invalid base64 character" );
             }
             
             switch( i % 4 )
