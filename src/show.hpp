@@ -271,7 +271,28 @@ namespace show
     
     class response : public std::streambuf
     {
+    public:
+        response(
+            request&       r,
+            http_protocol& protocol,
+            response_code& code,
+            headers_t&     headers
+        );
+        // TODO: warn that ~response() may try to flush
+        ~response();
         
+        virtual void flush();
+        
+    protected:
+        std::shared_ptr< _socket > serve_socket;
+        
+        virtual std::streamsize xsputn(
+            const char_type* s,
+            std::streamsize  count
+        );
+        virtual int_type overflow(
+            int_type ch = std::char_traits< char >::eof()
+        );
     };
     
     class server
@@ -768,6 +789,39 @@ namespace show
     }
     
     // response ----------------------------------------------------------------
+    
+    response::response(
+        request&       r,
+        http_protocol& protocol,
+        response_code& code,
+        headers_t&     headers
+    ) : serve_socket( r.serve_socket )
+    {
+        // IMPLEMENT:
+    }
+    
+    ~response()
+    {
+        // IMPLEMENT:
+    }
+    
+    void response::flush()
+    {
+        // IMPLEMENT:
+    }
+    
+    std::streamsize response::xsputn(
+        const char_type* s,
+        std::streamsize  count
+    )
+    {
+        // IMPLEMENT:
+    }
+    
+    response::int_type response::overflow( int_type ch )
+    {
+        // IMPLEMENT:
+    }
     
     // server ------------------------------------------------------------------
     
