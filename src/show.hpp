@@ -239,6 +239,8 @@ namespace show
         const content_length_flag_type  & unknown_content_length;
         unsigned long long              & content_length;
         
+        bool eof() const;
+        
     protected:
         std::shared_ptr< _socket > serve_socket;
         
@@ -252,7 +254,6 @@ namespace show
         unsigned long long         _content_length;
         
         unsigned long long read_content;
-        bool eof;
         
         request( std::shared_ptr< _socket > );
         
@@ -743,6 +744,11 @@ namespace show
     
     // request -----------------------------------------------------------------
     
+    bool request::eof() const
+    {
+        return !unknown_content_length && read_content >= _content_length;
+    }
+    
     request::request( std::shared_ptr< _socket > s ) :
         serve_socket(           s                          ),
         protocol(               _protocol                  ),
@@ -752,8 +758,7 @@ namespace show
         query_args(             _query_args                ),
         headers(                _headers                   ),
         unknown_content_length( _unknown_content_length    ),
-        content_length(         _content_length            ),
-        eof(                    false                      )
+        content_length(         _content_length            )
     {
         // IMPLEMENT:
     }
