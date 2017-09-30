@@ -272,10 +272,10 @@ namespace show
     {
     public:
         response(
-            request&       r,
-            http_protocol& protocol,
+            request      & r,
+            http_protocol  protocol,
             response_code& code,
-            headers_t&     headers
+            headers_t    & headers
         );
         // TODO: warn that ~response() may try to flush
         ~response();
@@ -789,10 +789,10 @@ namespace show
     // response ----------------------------------------------------------------
     
     response::response(
-        request&       r,
-        http_protocol& protocol,
+        request      & r,
+        http_protocol  protocol,
         response_code& code,
-        headers_t&     headers
+        headers_t    & headers
     ) : serve_socket( r.serve_socket )
     {
         // IMPLEMENT:
