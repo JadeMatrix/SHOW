@@ -188,8 +188,6 @@ namespace show
         );
         
     public:
-        ~_socket();
-        
         const std::string& address() const;
         unsigned int       port()    const;
         
@@ -493,11 +491,6 @@ namespace show
             put_buffer,
             put_buffer + BUFFER_SIZE
         );
-    }
-    
-    _socket::~_socket()
-    {
-        flush();
     }
     
     const std::string& _socket::address() const
