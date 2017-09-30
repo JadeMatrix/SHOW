@@ -311,9 +311,7 @@ namespace show
         );
         ~server();
         
-        // DEBUG:
-        // request serve();
-        std::shared_ptr< _socket > serve();
+        request serve();
         
         const std::string& address() const;
         unsigned int       port()    const;
@@ -1208,14 +1206,13 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
     }
+    
     server::~server()
     {
         delete listen_socket;
     }
     
-    // DEBUG:
-    // request server::serve()
-    std::shared_ptr< _socket > server::serve()
+    request server::serve()
     {
         if( _timeout != 0 )
             listen_socket -> wait_for(
@@ -1256,13 +1253,14 @@ namespace show
         // TODO: write a inet_ntoa_r() replacement
         char address_buffer[ 3 * 4 + 3 + 1 ] = "?.?.?.?";
         
-        // DEBUG:
-        return std::shared_ptr< _socket >(
-            new _socket(
-                serve_socket,
-                std::string( address_buffer ),
-                client_address.sin_port,
-                timeout()
+        return request(
+            std::shared_ptr< _socket >(
+                new _socket(
+                    serve_socket,
+                    std::string( address_buffer ),
+                    client_address.sin_port,
+                    timeout()
+                )
             )
         );
     }
