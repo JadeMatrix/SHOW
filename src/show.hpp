@@ -1068,17 +1068,66 @@ namespace show
         headers_t    & headers
     ) : serve_socket( r.serve_socket )
     {
-        // IMPLEMENT:
+        std::stringstream headers_stream;
+        
+        switch( protocol )
+        {
+        default:
+            headers_stream << "HTTP/1.0 ";
+            break;
+        case HTTP_1_1:
+            headers_stream << "HTTP/1.1 ";
+            break;
+        case HTTP_2_0:
+            headers_stream << "HTTP/1.2 ";
+            break;
+        }
+        
+        // Marshall response code & description
+        headers_stream
+            << code.code
+            << " "
+            << code.description
+            << "\r\n"
+        ;
+        
+        // Marshall headers
+        for(
+            auto map_iter = headers.begin();
+            map_iter != headers.end();
+            ++map_iter
+        )
+        {
+            for(
+                auto vector_iter = map_iter -> second.begin();
+                vector_iter != map_iter -> second.end();
+                ++vector_iter
+            )
+            {
+                headers_stream
+                    << map_iter -> first
+                    << ": "
+                    << *vector_iter
+                    << "\r\n"
+                ;
+            }
+        }
+        headers_stream << "\r\n";
+        
+        sputn(
+            headers_stream.str().c_str(),
+            headers_stream.str().size()
+        );
     }
     
-    ~response()
+    response::~response()
     {
-        // IMPLEMENT:
+        flush();
     }
     
     void response::flush()
     {
-        // IMPLEMENT:
+        serve_socket -> flush();
     }
     
     std::streamsize response::xsputn(
@@ -1086,12 +1135,12 @@ namespace show
         std::streamsize  count
     )
     {
-        // IMPLEMENT:
+        return serve_socket -> sputn( s, count );
     }
     
     response::int_type response::overflow( int_type ch )
     {
-        // IMPLEMENT:
+        return serve_socket -> overflow( ch );
     }
     
     // server ------------------------------------------------------------------
