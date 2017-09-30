@@ -83,18 +83,16 @@ namespace show
         std::vector< std::string >
     > query_args_t;
     
+    // Locale-independent ASCII uppercase
+    char _ASCII_upper( char c )
+    {
+        if( c >= 'a' && c <= 'z' )
+            c |= ~0x20;
+        return c;
+    }
+    
     struct _less_ignore_case_ASCII
     {
-    protected:
-        // Locale-independent ASCII lowercase
-        static char lower( char c )
-        {
-            if( c >= 'A' && c <= 'Z' )
-                c |= 0x20;
-            return c;
-        }
-    
-    public:
         bool operator()( const std::string& lhs, const std::string& rhs ) const
         {
             // This is probably faster than using a pair of
@@ -109,8 +107,8 @@ namespace show
                 ++i
             )
             {
-                char lhc = lower( lhs[ i ] );
-                char rhc = lower( rhs[ i ] );
+                char lhc = _ASCII_upper( lhs[ i ] );
+                char rhc = _ASCII_upper( rhs[ i ] );
                 
                 if( lhc < rhc )
                     return true;
@@ -806,7 +804,6 @@ namespace show
             switch( parse_state )
             {
             case READING_METHOD:
-                // TODO: Force uppercase
                 {
                     switch( current_char )
                     {
@@ -814,7 +811,7 @@ namespace show
                         parse_state = READING_PATH;
                         break;
                     default:
-                        _method += current_char;
+                        _method += _ASCII_upper( current_char );
                         break;
                     }
                 }
