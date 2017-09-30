@@ -90,6 +90,17 @@ namespace show
             c |= ~0x20;
         return c;
     }
+    std::string _ASCII_upper( std::string s )
+    {
+        std::string out;
+        for(
+            std::string::size_type i = 0;
+            i < s.size();
+            ++i
+        )
+            out += _ASCII_upper( s[ i ] );
+        return out;
+    }
     
     struct _less_ignore_case_ASCII
     {
@@ -973,13 +984,15 @@ namespace show
             }
         }
         
-        if( _protocol_string == "HTTP/1.0" )
+        std::string protocol_string_upper = _ASCII_upper( _protocol_string );
+        
+        if( protocol_string_upper == "HTTP/1.0" )
             _protocol = HTTP_1_0;
-        else if( _protocol_string == "HTTP/1.1" )
+        else if( protocol_string_upper == "HTTP/1.1" )
             _protocol = HTTP_1_1;
-        else if( _protocol_string == "HTTP/2.0" )
+        else if( protocol_string_upper == "HTTP/2.0" )
             _protocol = HTTP_2_0;
-        else if( _protocol_string == "" )
+        else if( protocol_string_upper == "" )
             _protocol = NONE;
         else
             _protocol = UNKNOWN;
