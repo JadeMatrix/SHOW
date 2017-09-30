@@ -81,6 +81,7 @@ void request_handler( show::request&& request )
     
     show::response response(
         request,
+        show::http_protocol::HTTP_1_0,
         rc,
         headers
     );
@@ -144,9 +145,9 @@ int main( int argc, char* argv[] )
     try
     {
         show::server test_server(
-            // request_handler,
             argv[ 1 ],
-            std::stoi( argv[ 2 ] )
+            std::stoi( argv[ 2 ] ),
+            2
         );
         
         while( true )
@@ -156,7 +157,7 @@ int main( int argc, char* argv[] )
             }
             catch( show::connection_timeout& ct )
             {
-                // TODO: log timeout info
+                std::cout << "timeout exceeded! looping...\n";
                 continue;
             }
     }

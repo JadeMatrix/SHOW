@@ -1,10 +1,5 @@
-/*
-Control some compile-time behavior by defining these:
-    #define SHOW_NOEXCEPT IGNORE
-    #define SHOW_NOEXCEPT AS_IS
-*/
-
 // TODO: when supporting HTTP/1.1, support pipelining requests
+// TODO: IPv6
 
 
 #pragma once
@@ -12,6 +7,7 @@ Control some compile-time behavior by defining these:
 #define SHOW_HPP
 
 
+#include <exception>
 #include <iomanip>
 #include <map>
 #include <memory>
@@ -20,21 +16,21 @@ Control some compile-time behavior by defining these:
 #include <streambuf>
 #include <vector>
 
-#ifndef SHOW_NOEXCEPT
-#include <exception>
-#endif
-
-#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <sys/socket.h>
+#include <sys/select.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <fcntl.h>
 
 
 namespace show
 {
+    // Constants ///////////////////////////////////////////////////////////////
+    
+    
     const struct
     {
         std::string name;
@@ -42,17 +38,30 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 5, 0, "0.5.0" };
+    } version = { "SHOW", 0, 6, 0, "0.6.0" };
+    
+    const char* base64_chars_standard =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const char* base64_chars_urlsafe  =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     
     
-    // Basic types & forward declarations //////////////////////////////////////
+    // Forward declarations ////////////////////////////////////////////////////
     
     
+    class _simple_socket;
+    class _socket;
     class server;
     class request;
     class response;
     
+    
+    // Basic types /////////////////////////////////////////////////////////////
+    
+    
     typedef int socket_fd;
+    // `int` instead of `size_t` because this is a buffer for POSIX `read()`
+    typedef int buffer_size_t;
     
     enum http_protocol
     {
@@ -74,18 +83,27 @@ namespace show
         std::vector< std::string >
     > query_args_t;
     
+    // Locale-independent ASCII uppercase
+    char _ASCII_upper( char c )
+    {
+        if( c >= 'a' && c <= 'z' )
+            c |= ~0x20;
+        return c;
+    }
+    std::string _ASCII_upper( std::string s )
+    {
+        std::string out;
+        for(
+            std::string::size_type i = 0;
+            i < s.size();
+            ++i
+        )
+            out += _ASCII_upper( s[ i ] );
+        return out;
+    }
+    
     struct _less_ignore_case_ASCII
     {
-    protected:
-        // Locale-independent ASCII lowercase
-        static char lower( char c )
-        {
-            if( c >= 'A' && c <= 'Z' )
-                c |= 0x20;
-            return c;
-        }
-    
-    public:
         bool operator()( const std::string& lhs, const std::string& rhs ) const
         {
             // This is probably faster than using a pair of
@@ -100,8 +118,8 @@ namespace show
                 ++i
             )
             {
-                char lhc = lower( lhs[ i ] );
-                char rhc = lower( rhs[ i ] );
+                char lhc = _ASCII_upper( lhs[ i ] );
+                char rhc = _ASCII_upper( rhs[ i ] );
                 
                 if( lhc < rhc )
                     return true;
@@ -120,46 +138,100 @@ namespace show
         _less_ignore_case_ASCII
     > headers_t;
     
-    // `int` instead of `size_t` because this is a buffer for POSIX `read()`
-    typedef int posix_buffer_size_t;
-    const posix_buffer_size_t buffer_size = 1024;
-    
-    const char ASCII_ACK = '\x06';
-    
-    const char* base64_chars_standard =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    const char* base64_chars_urlsafe  =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    
     
     // Classes /////////////////////////////////////////////////////////////////
     
     
-    class _socket
+    class _simple_socket
     {
-    public:
-        const socket_fd fd;
+        friend class server;
         
-        _socket( socket_fd fd ) : fd( fd ) {}
-        ~_socket() { close( fd ); }
+    protected:
+        _simple_socket( socket_fd fd );
         
         void setsockopt(
-            int optname,
-            void* value,
-            int value_size,
+            int         optname,
+            void*       value,
+            int         value_size,
             std::string description
         );
+    
+    public:
+        enum wait_for_t
+        {
+            READ       = 1,
+            WRITE      = 2,
+            READ_WRITE = 3
+        };
         
-        void set_timeout( int );
+        const socket_fd descriptor;
+        
+        ~_simple_socket();
+        
+        wait_for_t wait_for(
+            wait_for_t         wf,
+            int                timeout,
+            const std::string& purpose
+        );
+    };
+    
+    class _socket : public _simple_socket, public std::streambuf
+    {
+        friend class server;
+        
+    protected:
+        static const buffer_size_t BUFFER_SIZE =   1024;
+        static const char          ASCII_ACK   = '\x06';
+        
+        char         get_buffer[ BUFFER_SIZE ];
+        char         put_buffer[ BUFFER_SIZE ];
+        std::string  _address;
+        unsigned int _port;
+        int          _timeout;
+        
+        _socket(
+            socket_fd          fd,
+            const std::string& address,
+            unsigned int       port,
+            int                timeout
+        );
+        
+    public:
+        const std::string& address() const;
+        unsigned int       port()    const;
+        
+        int timeout() const;
+        int timeout( int t );
+        
+        void flush();
+        
+        // std::streambuf get functions
+        virtual std::streamsize showmanyc();
+        virtual int_type        underflow();
+        virtual std::streamsize xsgetn(
+            char_type* s,
+            std::streamsize count
+        );
+        virtual int_type        pbackfail(
+            int_type c = std::char_traits< char >::eof()
+        );
+        
+        // std::streambuf put functions
+        virtual std::streamsize xsputn(
+            const char_type* s,
+            std::streamsize count
+        );
+        virtual int_type overflow(
+            int_type ch = std::char_traits< char >::eof()
+        );
     };
     
     class request : public std::streambuf
     {
         friend class response;
         friend class server;
-        
+    
     public:
-        
         enum content_length_flag_type
         {
             NO = 0,
@@ -176,12 +248,9 @@ namespace show
         const content_length_flag_type  & unknown_content_length;
         unsigned long long              & content_length;
         
+        bool eof() const;
+        
     protected:
-        
-        char buffer[ buffer_size ];
-        
-        sockaddr_in client_address;
-        // TODO: pre-C++11
         std::shared_ptr< _socket > serve_socket;
         
         http_protocol              _protocol;
@@ -194,19 +263,13 @@ namespace show
         unsigned long long         _content_length;
         
         unsigned long long read_content;
-        bool eof;
         
-        request( socket_fd )
-        // #ifdef SHOW_NOEXCEPT
-        // noexcept
-        // #endif
-        ;
+        request( std::shared_ptr< _socket > );
         
         virtual std::streamsize showmanyc();
         virtual int_type        underflow();
-        // virtual int_type        uflow();
         virtual std::streamsize xsgetn(
-            std::streambuf::char_type* s,
+            char_type* s,
             std::streamsize count
         );
         virtual int_type        pbackfail(
@@ -217,34 +280,23 @@ namespace show
     class response : public std::streambuf
     {
     public:
-        
         response(
-            request& r,
+            request      & r,
+            http_protocol  protocol,
             response_code& code,
-            headers_t& headers
-            // TODO: Protocol
-        ) noexcept;
-        ~response()
-        #ifdef SHOW_NOEXCEPT
-        noexcept
-        #endif
-        ;
+            headers_t    & headers
+        );
+        // TODO: warn that ~response() may try to flush
+        ~response();
         
-        virtual void flush( bool force = false )
-        #ifdef SHOW_NOEXCEPT
-        noexcept
-        #endif
-        ;
+        virtual void flush();
         
     protected:
-        
-        char buffer[ buffer_size ];
-        // TODO: pre-C++11
         std::shared_ptr< _socket > serve_socket;
         
         virtual std::streamsize xsputn(
-            const std::streambuf::char_type* s,
-            std::streamsize count
+            const char_type* s,
+            std::streamsize  count
         );
         virtual int_type overflow(
             int_type ch = std::char_traits< char >::eof()
@@ -253,68 +305,47 @@ namespace show
     
     class server
     {
-    public:
-        
-        typedef void (* handler_type )( request& );
-        
-        const std::string& address;
-        const in_port_t  & port;
-        
     protected:
-        
         std::string _address;
         in_port_t   _port;
+        int         _timeout;
         
-        int _timeout;
-        _socket* listen_socket;
+        _simple_socket* listen_socket;
         
     public:
-        
-        // TODO: temporal types?
-        // `#if __cplusplus > 199711L` for C++98
-        // `#if __cplusplus > 201103L` for C++11
-        // `#if __cplusplus > 201402L` for C++14
-        
         server(
             const std::string& address,
-            in_port_t port,
-            int timeout = -1
+            unsigned int       port,
+            int                timeout = -1
         );
         ~server();
         
-        show::request serve();
+        request serve();
         
-        int timeout();
+        const std::string& address() const;
+        unsigned int       port()    const;
+        
+        int timeout() const;
         int timeout( int t );
     };
     
-    #ifndef SHOW_NOEXCEPT
-    
-    class exception : public std::exception {};
-    
-    class socket_error : public exception
+    class exception : public std::exception
     {
     protected:
         std::string message;
     public:
-        socket_error( const std::string& m ) noexcept : message( m ) {}
+        exception( const std::string& m ) noexcept : message( m ) {}
         virtual const char* what() const noexcept { return message.c_str(); };
     };
     
-    class     request_parse_error : public exception
-    {
-    protected:
-        std::string message;
-    public:
-        request_parse_error( const std::string& m ) noexcept : message( m ) {}
-        virtual const char* what() const noexcept { return message.c_str(); };
-    };
-    class response_marshall_error : public exception {};
-    class        url_decode_error : public exception {};
-    class     base64_decode_error : public exception {};
+    class            socket_error : public exception { using exception::exception; };
+    class     request_parse_error : public exception { using exception::exception; };
+    class response_marshall_error : public exception { using exception::exception; };
+    class        url_decode_error : public exception { using exception::exception; };
+    class     base64_decode_error : public exception { using exception::exception; };
     
-    #endif
-    
+    // Does not inherit from std::exception as this isn't meant to signal a
+    // strict error state
     class connection_timeout
     {
         // TODO: information about which connection, etc.
@@ -328,11 +359,8 @@ namespace show
         const std::string& o,
         bool use_plus_space = true
     ) noexcept;
-    std::string url_decode( const std::string& )
-    #ifdef SHOW_NOEXCEPT
-    noexcept
-    #endif
-    ;
+    std::string url_decode( const std::string& );
+    
     std::string base64_encode(
         const std::string& o,
         const char* chars = base64_chars_standard
@@ -340,25 +368,34 @@ namespace show
     std::string base64_decode(
         const std::string& o,
         const char* chars = base64_chars_standard
-    )
-    #ifdef SHOW_NOEXCEPT
-    noexcept
-    #endif
-    ;
+    );
     
     
     // Implementations /////////////////////////////////////////////////////////
     
     
-    void _socket::setsockopt(
-        int optname,
-        void* value,
-        int value_size,
+    // _simple_socket ----------------------------------------------------------
+    
+    _simple_socket::_simple_socket( socket_fd fd ) : descriptor( fd )
+    {
+        // Because we want non-blocking behavior on 0-second timeouts, all
+        // sockets are set to `O_NONBLOCK` even though `pselect()` is used.
+        fcntl(
+            descriptor,
+            F_SETFL,
+            fcntl( descriptor, F_GETFL, 0 ) | O_NONBLOCK
+        );
+    }
+    
+    void _simple_socket::setsockopt(
+        int         optname,
+        void*       value,
+        int         value_size,
         std::string description
     )
     {
         if( ::setsockopt(
-            fd,
+            descriptor,
             SOL_SOCKET,
             optname,
             value,
@@ -372,413 +409,219 @@ namespace show
             );
     }
     
-    void _socket::set_timeout( int t )
+    _simple_socket::~_simple_socket()
     {
-        timeval timeout_tv;
-        int flags = fcntl( fd, F_GETFL, 0 );
-        
-        if( t <= 0 )
-        {
-            timeout_tv.tv_sec = 0;
-            timeout_tv.tv_usec = 0;
-            
-            if( t == 0 )
-                flags |= O_NONBLOCK;
-            else
-                flags &= ~O_NONBLOCK;
-        }
-        else
-        {
-            flags &= ~O_NONBLOCK;
-            timeout_tv.tv_sec = t;
-            timeout_tv.tv_usec = 0;
-        }
-        
-        setsockopt(
-            SO_RCVTIMEO,
-            &timeout_tv,
-            sizeof( timeout_tv ),
-            "receive timeout"
-        );
-        setsockopt(
-            SO_SNDTIMEO,
-            &timeout_tv,
-            sizeof( timeout_tv ),
-            "send timeout"
-        );
-        fcntl( fd, F_SETFL, flags );
+        close( descriptor );
     }
     
-    request::request( socket_fd s ) :
-        protocol(               _protocol                  ),
-        protocol_string(        _protocol_string           ),
-        method(                 _method                    ),
-        path(                   _path                      ),
-        query_args(             _query_args                ),
-        headers(                _headers                   ),
-        unknown_content_length( _unknown_content_length    ),
-        content_length(         _content_length            ),
-        eof(                    false                      )
+    _simple_socket::wait_for_t _simple_socket::wait_for(
+        wait_for_t         wf,
+        int                timeout,
+        const std::string& purpose
+    )
     {
-        // TODO: client address
+        if( timeout == 0 )
+            // 0-second timeouts must be handled in the code that called
+            // `wait_for()`, and 0s will cause `pselect()` to error
+            throw socket_error(
+                "0-second timeouts can't be handled by wait_for()"
+            );
         
-        serve_socket.reset( new _socket( s ) );
+        fd_set read_descriptors, write_descriptors;
+        timespec timeout_spec = { timeout, 0 };
         
-        bool reading = true;
-        int bytes_read;
+        bool r = wf & wait_for_t::READ;
+        bool w = wf & wait_for_t::WRITE;
         
-        int seq_newlines = 0;
-        bool in_endline_seq = false;
-        // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-        bool check_for_multiline_header = false;
-        
-        std::stack< std::string > key_buffer_stack;
-        std::string key_buffer, value_buffer;
-        
-        enum {
-            READING_METHOD,
-            READING_PATH,
-            READING_QUERY_ARGS,
-            READING_PROTOCOL,
-            READING_HEADER_NAME,
-            READING_HEADER_VALUE
-        } parse_state = READING_METHOD;
-        
-        // FIXME: Parsing request assumes it is well-formed for now
-        // FIXME: This is also super-unoptimal
-        while( reading )
+        if( r )
         {
-            bytes_read = read( serve_socket -> fd, buffer, buffer_size - 1 );
+            FD_ZERO( &read_descriptors );
+            FD_SET( descriptor, &read_descriptors );
+        }
+        if( w )
+        {
+            FD_ZERO( &write_descriptors );
+            FD_SET( descriptor, &write_descriptors );
+        }
+        
+        int select_result = pselect(
+            descriptor + 1,
+            r ? &read_descriptors  : NULL,
+            w ? &write_descriptors : NULL,
+            NULL,
+            timeout > 0 ? &timeout_spec : NULL,
+            NULL
+        );
+        
+        if( select_result == -1 )
+            throw socket_error(
+                "failure to select on "
+                + purpose
+                + ": "
+                + std::string( std::strerror( errno ) )
+            );
+        else if( select_result == 0 )
+            throw connection_timeout();
+        
+        if( r )
+            r = FD_ISSET( descriptor, &read_descriptors );
+        if( w )
+            w = FD_ISSET( descriptor, &write_descriptors );
+        
+        // At least one of these must be true
+        if( w && r )
+            return READ_WRITE;
+        else if( r )
+            return READ;
+        else
+            return WRITE;
+    }
+    
+    // _socket -----------------------------------------------------------------
+    
+    _socket::_socket(
+        socket_fd          fd,
+        const std::string& address,
+        unsigned int       port,
+        int                timeout
+    ) :
+        _simple_socket( fd      ),
+        _address(       address ),
+        _port(          port    )
+    {
+        this -> timeout( timeout );
+        setg(
+            get_buffer,
+            get_buffer,
+            get_buffer
+        );
+        setp(
+            put_buffer,
+            put_buffer + BUFFER_SIZE
+        );
+    }
+    
+    const std::string& _socket::address() const
+    {
+        return _address;
+    }
+    
+    unsigned int _socket::port() const
+    {
+        return _port;
+    }
+    
+    int _socket::timeout() const
+    {
+        return _timeout;
+    }
+    
+    int _socket::timeout( int t )
+    {
+        _timeout = t;
+        return _timeout;
+    }
+    
+    void _socket::flush()
+    {
+        buffer_size_t send_offset = 0;
+        
+        while( pptr() - ( pbase() + send_offset ) > 0 )
+        {
+            if( _timeout != 0 )
+                wait_for(
+                    WRITE,
+                    _timeout,
+                    "response send"
+                );
             
-            for( int i = 0; reading && i < bytes_read; ++i )
+            buffer_size_t bytes_sent = send(
+                descriptor,
+                pbase() + send_offset,
+                pptr() - ( pbase() + send_offset ),
+                0
+            );
+            
+            if( bytes_sent == -1 )
             {
-                // \r\n does not make the FSM parser happy
-                if( in_endline_seq )
-                {
-                    if( buffer[ i ] == '\n' )
-                        in_endline_seq = false;
-                    else
-                        throw request_parse_error(
-                            "malformed HTTP line ending"
-                        );
-                }
+                auto errno_copy = errno;
                 
-                if( buffer[ i ] == '\n' )
-                    ++seq_newlines;
-                else if( buffer[ i ] == '\r' )
-                {
-                    in_endline_seq = true;
-                    continue;
-                }
-                else
-                    seq_newlines = 0;
-                
-                switch( parse_state )
-                {
-                case READING_METHOD:
-                    // TODO: Force uppercase
-                    {
-                        switch( buffer[ i ] )
-                        {
-                        case ' ':
-                            parse_state = READING_PATH;
-                            break;
-                        default:
-                            _method += buffer[ i ];
-                            break;
-                        }
-                    }
-                    break;
-                
-                case READING_PATH:
-                    {
-                        switch( buffer[ i ] )
-                        {
-                        case '?':
-                            parse_state = READING_QUERY_ARGS;
-                            break;
-                        case ' ':
-                            parse_state = READING_PROTOCOL;
-                            break;
-                        case '/':
-                            if( _path.size() > 0 )
-                            {
-                                *_path.rbegin() = url_decode( *_path.rbegin() );
-                                _path.push_back( "" );
-                            }
-                            break;
-                        default:
-                            if( _path.size() < 1 )
-                                _path.push_back( std::string( buffer + i, 1 ) );
-                            else
-                                _path[ _path.size() - 1 ] += buffer[ i ];
-                            break;
-                        }
-                        
-                        if(
-                            parse_state != READING_PATH
-                            && _path.size() > 0
-                        )
-                            *_path.rbegin() = url_decode( *_path.rbegin() );
-                    }
-                    break;
-                
-                case READING_QUERY_ARGS:
-                    {
-                        switch( buffer[ i ] )
-                        {
-                        case '=':
-                            key_buffer_stack.push( "" );
-                            break;
-                        case '\n':
-                        case ' ':
-                        case '&':
-                            if( key_buffer_stack.size() > 1 )
-                            {
-                                value_buffer = url_decode(
-                                    key_buffer_stack.top()
-                                );
-                                key_buffer_stack.pop();
-                            }
-                            else
-                                value_buffer = "";
-                            
-                            while( !key_buffer_stack.empty() )
-                            {
-                                _query_args[
-                                    url_decode( key_buffer_stack.top() )
-                                ].push_back( value_buffer );
-                                
-                                key_buffer_stack.pop();
-                            }
-                            
-                            if( buffer[ i ] == '\n' )
-                                parse_state = READING_HEADER_NAME;
-                            else if( buffer[ i ] == ' ' )
-                                parse_state = READING_PROTOCOL;
-                            
-                            break;
-                        default:
-                            if( key_buffer_stack.empty() )
-                                key_buffer_stack.push( "" );
-                            key_buffer_stack.top() += buffer[ i ];
-                            break;
-                        }
-                    }
-                    break;
-                
-                case READING_PROTOCOL:
-                    if( buffer[ i ] == '\n' )
-                        parse_state = READING_HEADER_NAME;
-                    else
-                        _protocol_string += buffer[ i ];
-                    break;
-                
-                case READING_HEADER_NAME:
-                    {
-                        switch( buffer[ i ] )
-                        {
-                        case ':':
-                            parse_state = READING_HEADER_VALUE;
-                            break;
-                        case '\n':
-                            if( key_buffer.size() < 1 )
-                            {
-                                reading = false;
-                                break;
-                            }
-                        default:
-                            if( !(
-                                ( buffer[ i ] >= 'a' && buffer[ i ] <= 'z' )
-                                || ( buffer[ i ] >= 'A' && buffer[ i ] <= 'Z' )
-                                || ( buffer[ i ] >= '0' && buffer[ i ] <= '9' )
-                                || buffer[ i ] == '-'
-                            ) )
-                                throw request_parse_error( "malformed header" );
-                            
-                            key_buffer += buffer[ i ];
-                            break;
-                        }
-                    }
-                    break;
-                
-                case READING_HEADER_VALUE:
-                    {
-                        switch( buffer[ i ] )
-                        {
-                        case '\n':
-                            if( seq_newlines >= 2 )
-                            {
-                                if( check_for_multiline_header )
-                                    _headers[ key_buffer ].push_back(
-                                        value_buffer
-                                    );
-                                
-                                reading = false;
-                            }
-                            else
-                                check_for_multiline_header = true;
-                            break;
-                        default:
-                            if( check_for_multiline_header )
-                            {
-                                _headers[ key_buffer ].push_back(
-                                    value_buffer
-                                );
-                                
-                                // Start new key with current value
-                                key_buffer = buffer[ i ];
-                                value_buffer = "";
-                                check_for_multiline_header = false;
-                                
-                                parse_state = READING_HEADER_NAME;
-                                
-                                break;
-                            }
-                        case ' ':
-                        case '\t':
-                            value_buffer += buffer[ i ];
-                            check_for_multiline_header = false;
-                            break;
-                        }
-                    }
-                    break;
-                }
-                
-                if( !reading )
-                {
-                    setg(
-                        buffer + 1,
-                        buffer + 1 + i,
-                        buffer + 1 + bytes_read
+                if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
+                    throw connection_timeout();
+                else if( errno_copy != EINTR )
+                    // EINTR means the send() was interrupted and we just need
+                    // to try again
+                    throw socket_error(
+                        "failure to send response: "
+                        + std::string( std::strerror( errno_copy ) )
                     );
-                    read_content = bytes_read - i;
+            }
+            else
+                send_offset += bytes_sent;
+        }
+        
+        setp(
+            pbase(),
+            epptr()
+        );
+    }
+    
+    std::streamsize _socket::showmanyc()
+    {
+        return egptr() - gptr();
+    }
+    
+    _socket::int_type _socket::underflow()
+    {
+        if( showmanyc() <= 0 )
+        {
+            buffer_size_t bytes_read = 0;
+            
+            while( bytes_read < 1 )
+            {
+                if( _timeout != 0 )
+                    wait_for(
+                        READ,
+                        _timeout,
+                        "request read"
+                    );
+                
+                bytes_read = read(
+                    descriptor,
+                    eback(),
+                    BUFFER_SIZE
+                );
+                
+                if( bytes_read == -1 )
+                {
+                    auto errno_copy = errno;
+                    
+                    if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
+                        throw connection_timeout();
+                    else if( errno_copy != EINTR )
+                        // EINTR means the read() was interrupted and we just
+                        // need to try again
+                        throw socket_error(
+                            "failure to read request: "
+                            + std::string( std::strerror( errno_copy ) )
+                        );
                 }
             }
-        }
-        
-        if( _protocol_string == "HTTP/1.0" )
-            _protocol = HTTP_1_0;
-        else if( _protocol_string == "HTTP/1.1" )
-            _protocol = HTTP_1_1;
-        else if( _protocol_string == "HTTP/2.0" )
-            _protocol = HTTP_2_0;
-        else if( _protocol_string == "" )
-            _protocol = NONE;
-        else
-            _protocol = UNKNOWN;
-        
-        // TODO: pre-C++11
-        auto content_length_header = _headers.find( "Content-Length" );
-        
-        _unknown_content_length = YES;
-        
-        if( content_length_header != _headers.end() )
-        {
-            if( content_length_header -> second.size() > 1 )
-                _unknown_content_length = MAYBE;
-            else
-                try
-                {
-                    // TODO: pre-C++11
-                    _content_length = std::stoull(
-                        content_length_header -> second[ 0 ],
-                        nullptr,
-                        0
-                    );
-                    _unknown_content_length = NO;
-                    
-                    // Avoid issues when the client sends more than it claims;
-                    // this has to be handled specially here as we've already
-                    // read those bytes from the socket
-                    // TODO: Have request::request() use itself as a stream?
-                    if( _content_length < read_content )
-                    {
-                        read_content = _content_length;
-                        setg(
-                            eback(),
-                            gptr(),
-                            gptr() + _content_length
-                        );
-                        eof = true;
-                    }
-                }
-                catch( std::invalid_argument& e )
-                {
-                    _unknown_content_length = MAYBE;
-                }
-        }
-    }
-    
-    std::streamsize request::showmanyc()
-    {
-        if( !unknown_content_length && eof )
-            return -1;
-        else
-            return egptr() - gptr();
-    }
-    
-    request::int_type request::underflow()
-    {
-        if( gptr() >= egptr() )
-        {
-            std::streamsize in_buffer = showmanyc();
             
-            if( in_buffer < 0 )
-                return traits_type::eof();
-            else if( in_buffer == 0 )
-            {
-                posix_buffer_size_t to_get = buffer_size;
-                
-                if( !unknown_content_length )
-                {
-                    unsigned long long remaining_content = (
-                        content_length - read_content
-                    );
-                    
-                    if( remaining_content < buffer_size )
-                        to_get = ( posix_buffer_size_t )remaining_content;
-                }
-                
-                if( to_get > 0 )
-                {
-                    posix_buffer_size_t bytes_read = 0;
-                    
-                    while( bytes_read < 1 )
-                        // TODO: block instead of spin
-                        bytes_read = read(
-                            serve_socket -> fd,
-                            eback(),
-                            to_get
-                        );
-                    
-                    read_content += bytes_read;
-                    
-                    setg(
-                        eback(),
-                        eback(),
-                        eback() + bytes_read
-                    );
-                }
-                else
-                {
-                    eof = true;
-                    
-                    setg(
-                        eback(),
-                        eback(),
-                        eback()
-                    );
-                    
-                    return traits_type::eof();
-                }
-            }
+            setg(
+                eback(),
+                eback(),
+                eback() + bytes_read
+            );
         }
         
         return traits_type::to_int_type( *gptr() );
     }
     
-    std::streamsize request::xsgetn( request::char_type* s, std::streamsize count )
+    std::streamsize _socket::xsgetn(
+        char_type* s,
+        std::streamsize count
+    )
     {
         // TODO: copy in available chunks rather than ~i calls to `sbumpc()`?
         
@@ -799,7 +642,7 @@ namespace show
         return i;
     }
     
-    request::int_type request::pbackfail( request::int_type c )
+    _socket::int_type _socket::pbackfail( int_type c )
     {
         /*
         Parameters:
@@ -817,7 +660,7 @@ namespace show
                     egptr()
                 );
             }
-            else if( egptr() < eback() + buffer_size )
+            else if( egptr() < eback() + BUFFER_SIZE )
             {
                 setg(
                     eback(),
@@ -867,67 +710,8 @@ namespace show
         }
     }
     
-    response::response(
-        request& r,
-        response_code& code,
-        headers_t& headers
-    ) noexcept :
-        serve_socket( r.serve_socket )
-    {
-        std::stringstream headers_stream;
-        
-        // Marshall response code & description
-        headers_stream
-            << code.code
-            << " "
-            << code.description
-            << " HTTP/1.0"
-            << "\r\n"
-        ;
-        
-        // Marshall headers
-        // TODO: pre-C++11
-        for(
-            auto map_iter = headers.begin();
-            map_iter != headers.end();
-            ++map_iter
-        )
-        {
-            // TODO: pre-C++11
-            for(
-                auto vector_iter = map_iter -> second.begin();
-                vector_iter != map_iter -> second.end();
-                ++vector_iter
-            )
-            {
-                headers_stream
-                    << map_iter -> first
-                    << ": "
-                    << *vector_iter
-                    << "\r\n"
-                ;
-            }
-        }
-        headers_stream << "\r\n";
-        
-        setp(
-            buffer,
-            buffer + buffer_size
-        );
-        
-        sputn(
-            headers_stream.str().c_str(),
-            headers_stream.str().size()
-        );
-    }
-    
-    response::~response()
-    {
-        flush();
-    }
-    
-    std::streamsize response::xsputn(
-        const response::char_type* s,
+    std::streamsize _socket::xsputn(
+        const char_type* s,
         std::streamsize count
     )
     {
@@ -944,7 +728,7 @@ namespace show
         return chars_written;
     }
     
-    response::int_type response::overflow( response::int_type ch )
+    _socket::int_type _socket::overflow( int_type ch )
     {
         try
         {
@@ -965,51 +749,423 @@ namespace show
             return traits_type::to_int_type( ASCII_ACK );
     }
     
-    void response::flush( bool force )
+    // request -----------------------------------------------------------------
+    
+    bool request::eof() const
     {
-        if( force || pptr() > pbase() )
-        {
-            while(
-                send(
-                    serve_socket -> fd,
-                    pbase(),
-                    pptr() - pbase(),
-                    0
-                ) == -1
-            )
-            {
-                // TODO: pre-C++11
-                auto errno_copy = errno;
-                
-                if( errno_copy != EINTR )
-                    #ifdef SHOW_NOEXCEPT
-                    // Fail silently under no-except
-                    break;
-                    #else
-                    throw socket_error(
-                        "failure to send response: "
-                        + std::string( std::strerror( errno_copy ) )
-                    );
-                    #endif
-            }
-            
-            setp(
-                pbase(),
-                epptr()
-            );
-        }
+        return !unknown_content_length && read_content >= _content_length;
     }
     
+    request::request( std::shared_ptr< _socket > s ) :
+        serve_socket(           s                          ),
+        protocol(               _protocol                  ),
+        protocol_string(        _protocol_string           ),
+        method(                 _method                    ),
+        path(                   _path                      ),
+        query_args(             _query_args                ),
+        headers(                _headers                   ),
+        unknown_content_length( _unknown_content_length    ),
+        content_length(         _content_length            ),
+        read_content(           0                          )
+    {
+        bool reading = true;
+        int bytes_read;
+        
+        int seq_newlines = 0;
+        bool in_endline_seq = false;
+        // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+        bool check_for_multiline_header = false;
+        
+        std::stack< std::string > key_buffer_stack;
+        std::string key_buffer, value_buffer;
+        
+        enum {
+            READING_METHOD,
+            READING_PATH,
+            READING_QUERY_ARGS,
+            READING_PROTOCOL,
+            READING_HEADER_NAME,
+            READING_HEADER_VALUE
+        } parse_state = READING_METHOD;
+        
+        while( reading )
+        {
+            char current_char = serve_socket -> sbumpc();
+            
+            // \r\n does not make the FSM parser happy
+            if( in_endline_seq )
+            {
+                if( current_char == '\n' )
+                    in_endline_seq = false;
+                else
+                    throw request_parse_error(
+                        "malformed HTTP line ending"
+                    );
+            }
+            
+            if( current_char == '\n' )
+                ++seq_newlines;
+            else if( current_char == '\r' )
+            {
+                in_endline_seq = true;
+                continue;
+            }
+            else
+                seq_newlines = 0;
+            
+            switch( parse_state )
+            {
+            case READING_METHOD:
+                {
+                    switch( current_char )
+                    {
+                    case ' ':
+                        parse_state = READING_PATH;
+                        break;
+                    default:
+                        _method += _ASCII_upper( current_char );
+                        break;
+                    }
+                }
+                break;
+                
+            case READING_PATH:
+                {
+                    switch( current_char )
+                    {
+                    case '?':
+                        parse_state = READING_QUERY_ARGS;
+                        break;
+                    case ' ':
+                        parse_state = READING_PROTOCOL;
+                        break;
+                    case '/':
+                        if( _path.size() > 0 )
+                        {
+                            *_path.rbegin() = url_decode( *_path.rbegin() );
+                            _path.push_back( "" );
+                        }
+                        break;
+                    default:
+                        if( _path.size() < 1 )
+                            _path.push_back( std::string( &current_char, 1 ) );
+                        else
+                            _path[ _path.size() - 1 ] += current_char;
+                        break;
+                    }
+                    
+                    if(
+                        parse_state != READING_PATH
+                        && _path.size() > 0
+                    )
+                        *_path.rbegin() = url_decode( *_path.rbegin() );
+                }
+                break;
+                
+            case READING_QUERY_ARGS:
+                {
+                    switch( current_char )
+                    {
+                    case '=':
+                        key_buffer_stack.push( "" );
+                        break;
+                    case '\n':
+                    case ' ':
+                    case '&':
+                        if( key_buffer_stack.size() > 1 )
+                        {
+                            value_buffer = url_decode(
+                                key_buffer_stack.top()
+                            );
+                            key_buffer_stack.pop();
+                        }
+                        else
+                            value_buffer = "";
+                        
+                        while( !key_buffer_stack.empty() )
+                        {
+                            _query_args[
+                                url_decode( key_buffer_stack.top() )
+                            ].push_back( value_buffer );
+                            
+                            key_buffer_stack.pop();
+                        }
+                        
+                        if( current_char == '\n' )
+                            parse_state = READING_HEADER_NAME;
+                        else if( current_char == ' ' )
+                            parse_state = READING_PROTOCOL;
+                        
+                        break;
+                    default:
+                        if( key_buffer_stack.empty() )
+                            key_buffer_stack.push( "" );
+                        key_buffer_stack.top() += current_char;
+                        break;
+                    }
+                }
+                break;
+                
+            case READING_PROTOCOL:
+                if( current_char == '\n' )
+                    parse_state = READING_HEADER_NAME;
+                else
+                    _protocol_string += current_char;
+                break;
+                
+            case READING_HEADER_NAME:
+                {
+                    switch( current_char )
+                    {
+                    case ':':
+                        parse_state = READING_HEADER_VALUE;
+                        break;
+                    case '\n':
+                        if( key_buffer.size() < 1 )
+                        {
+                            reading = false;
+                            break;
+                        }
+                    default:
+                        if( !(
+                            ( current_char >= 'a' && current_char <= 'z' )
+                            || ( current_char >= 'A' && current_char <= 'Z' )
+                            || ( current_char >= '0' && current_char <= '9' )
+                            || current_char == '-'
+                        ) )
+                            throw request_parse_error( "malformed header" );
+                        
+                        key_buffer += current_char;
+                        break;
+                    }
+                }
+                break;
+                
+            case READING_HEADER_VALUE:
+                {
+                    switch( current_char )
+                    {
+                    case '\n':
+                        if( seq_newlines >= 2 )
+                        {
+                            if( check_for_multiline_header )
+                                _headers[ key_buffer ].push_back(
+                                    value_buffer
+                                );
+                            
+                            reading = false;
+                        }
+                        else
+                            check_for_multiline_header = true;
+                        break;
+                    default:
+                        if( check_for_multiline_header )
+                        {
+                            _headers[ key_buffer ].push_back(
+                                value_buffer
+                            );
+                            
+                            // Start new key with current value
+                            key_buffer = current_char;
+                            value_buffer = "";
+                            check_for_multiline_header = false;
+                            
+                            parse_state = READING_HEADER_NAME;
+                            
+                            break;
+                        }
+                    case ' ':
+                    case '\t':
+                        value_buffer += current_char;
+                        check_for_multiline_header = false;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        
+        std::string protocol_string_upper = _ASCII_upper( _protocol_string );
+        
+        if( protocol_string_upper == "HTTP/1.0" )
+            _protocol = HTTP_1_0;
+        else if( protocol_string_upper == "HTTP/1.1" )
+            _protocol = HTTP_1_1;
+        else if( protocol_string_upper == "HTTP/2.0" )
+            _protocol = HTTP_2_0;
+        else if( protocol_string_upper == "" )
+            _protocol = NONE;
+        else
+            _protocol = UNKNOWN;
+        
+        auto content_length_header = _headers.find( "Content-Length" );
+        
+        if( content_length_header != _headers.end() )
+        {
+            if( content_length_header -> second.size() > 1 )
+                _unknown_content_length = MAYBE;
+            else
+                try
+                {
+                    _content_length = std::stoull(
+                        content_length_header -> second[ 0 ],
+                        nullptr,
+                        0
+                    );
+                    _unknown_content_length = NO;
+                }
+                catch( std::invalid_argument& e )
+                {
+                    _unknown_content_length = MAYBE;
+                }
+        }
+        else
+            _unknown_content_length = YES;
+    }
+    
+    std::streamsize request::showmanyc()
+    {
+        if( eof() )
+            return -1;
+        else
+            return serve_socket -> showmanyc();
+    }
+    
+    request::int_type request::underflow()
+    {
+        if( eof() )
+            return traits_type::eof();
+        else
+            return serve_socket -> underflow();
+    }
+    
+    std::streamsize request::xsgetn(
+        char_type* s,
+        std::streamsize count
+    )
+    {
+        std::streamsize read;
+        
+        if( unknown_content_length )
+            read = serve_socket -> sgetn( s, count );
+        else if( !eof() )
+        {
+            std::streamsize remaining = _content_length - read_content;
+            read = serve_socket -> sgetn(
+                s,
+                count > remaining ? remaining : count
+            );
+        }
+        else
+            return 0;
+        
+        read_content += read;
+        return read;
+    }
+    
+    request::int_type request::pbackfail( int_type c )
+    {
+        request::int_type result = serve_socket -> pbackfail( c );
+        
+        if( traits_type::not_eof( result ) )
+            --read_content;
+        
+        return result;
+    }
+    
+    // response ----------------------------------------------------------------
+    
+    response::response(
+        request      & r,
+        http_protocol  protocol,
+        response_code& code,
+        headers_t    & headers
+    ) : serve_socket( r.serve_socket )
+    {
+        std::stringstream headers_stream;
+        
+        switch( protocol )
+        {
+        default:
+            headers_stream << "HTTP/1.0 ";
+            break;
+        case HTTP_1_1:
+            headers_stream << "HTTP/1.1 ";
+            break;
+        case HTTP_2_0:
+            headers_stream << "HTTP/1.2 ";
+            break;
+        }
+        
+        // Marshall response code & description
+        headers_stream
+            << code.code
+            << " "
+            << code.description
+            << "\r\n"
+        ;
+        
+        // Marshall headers
+        for(
+            auto map_iter = headers.begin();
+            map_iter != headers.end();
+            ++map_iter
+        )
+        {
+            for(
+                auto vector_iter = map_iter -> second.begin();
+                vector_iter != map_iter -> second.end();
+                ++vector_iter
+            )
+            {
+                headers_stream
+                    << map_iter -> first
+                    << ": "
+                    << *vector_iter
+                    << "\r\n"
+                ;
+            }
+        }
+        headers_stream << "\r\n";
+        
+        sputn(
+            headers_stream.str().c_str(),
+            headers_stream.str().size()
+        );
+    }
+    
+    response::~response()
+    {
+        flush();
+    }
+    
+    void response::flush()
+    {
+        serve_socket -> flush();
+    }
+    
+    std::streamsize response::xsputn(
+        const char_type* s,
+        std::streamsize  count
+    )
+    {
+        return serve_socket -> sputn( s, count );
+    }
+    
+    response::int_type response::overflow( int_type ch )
+    {
+        return serve_socket -> overflow( ch );
+    }
+    
+    // server ------------------------------------------------------------------
+    
     server::server(
-        const std::string& a,
-        in_port_t p,
-        int t
+        const std::string& address,
+        unsigned int       port,
+        int                timeout
     ) :
-        _address( a ),
-        _port( p ),
-        _timeout( t ),
-        address( _address ),
-        port( _port )
+        _address( address ),
+        _port(    port    )
     {
         socket_fd listen_socket_fd = socket(
             AF_INET,
@@ -1023,7 +1179,7 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
-        listen_socket = new _socket( listen_socket_fd );
+        listen_socket = new _simple_socket( listen_socket_fd );
         
         int opt_reuse = 1;
         
@@ -1041,7 +1197,7 @@ namespace show
             sizeof( opt_reuse ),
             "port reuse"
         );
-        timeout( t );
+        this -> timeout( timeout );
         
         sockaddr_in socket_address;
         memset(&socket_address, 0, sizeof(socket_address));
@@ -1051,7 +1207,7 @@ namespace show
         socket_address.sin_port        = htons( _port );
         
         if( bind(
-            listen_socket -> fd,
+            listen_socket -> descriptor,
             ( sockaddr* )&socket_address,
             sizeof( socket_address )
         ) == -1 )
@@ -1060,7 +1216,7 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
-        if( listen( listen_socket -> fd, 3 ) == -1 )
+        if( listen( listen_socket -> descriptor, 3 ) == -1 )
             throw socket_error(
                 "could not listen on socket: "
                 + std::string( std::strerror( errno ) )
@@ -1072,39 +1228,74 @@ namespace show
         delete listen_socket;
     }
     
-    show::request server::serve()
+    request server::serve()
     {
+        if( _timeout != 0 )
+            listen_socket -> wait_for(
+                _simple_socket::wait_for_t::READ,
+                _timeout,
+                "listen"
+            );
+        
         sockaddr_in client_address;
         socklen_t client_address_len = sizeof( client_address );
         
         socket_fd serve_socket = accept(
-            listen_socket -> fd,
+            listen_socket -> descriptor,
             ( sockaddr* )&client_address,
             &client_address_len
         );
         
-        if( serve_socket == -1 )
+        if(
+            serve_socket == -1
+            // || inet_ntoa_r(
+            //     client_address.sin_addr,
+            //     address_buffer,
+            //     3 * 4 + 3
+            // ) == NULL
+        )
         {
-            if( errno == EAGAIN || errno == EWOULDBLOCK )
-                // Listen timeout reached
-                throw connection_timeout();
+            auto errno_copy = errno;
             
-            throw socket_error(
-                "could not create serve socket: "
-                + std::string( std::strerror( errno ) )
-            );
+            if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
+                throw connection_timeout();
+            else
+                throw socket_error(
+                    "could not create serve socket: "
+                    + std::string( std::strerror( errno_copy ) )
+                );
         }
         
-        return request( serve_socket );
+        // TODO: write a inet_ntoa_r() replacement
+        char address_buffer[ 3 * 4 + 3 + 1 ] = "?.?.?.?";
+        
+        return request(
+            std::shared_ptr< _socket >(
+                new _socket(
+                    serve_socket,
+                    std::string( address_buffer ),
+                    client_address.sin_port,
+                    timeout()
+                )
+            )
+        );
     }
     
-    int server::timeout()
+    const std::string& server::address() const
+    {
+        return _address;
+    }
+    unsigned int server::port() const
+    {
+        return _port;
+    }
+    
+    int server::timeout() const
     {
         return _timeout;
     }
     int server::timeout( int t )
     {
-        listen_socket -> set_timeout( t );
         _timeout = t;
         return _timeout;
     }
@@ -1148,9 +1339,6 @@ namespace show
     }
     
     std::string url_decode( const std::string& o )
-    #ifdef SHOW_NOEXCEPT
-    noexcept
-    #endif
     {
         std::string decoded;
         std::string hex_convert_space = "00";
@@ -1160,15 +1348,9 @@ namespace show
             if( o[ i ] == '%' )
             {
                 if( o.size() < i + 3 )
-                {
-                    #if SHOW_NOEXCEPT == IGNORE
-                    break;
-                    #elif SHOW_NOEXCEPT == AS_IS
-                    decoded += '%';
-                    #else
-                    throw url_decode_error();
-                    #endif
-                }
+                    throw url_decode_error(
+                        "incomplete URL-encoded sequence"
+                    );
                 else
                 {
                     try
@@ -1186,13 +1368,9 @@ namespace show
                     }
                     catch( std::invalid_argument& e )
                     {
-                        #if SHOW_NOEXCEPT == IGNORE
-                        i += 2;
-                        #elif SHOW_NOEXCEPT == AS_IS
-                        decoded += '%';
-                        #else
-                        throw url_decode_error();
-                        #endif
+                        throw url_decode_error(
+                            "invalid URL-encoded sequence"
+                        );
                     }
                 }
             }
@@ -1279,9 +1457,6 @@ namespace show
     }
     
     std::string base64_decode( const std::string& o, const char* chars )
-    #ifdef SHOW_NOEXCEPT
-    noexcept
-    #endif
     {
         /*unsigned*/ char current_octet;
         std::string decoded;
@@ -1305,11 +1480,10 @@ namespace show
         if( b64_size % 4 )
             b64_size += 4 - ( b64_size % 4 );
         
-        #ifndef SHOW_NOEXCEPT
         if( b64_size > o.size() )
             // Missing required padding
-            throw base64_decode_error();
-        #endif
+            // TODO: add flag to explicitly ignore?
+            throw base64_decode_error( "missing required padding" );
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
         for( /*unsigned*/ char i = 0; i < 64; ++i )
@@ -1326,38 +1500,20 @@ namespace show
                 )
                     break;
                 else
-                    #if SHOW_NOEXCEPT == IGNORE
-                    continue;
-                    #elif SHOW_NOEXCEPT == AS_IS
-                    return o;
-                    #else
-                    throw base64_decode_error();
-                    #endif
+                    throw base64_decode_error( "premature padding" );
             }
             
             std::map< char, /*unsigned*/ char >::iterator first, second;
             
             first = reverse_lookup.find( o[ i ] );
             if( first == reverse_lookup.end() )
-                #if SHOW_NOEXCEPT == IGNORE
-                break;
-                #elif SHOW_NOEXCEPT == AS_IS
-                return o;
-                #else
-                throw base64_decode_error();
-                #endif
+                throw base64_decode_error( "invalid base64 character" );
             
             if( i + 1 < o.size() )
             {
                 second = reverse_lookup.find( o[ i + 1 ] );
                 if( second == reverse_lookup.end() )
-                    #if SHOW_NOEXCEPT == IGNORE
-                    break;
-                    #elif SHOW_NOEXCEPT == AS_IS
-                    return o;
-                    #else
-                    throw base64_decode_error();
-                    #endif
+                    throw base64_decode_error( "invalid base64 character" );
             }
             
             switch( i % 4 )
