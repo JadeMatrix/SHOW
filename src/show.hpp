@@ -760,17 +760,274 @@ namespace show
         unknown_content_length( _unknown_content_length    ),
         content_length(         _content_length            )
     {
-        // IMPLEMENT:
+        bool reading = true;
+        int bytes_read;
+        
+        int seq_newlines = 0;
+        bool in_endline_seq = false;
+        // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+        bool check_for_multiline_header = false;
+        
+        std::stack< std::string > key_buffer_stack;
+        std::string key_buffer, value_buffer;
+        
+        enum {
+            READING_METHOD,
+            READING_PATH,
+            READING_QUERY_ARGS,
+            READING_PROTOCOL,
+            READING_HEADER_NAME,
+            READING_HEADER_VALUE
+        } parse_state = READING_METHOD;
+        
+        while( reading )
+        {
+            char current_char = serve_socket -> sbumpc();
+            
+            // \r\n does not make the FSM parser happy
+            if( in_endline_seq )
+            {
+                if( current_char == '\n' )
+                    in_endline_seq = false;
+                else
+                    throw request_parse_error(
+                        "malformed HTTP line ending"
+                    );
+            }
+            
+            if( current_char == '\n' )
+                ++seq_newlines;
+            else if( current_char == '\r' )
+            {
+                in_endline_seq = true;
+                continue;
+            }
+            else
+                seq_newlines = 0;
+            
+            switch( parse_state )
+            {
+            case READING_METHOD:
+                // TODO: Force uppercase
+                {
+                    switch( current_char )
+                    {
+                    case ' ':
+                        parse_state = READING_PATH;
+                        break;
+                    default:
+                        _method += current_char;
+                        break;
+                    }
+                }
+                break;
+                
+            case READING_PATH:
+                {
+                    switch( current_char )
+                    {
+                    case '?':
+                        parse_state = READING_QUERY_ARGS;
+                        break;
+                    case ' ':
+                        parse_state = READING_PROTOCOL;
+                        break;
+                    case '/':
+                        if( _path.size() > 0 )
+                        {
+                            *_path.rbegin() = url_decode( *_path.rbegin() );
+                            _path.push_back( "" );
+                        }
+                        break;
+                    default:
+                        if( _path.size() < 1 )
+                            _path.push_back( std::string( &current_char, 1 ) );
+                        else
+                            _path[ _path.size() - 1 ] += current_char;
+                        break;
+                    }
+                    
+                    if(
+                        parse_state != READING_PATH
+                        && _path.size() > 0
+                    )
+                        *_path.rbegin() = url_decode( *_path.rbegin() );
+                }
+                break;
+                
+            case READING_QUERY_ARGS:
+                {
+                    switch( current_char )
+                    {
+                    case '=':
+                        key_buffer_stack.push( "" );
+                        break;
+                    case '\n':
+                    case ' ':
+                    case '&':
+                        if( key_buffer_stack.size() > 1 )
+                        {
+                            value_buffer = url_decode(
+                                key_buffer_stack.top()
+                            );
+                            key_buffer_stack.pop();
+                        }
+                        else
+                            value_buffer = "";
+                        
+                        while( !key_buffer_stack.empty() )
+                        {
+                            _query_args[
+                                url_decode( key_buffer_stack.top() )
+                            ].push_back( value_buffer );
+                            
+                            key_buffer_stack.pop();
+                        }
+                        
+                        if( current_char == '\n' )
+                            parse_state = READING_HEADER_NAME;
+                        else if( current_char == ' ' )
+                            parse_state = READING_PROTOCOL;
+                        
+                        break;
+                    default:
+                        if( key_buffer_stack.empty() )
+                            key_buffer_stack.push( "" );
+                        key_buffer_stack.top() += current_char;
+                        break;
+                    }
+                }
+                break;
+                
+            case READING_PROTOCOL:
+                if( current_char == '\n' )
+                    parse_state = READING_HEADER_NAME;
+                else
+                    _protocol_string += current_char;
+                break;
+                
+            case READING_HEADER_NAME:
+                {
+                    switch( current_char )
+                    {
+                    case ':':
+                        parse_state = READING_HEADER_VALUE;
+                        break;
+                    case '\n':
+                        if( key_buffer.size() < 1 )
+                        {
+                            reading = false;
+                            break;
+                        }
+                    default:
+                        if( !(
+                            ( current_char >= 'a' && current_char <= 'z' )
+                            || ( current_char >= 'A' && current_char <= 'Z' )
+                            || ( current_char >= '0' && current_char <= '9' )
+                            || current_char == '-'
+                        ) )
+                            throw request_parse_error( "malformed header" );
+                        
+                        key_buffer += current_char;
+                        break;
+                    }
+                }
+                break;
+                
+            case READING_HEADER_VALUE:
+                {
+                    switch( current_char )
+                    {
+                    case '\n':
+                        if( seq_newlines >= 2 )
+                        {
+                            if( check_for_multiline_header )
+                                _headers[ key_buffer ].push_back(
+                                    value_buffer
+                                );
+                            
+                            reading = false;
+                        }
+                        else
+                            check_for_multiline_header = true;
+                        break;
+                    default:
+                        if( check_for_multiline_header )
+                        {
+                            _headers[ key_buffer ].push_back(
+                                value_buffer
+                            );
+                            
+                            // Start new key with current value
+                            key_buffer = current_char;
+                            value_buffer = "";
+                            check_for_multiline_header = false;
+                            
+                            parse_state = READING_HEADER_NAME;
+                            
+                            break;
+                        }
+                    case ' ':
+                    case '\t':
+                        value_buffer += current_char;
+                        check_for_multiline_header = false;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        
+        if( _protocol_string == "HTTP/1.0" )
+            _protocol = HTTP_1_0;
+        else if( _protocol_string == "HTTP/1.1" )
+            _protocol = HTTP_1_1;
+        else if( _protocol_string == "HTTP/2.0" )
+            _protocol = HTTP_2_0;
+        else if( _protocol_string == "" )
+            _protocol = NONE;
+        else
+            _protocol = UNKNOWN;
+        
+        auto content_length_header = _headers.find( "Content-Length" );
+        
+        if( content_length_header != _headers.end() )
+        {
+            if( content_length_header -> second.size() > 1 )
+                _unknown_content_length = MAYBE;
+            else
+                try
+                {
+                    _content_length = std::stoull(
+                        content_length_header -> second[ 0 ],
+                        nullptr,
+                        0
+                    );
+                    _unknown_content_length = NO;
+                }
+                catch( std::invalid_argument& e )
+                {
+                    _unknown_content_length = MAYBE;
+                }
+        }
+        else
+            _unknown_content_length = YES;
     }
     
     std::streamsize request::showmanyc()
     {
-        // IMPLEMENT:
+        if( eof() )
+            return -1;
+        else
+            return serve_socket -> showmanyc();
     }
     
     request::int_type request::underflow()
     {
-        // IMPLEMENT:
+        if( eof() )
+            return traits_type::eof();
+        else
+            return serve_socket -> underflow();
     }
     
     std::streamsize request::xsgetn(
@@ -778,12 +1035,28 @@ namespace show
         std::streamsize count
     )
     {
-        // IMPLEMENT:
+        if( unknown_content_length )
+            return serve_socket -> sgetn( s, count );
+        else if( !eof() )
+        {
+            std::streamsize remaining = _content_length - read_content;
+            return serve_socket -> sgetn(
+                s,
+                count > remaining ? remaining : count
+            );
+        }
+        else
+            return 0;
     }
     
     request::int_type request::pbackfail( int_type c )
     {
-        // IMPLEMENT:
+        request::int_type result = serve_socket -> pbackfail( c );
+        
+        if( traits_type::not_eof( result ) )
+            --read_content;
+        
+        return result;
     }
     
     // response ----------------------------------------------------------------
