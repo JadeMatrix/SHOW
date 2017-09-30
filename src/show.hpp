@@ -765,7 +765,8 @@ namespace show
         query_args(             _query_args                ),
         headers(                _headers                   ),
         unknown_content_length( _unknown_content_length    ),
-        content_length(         _content_length            )
+        content_length(         _content_length            ),
+        read_content(           0                          )
     {
         bool reading = true;
         int bytes_read;
@@ -1043,18 +1044,23 @@ namespace show
         std::streamsize count
     )
     {
+        std::streamsize read;
+        
         if( unknown_content_length )
-            return serve_socket -> sgetn( s, count );
+            read = serve_socket -> sgetn( s, count );
         else if( !eof() )
         {
             std::streamsize remaining = _content_length - read_content;
-            return serve_socket -> sgetn(
+            read = serve_socket -> sgetn(
                 s,
                 count > remaining ? remaining : count
             );
         }
         else
             return 0;
+        
+        read_content += read;
+        return read;
     }
     
     request::int_type request::pbackfail( int_type c )
