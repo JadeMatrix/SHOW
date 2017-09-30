@@ -1,7 +1,7 @@
 # `SHOW::`
 
-[![GitHub version](https://img.shields.io/github/release/JadeMatrix/SHOW.svg?label=stable)](http://shields.io/)
-[![GitHub version](https://img.shields.io/github/release/JadeMatrix/SHOW/all.svg?label=latest)](http://shields.io/)
+[![stable version](https://img.shields.io/github/release/JadeMatrix/SHOW.svg?label=stable)](https://github.com/JadeMatrix/SHOW/releases/latest)
+[![latest version](https://img.shields.io/github/release/JadeMatrix/SHOW/all.svg?label=latest)](https://github.com/JadeMatrix/SHOW/releases)
 
 SHOW stands for Simple Header-Only Webserver.  The goal is to make an idiomatic library for tiny, standalone webserverlets written for modern C++.
 
