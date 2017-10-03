@@ -14,8 +14,6 @@ clang++ -std=c++11 -stdlib=libc++ -Oz src/test.cpp -o make/build/test
 
 void request_handler( show::request&& request )
 {
-    std::cout << "\n\nvvvv IN REQUEST HANDLER vvvv\n\n";
-    
     show::response_code rc = {
         200,
         "OK"
@@ -118,8 +116,6 @@ void request_handler( show::request&& request )
             );
         }
     }
-    
-    std::cout << "\n\n^^^^ IN REQUEST HANDLER ^^^^\n\n";
 }
 
 
@@ -153,7 +149,17 @@ int main( int argc, char* argv[] )
         while( true )
             try
             {
-                request_handler( test_server.serve() );
+                show::request request( test_server.serve() );
+                
+                std::cout
+                    << "got a request from "
+                    << request.client_address
+                    << ":"
+                    << request.client_port
+                    << "\n"
+                ;
+                
+                request_handler( std::move( request ) );
             }
             catch( show::connection_timeout& ct )
             {
