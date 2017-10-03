@@ -1168,7 +1168,7 @@ namespace show
         _port(    port    )
     {
         socket_fd listen_socket_fd = socket(
-            AF_INET,
+            AF_INET6,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
         );
@@ -1199,12 +1199,23 @@ namespace show
         );
         this -> timeout( timeout );
         
-        sockaddr_in socket_address;
+        sockaddr_in6 socket_address;
         memset(&socket_address, 0, sizeof(socket_address));
-        socket_address.sin_family      = AF_INET;
-        // socket_address.sin_addr.s_addr = INADDR_ANY;
-        socket_address.sin_addr.s_addr = inet_addr( _address.c_str() );
-        socket_address.sin_port        = htons( _port );
+        socket_address.sin6_family = AF_INET6;
+        socket_address.sin6_port   = htons( _port );
+        // socket_address.sin6_addr.s_addr  = in6addr_any;
+        if(
+            !inet_pton(
+                AF_INET6,
+                _address.c_str(),
+                socket_address.sin6_addr.s6_addr
+            ) && !inet_pton(
+                AF_INET,
+                _address.c_str(),
+                socket_address.sin6_addr.s6_addr
+            )
+        )
+            throw exception( _address + " is not a valid IP address" );
         
         if( bind(
             listen_socket -> descriptor,
@@ -1237,7 +1248,7 @@ namespace show
                 "listen"
             );
         
-        sockaddr_in client_address;
+        sockaddr_in6 client_address;
         socklen_t client_address_len = sizeof( client_address );
         
         socket_fd serve_socket = accept(
@@ -1249,7 +1260,7 @@ namespace show
         if(
             serve_socket == -1
             // || inet_ntoa_r(
-            //     client_address.sin_addr,
+            //     client_address.sin6_addr,
             //     address_buffer,
             //     3 * 4 + 3
             // ) == NULL
@@ -1274,7 +1285,7 @@ namespace show
                 new _socket(
                     serve_socket,
                     std::string( address_buffer ),
-                    client_address.sin_port,
+                    client_address.sin6_port,
                     timeout()
                 )
             )
