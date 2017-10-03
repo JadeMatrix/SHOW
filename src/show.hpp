@@ -1300,6 +1300,8 @@ namespace show
         return _timeout;
     }
     
+    // Functions ---------------------------------------------------------------
+    
     std::string url_encode(
         const std::string& o,
         bool use_plus_space
