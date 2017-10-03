@@ -147,7 +147,11 @@ namespace show
         friend class server;
         
     protected:
-        _simple_socket( socket_fd fd );
+        _simple_socket(
+            socket_fd          fd,
+            const std::string& address,
+            unsigned int       port
+        );
         
         void setsockopt(
             int         optname,
@@ -157,6 +161,9 @@ namespace show
         );
     
     public:
+        const std::string  address;
+        const unsigned int port;
+        
         enum wait_for_t
         {
             READ       = 1,
@@ -197,9 +204,6 @@ namespace show
         );
         
     public:
-        const std::string& address() const;
-        unsigned int       port()    const;
-        
         int timeout() const;
         int timeout( int t );
         
@@ -239,6 +243,8 @@ namespace show
             MAYBE
         };
         
+        const std::string               & client_address;
+        const unsigned int              & client_port;
         const http_protocol             & protocol;
         const std::string               & protocol_string;
         const std::string               & method;
@@ -306,9 +312,7 @@ namespace show
     class server
     {
     protected:
-        std::string _address;
-        in_port_t   _port;
-        int         _timeout;
+        int _timeout;
         
         _simple_socket* listen_socket;
         
@@ -376,7 +380,14 @@ namespace show
     
     // _simple_socket ----------------------------------------------------------
     
-    _simple_socket::_simple_socket( socket_fd fd ) : descriptor( fd )
+    _simple_socket::_simple_socket(
+        socket_fd          fd,
+        const std::string& address,
+        unsigned int       port
+    ) :
+        descriptor( fd      ),
+        address(    address ),
+        port(       port    )
     {
         // Because we want non-blocking behavior on 0-second timeouts, all
         // sockets are set to `O_NONBLOCK` even though `pselect()` is used.
@@ -485,9 +496,7 @@ namespace show
         unsigned int       port,
         int                timeout
     ) :
-        _simple_socket( fd      ),
-        _address(       address ),
-        _port(          port    )
+        _simple_socket( fd, address, port )
     {
         this -> timeout( timeout );
         setg(
@@ -499,16 +508,6 @@ namespace show
             put_buffer,
             put_buffer + BUFFER_SIZE
         );
-    }
-    
-    const std::string& _socket::address() const
-    {
-        return _address;
-    }
-    
-    unsigned int _socket::port() const
-    {
-        return _port;
     }
     
     int _socket::timeout() const
@@ -758,6 +757,8 @@ namespace show
     
     request::request( std::shared_ptr< _socket > s ) :
         serve_socket(           s                          ),
+        client_address(         s -> address               ),
+        client_port(            s -> port                  ),
         protocol(               _protocol                  ),
         protocol_string(        _protocol_string           ),
         method(                 _method                    ),
@@ -1163,9 +1164,7 @@ namespace show
         const std::string& address,
         unsigned int       port,
         int                timeout
-    ) :
-        _address( address ),
-        _port(    port    )
+    )
     {
         socket_fd listen_socket_fd = socket(
             AF_INET6,
@@ -1179,7 +1178,11 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
-        listen_socket = new _simple_socket( listen_socket_fd );
+        listen_socket = new _simple_socket(
+            listen_socket_fd,
+            address,
+            port
+        );
         
         int opt_reuse = 1;
         
@@ -1202,20 +1205,20 @@ namespace show
         sockaddr_in6 socket_address;
         memset(&socket_address, 0, sizeof(socket_address));
         socket_address.sin6_family = AF_INET6;
-        socket_address.sin6_port   = htons( _port );
+        socket_address.sin6_port   = htons( port );
         // socket_address.sin6_addr.s_addr  = in6addr_any;
         if(
             !inet_pton(
                 AF_INET6,
-                _address.c_str(),
+                address.c_str(),
                 socket_address.sin6_addr.s6_addr
             ) && !inet_pton(
                 AF_INET,
-                _address.c_str(),
+                address.c_str(),
                 socket_address.sin6_addr.s6_addr
             )
         )
-            throw exception( _address + " is not a valid IP address" );
+            throw exception( address + " is not a valid IP address" );
         
         if( bind(
             listen_socket -> descriptor,
@@ -1277,9 +1280,6 @@ namespace show
                 );
         }
         
-        // TODO: write a inet_ntoa_r() replacement
-        char address_buffer[ 3 * 4 + 3 + 1 ] = "?.?.?.?";
-        
         return request(
             std::shared_ptr< _socket >(
                 new _socket(
@@ -1294,11 +1294,11 @@ namespace show
     
     const std::string& server::address() const
     {
-        return _address;
+        return listen_socket -> address;
     }
     unsigned int server::port() const
     {
-        return _port;
+        return listen_socket -> port;
     }
     
     int server::timeout() const
