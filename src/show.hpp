@@ -1,5 +1,4 @@
 // TODO: when supporting HTTP/1.1, support pipelining requests
-// TODO: IPv6
 
 
 #pragma once
