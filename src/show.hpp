@@ -1254,6 +1254,8 @@ namespace show
         sockaddr_in6 client_address;
         socklen_t client_address_len = sizeof( client_address );
         
+        char address_buffer[ 3 * 4 + 3 + 1 ];
+        
         socket_fd serve_socket = accept(
             listen_socket -> descriptor,
             ( sockaddr* )&client_address,
@@ -1262,11 +1264,20 @@ namespace show
         
         if(
             serve_socket == -1
-            // || inet_ntoa_r(
-            //     client_address.sin6_addr,
-            //     address_buffer,
-            //     3 * 4 + 3
-            // ) == NULL
+            || (
+                inet_ntop(
+                    AF_INET,
+                    &client_address.sin6_addr,
+                    address_buffer,
+                    client_address_len
+                ) ==  NULL
+                && inet_ntop(
+                    AF_INET6,
+                    &client_address.sin6_addr,
+                    address_buffer,
+                    client_address_len
+                ) ==  NULL
+            )
         )
         {
             auto errno_copy = errno;
