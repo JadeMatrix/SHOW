@@ -38,7 +38,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 6, 1, "0.6.1" };
+    } version = { "SHOW", 0, 7, 0, "0.7.0" };
     
     const char* base64_chars_standard =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
