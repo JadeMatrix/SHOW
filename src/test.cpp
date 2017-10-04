@@ -1,6 +1,9 @@
 /*
-clang++ -std=c++11 -stdlib=libc++ -Oz src/test.cpp -o make/build/test
-./make/build/test
+    clang++ -std=c++11 -Oz src/test.cpp -o make/build/test
+or
+    g++ -std=c++11 src/test.cpp -o make/build/test
+then
+    ./make/build/test [host IP] [host port]
 */
 
 
@@ -12,7 +15,7 @@ clang++ -std=c++11 -stdlib=libc++ -Oz src/test.cpp -o make/build/test
 ////////////////////////////////////////////////////////////////////////////////
 
 
-void request_handler( show::request&& request )
+void request_handler( show::request& request )
 {
     show::response_code rc = {
         200,
@@ -159,7 +162,7 @@ int main( int argc, char* argv[] )
                     << "\n"
                 ;
                 
-                request_handler( std::move( request ) );
+                request_handler( request );
             }
             catch( show::connection_timeout& ct )
             {
