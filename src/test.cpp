@@ -1,6 +1,9 @@
 /*
-clang++ -std=c++11 -stdlib=libc++ -Oz src/test.cpp -o make/build/test
-./make/build/test
+    clang++ -std=c++11 -Oz src/test.cpp -o make/build/test
+or
+    g++ -std=c++11 src/test.cpp -o make/build/test
+then
+    ./make/build/test [host IP] [host port]
 */
 
 
