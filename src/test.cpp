@@ -15,7 +15,7 @@ then
 ////////////////////////////////////////////////////////////////////////////////
 
 
-void request_handler( show::request&& request )
+void request_handler( show::request& request )
 {
     show::response_code rc = {
         200,
@@ -162,7 +162,7 @@ int main( int argc, char* argv[] )
                     << "\n"
                 ;
                 
-                request_handler( std::move( request ) );
+                request_handler( request );
             }
             catch( show::connection_timeout& ct )
             {
