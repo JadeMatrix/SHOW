@@ -1,5 +1,4 @@
 // TODO: when supporting HTTP/1.1, support pipelining requests
-// TODO: IPv6
 
 
 #pragma once
@@ -7,6 +6,7 @@
 #define SHOW_HPP
 
 
+#include <cstring>
 #include <exception>
 #include <iomanip>
 #include <map>
@@ -38,7 +38,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 6, 0, "0.6.0" };
+    } version = { "SHOW", 0, 6, 1, "0.6.1" };
     
     const char* base64_chars_standard =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -147,7 +147,11 @@ namespace show
         friend class server;
         
     protected:
-        _simple_socket( socket_fd fd );
+        _simple_socket(
+            socket_fd          fd,
+            const std::string& address,
+            unsigned int       port
+        );
         
         void setsockopt(
             int         optname,
@@ -157,6 +161,9 @@ namespace show
         );
     
     public:
+        const std::string  address;
+        const unsigned int port;
+        
         enum wait_for_t
         {
             READ       = 1,
@@ -197,9 +204,6 @@ namespace show
         );
         
     public:
-        const std::string& address() const;
-        unsigned int       port()    const;
-        
         int timeout() const;
         int timeout( int t );
         
@@ -230,7 +234,7 @@ namespace show
     {
         friend class response;
         friend class server;
-    
+        
     public:
         enum content_length_flag_type
         {
@@ -239,16 +243,12 @@ namespace show
             MAYBE
         };
         
-        const http_protocol             & protocol;
-        const std::string               & protocol_string;
-        const std::string               & method;
-        const std::vector< std::string >& path;
-        const query_args_t              & query_args;
-        const headers_t                 & headers;
-        const content_length_flag_type  & unknown_content_length;
-        unsigned long long              & content_length;
+        const std::string & client_address;
+        const unsigned int& client_port;
         
         bool eof() const;
+        
+        request( request&& );   // See note in implementation
         
     protected:
         std::shared_ptr< _socket > serve_socket;
@@ -275,6 +275,16 @@ namespace show
         virtual int_type        pbackfail(
             int_type c = std::char_traits< char >::eof()
         );
+        
+    public:
+        const http_protocol             & protocol               = _protocol;
+        const std::string               & protocol_string        = _protocol_string;
+        const std::string               & method                 = _method;
+        const std::vector< std::string >& path                   = _path;
+        const query_args_t              & query_args             = _query_args;
+        const headers_t                 & headers                = _headers;
+        const content_length_flag_type  & unknown_content_length = _unknown_content_length;
+        unsigned long long              & content_length         = _content_length;
     };
     
     class response : public std::streambuf
@@ -306,9 +316,7 @@ namespace show
     class server
     {
     protected:
-        std::string _address;
-        in_port_t   _port;
-        int         _timeout;
+        int _timeout;
         
         _simple_socket* listen_socket;
         
@@ -376,7 +384,14 @@ namespace show
     
     // _simple_socket ----------------------------------------------------------
     
-    _simple_socket::_simple_socket( socket_fd fd ) : descriptor( fd )
+    _simple_socket::_simple_socket(
+        socket_fd          fd,
+        const std::string& address,
+        unsigned int       port
+    ) :
+        descriptor( fd      ),
+        address(    address ),
+        port(       port    )
     {
         // Because we want non-blocking behavior on 0-second timeouts, all
         // sockets are set to `O_NONBLOCK` even though `pselect()` is used.
@@ -485,9 +500,7 @@ namespace show
         unsigned int       port,
         int                timeout
     ) :
-        _simple_socket( fd      ),
-        _address(       address ),
-        _port(          port    )
+        _simple_socket( fd, address, port )
     {
         this -> timeout( timeout );
         setg(
@@ -499,16 +512,6 @@ namespace show
             put_buffer,
             put_buffer + BUFFER_SIZE
         );
-    }
-    
-    const std::string& _socket::address() const
-    {
-        return _address;
-    }
-    
-    unsigned int _socket::port() const
-    {
-        return _port;
     }
     
     int _socket::timeout() const
@@ -706,7 +709,7 @@ namespace show
             success.
             http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
             */
-            return traits_type::to_int_type( ASCII_ACK );
+            return traits_type::to_int_type( ( char )ASCII_ACK );
         }
     }
     
@@ -746,7 +749,7 @@ namespace show
             return ch;
         }
         else
-            return traits_type::to_int_type( ASCII_ACK );
+            return traits_type::to_int_type( ( char )ASCII_ACK );
     }
     
     // request -----------------------------------------------------------------
@@ -756,17 +759,31 @@ namespace show
         return !unknown_content_length && read_content >= _content_length;
     }
     
+    request::request( request&& o ) :
+        client_address(                     o.serve_socket -> address   ),
+        client_port(                        o.serve_socket -> port      ),
+        serve_socket(            std::move( o.serve_socket            ) ),
+        read_content(            std::move( o.read_content            ) ),
+        _protocol(               std::move( o._protocol               ) ),
+        _protocol_string(        std::move( o._protocol_string        ) ),
+        _method(                 std::move( o._method                 ) ),
+        _path(                   std::move( o._path                   ) ),
+        _query_args(             std::move( o._query_args             ) ),
+        _headers(                std::move( o._headers                ) ),
+        _unknown_content_length( std::move( o._unknown_content_length ) ),
+        _content_length(         std::move( o._content_length         ) )
+    {
+        // `request` can use neither an implicit nor explicit default move
+        // constructor, as that relies on the `std::streambuf` implementation to
+        // be move-friendly, which unfortunately it doesn't seem to be for any
+        // of major compilers.
+    }
+    
     request::request( std::shared_ptr< _socket > s ) :
-        serve_socket(           s                          ),
-        protocol(               _protocol                  ),
-        protocol_string(        _protocol_string           ),
-        method(                 _method                    ),
-        path(                   _path                      ),
-        query_args(             _query_args                ),
-        headers(                _headers                   ),
-        unknown_content_length( _unknown_content_length    ),
-        content_length(         _content_length            ),
-        read_content(           0                          )
+        serve_socket(           s                       ),
+        client_address(         s -> address            ),
+        client_port(            s -> port               ),
+        read_content(           0                       )
     {
         bool reading = true;
         int bytes_read;
@@ -1163,12 +1180,10 @@ namespace show
         const std::string& address,
         unsigned int       port,
         int                timeout
-    ) :
-        _address( address ),
-        _port(    port    )
+    )
     {
         socket_fd listen_socket_fd = socket(
-            AF_INET,
+            AF_INET6,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
         );
@@ -1179,7 +1194,11 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
-        listen_socket = new _simple_socket( listen_socket_fd );
+        listen_socket = new _simple_socket(
+            listen_socket_fd,
+            address,
+            port
+        );
         
         int opt_reuse = 1;
         
@@ -1199,12 +1218,23 @@ namespace show
         );
         this -> timeout( timeout );
         
-        sockaddr_in socket_address;
+        sockaddr_in6 socket_address;
         memset(&socket_address, 0, sizeof(socket_address));
-        socket_address.sin_family      = AF_INET;
-        // socket_address.sin_addr.s_addr = INADDR_ANY;
-        socket_address.sin_addr.s_addr = inet_addr( _address.c_str() );
-        socket_address.sin_port        = htons( _port );
+        socket_address.sin6_family = AF_INET6;
+        socket_address.sin6_port   = htons( port );
+        // socket_address.sin6_addr.s_addr  = in6addr_any;
+        if(
+            !inet_pton(
+                AF_INET6,
+                address.c_str(),
+                socket_address.sin6_addr.s6_addr
+            ) && !inet_pton(
+                AF_INET,
+                address.c_str(),
+                socket_address.sin6_addr.s6_addr
+            )
+        )
+            throw exception( address + " is not a valid IP address" );
         
         if( bind(
             listen_socket -> descriptor,
@@ -1237,8 +1267,10 @@ namespace show
                 "listen"
             );
         
-        sockaddr_in client_address;
+        sockaddr_in6 client_address;
         socklen_t client_address_len = sizeof( client_address );
+        
+        char address_buffer[ 3 * 4 + 3 + 1 ];
         
         socket_fd serve_socket = accept(
             listen_socket -> descriptor,
@@ -1248,11 +1280,20 @@ namespace show
         
         if(
             serve_socket == -1
-            // || inet_ntoa_r(
-            //     client_address.sin_addr,
-            //     address_buffer,
-            //     3 * 4 + 3
-            // ) == NULL
+            || (
+                inet_ntop(
+                    AF_INET,
+                    &client_address.sin6_addr,
+                    address_buffer,
+                    client_address_len
+                ) ==  NULL
+                && inet_ntop(
+                    AF_INET6,
+                    &client_address.sin6_addr,
+                    address_buffer,
+                    client_address_len
+                ) ==  NULL
+            )
         )
         {
             auto errno_copy = errno;
@@ -1266,15 +1307,12 @@ namespace show
                 );
         }
         
-        // TODO: write a inet_ntoa_r() replacement
-        char address_buffer[ 3 * 4 + 3 + 1 ] = "?.?.?.?";
-        
         return request(
             std::shared_ptr< _socket >(
                 new _socket(
                     serve_socket,
                     std::string( address_buffer ),
-                    client_address.sin_port,
+                    client_address.sin6_port,
                     timeout()
                 )
             )
@@ -1283,11 +1321,11 @@ namespace show
     
     const std::string& server::address() const
     {
-        return _address;
+        return listen_socket -> address;
     }
     unsigned int server::port() const
     {
-        return _port;
+        return listen_socket -> port;
     }
     
     int server::timeout() const
@@ -1299,6 +1337,8 @@ namespace show
         _timeout = t;
         return _timeout;
     }
+    
+    // Functions ---------------------------------------------------------------
     
     std::string url_encode(
         const std::string& o,

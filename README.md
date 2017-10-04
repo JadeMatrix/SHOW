@@ -3,11 +3,22 @@
 [![stable version](https://img.shields.io/github/release/JadeMatrix/SHOW.svg?label=stable)](https://github.com/JadeMatrix/SHOW/releases/latest)
 [![latest version](https://img.shields.io/github/release/JadeMatrix/SHOW/all.svg?label=latest)](https://github.com/JadeMatrix/SHOW/releases)
 
-The goal of SHOW is to make an idiomatic library for tiny, standalone webserverlets written for modern C++.  Currently requires C++11 or higher and a POSIX operating system; Windows support is planned, and C++98 support may be added in the future.
-
-HTTP/1.1 and IPv6 support soon™.
+The goal of SHOW is to make an idiomatic library for tiny, standalone webserverlets written for modern C++.  Currently requires C++11 or higher and a POSIX operating system.
 
 SHOW uses the `zlib` license.
+
+### Feature status
+
+| Support for | Status |
+| --- | --- |
+| Linux | working on CentOS 7 |
+| OS X / macOS | working, tested on 10.12.6 |
+| ~~Windows~~ |  |
+| IPv4 | working |
+| IPv6 | working |
+| HTTP/1.0 | working |
+| ~~HTTP/1.1~~ |  |
+| ~~HTTP/2.0~~ |  |
 
 ## How to use
 
