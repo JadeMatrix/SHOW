@@ -6,6 +6,7 @@
 #define SHOW_HPP
 
 
+#include <cstring>
 #include <exception>
 #include <iomanip>
 #include <map>
