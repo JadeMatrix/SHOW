@@ -234,7 +234,7 @@ namespace show
     {
         friend class response;
         friend class server;
-    
+        
     public:
         enum content_length_flag_type
         {
@@ -243,18 +243,12 @@ namespace show
             MAYBE
         };
         
-        const std::string               & client_address;
-        const unsigned int              & client_port;
-        const http_protocol             & protocol;
-        const std::string               & protocol_string;
-        const std::string               & method;
-        const std::vector< std::string >& path;
-        const query_args_t              & query_args;
-        const headers_t                 & headers;
-        const content_length_flag_type  & unknown_content_length;
-        unsigned long long              & content_length;
+        const std::string & client_address;
+        const unsigned int& client_port;
         
         bool eof() const;
+        
+        request( request&& );   // See note in implementation
         
     protected:
         std::shared_ptr< _socket > serve_socket;
@@ -281,6 +275,16 @@ namespace show
         virtual int_type        pbackfail(
             int_type c = std::char_traits< char >::eof()
         );
+        
+    public:
+        const http_protocol             & protocol               = _protocol;
+        const std::string               & protocol_string        = _protocol_string;
+        const std::string               & method                 = _method;
+        const std::vector< std::string >& path                   = _path;
+        const query_args_t              & query_args             = _query_args;
+        const headers_t                 & headers                = _headers;
+        const content_length_flag_type  & unknown_content_length = _unknown_content_length;
+        unsigned long long              & content_length         = _content_length;
     };
     
     class response : public std::streambuf
@@ -705,7 +709,7 @@ namespace show
             success.
             http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
             */
-            return traits_type::to_int_type( ASCII_ACK );
+            return traits_type::to_int_type( ( char )ASCII_ACK );
         }
     }
     
@@ -745,7 +749,7 @@ namespace show
             return ch;
         }
         else
-            return traits_type::to_int_type( ASCII_ACK );
+            return traits_type::to_int_type( ( char )ASCII_ACK );
     }
     
     // request -----------------------------------------------------------------
@@ -755,19 +759,31 @@ namespace show
         return !unknown_content_length && read_content >= _content_length;
     }
     
+    request::request( request&& o ) :
+        client_address(                     o.serve_socket -> address   ),
+        client_port(                        o.serve_socket -> port      ),
+        serve_socket(            std::move( o.serve_socket            ) ),
+        read_content(            std::move( o.read_content            ) ),
+        _protocol(               std::move( o._protocol               ) ),
+        _protocol_string(        std::move( o._protocol_string        ) ),
+        _method(                 std::move( o._method                 ) ),
+        _path(                   std::move( o._path                   ) ),
+        _query_args(             std::move( o._query_args             ) ),
+        _headers(                std::move( o._headers                ) ),
+        _unknown_content_length( std::move( o._unknown_content_length ) ),
+        _content_length(         std::move( o._content_length         ) )
+    {
+        // `request` can use neither an implicit nor explicit default move
+        // constructor, as that relies on the `std::streambuf` implementation to
+        // be move-friendly, which unfortunately it doesn't seem to be for any
+        // of major compilers.
+    }
+    
     request::request( std::shared_ptr< _socket > s ) :
-        serve_socket(           s                          ),
-        client_address(         s -> address               ),
-        client_port(            s -> port                  ),
-        protocol(               _protocol                  ),
-        protocol_string(        _protocol_string           ),
-        method(                 _method                    ),
-        path(                   _path                      ),
-        query_args(             _query_args                ),
-        headers(                _headers                   ),
-        unknown_content_length( _unknown_content_length    ),
-        content_length(         _content_length            ),
-        read_content(           0                          )
+        serve_socket(           s                       ),
+        client_address(         s -> address            ),
+        client_port(            s -> port               ),
+        read_content(           0                       )
     {
         bool reading = true;
         int bytes_read;
