@@ -59,9 +59,9 @@ namespace show
     // Basic types /////////////////////////////////////////////////////////////
     
     
-    typedef int socket_fd;
+    using socket_fd = int;
     // `int` instead of `size_t` because this is a buffer for POSIX `read()`
-    typedef int buffer_size_t;
+    using buffer_size_t = int;
     
     enum http_protocol
     {
@@ -77,10 +77,10 @@ namespace show
         std::string description;
     };
     
-    typedef std::map<
+    using query_args_t = std::map<
         std::string,
         std::vector< std::string >
-    > query_args_t;
+    >;
     
     // Locale-independent ASCII uppercase
     char _ASCII_upper( char c )
@@ -131,11 +131,11 @@ namespace show
         }
     };
     
-    typedef std::map<
+    using headers_t = std::map<
         std::string,
         std::vector< std::string >,
         _less_ignore_case_ASCII
-    > headers_t;
+    >;
     
     
     // Classes /////////////////////////////////////////////////////////////////
