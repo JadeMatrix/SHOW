@@ -68,8 +68,7 @@ namespace show
         NONE     =  0,
         UNKNOWN  =  1,
         HTTP_1_0 = 10,
-        HTTP_1_1 = 11,
-        HTTP_2_0 = 20
+        HTTP_1_1 = 11
     };
     
     struct response_code
@@ -1008,8 +1007,6 @@ namespace show
             _protocol = HTTP_1_0;
         else if( protocol_string_upper == "HTTP/1.1" )
             _protocol = HTTP_1_1;
-        else if( protocol_string_upper == "HTTP/2.0" )
-            _protocol = HTTP_2_0;
         else if( protocol_string_upper == "" )
             _protocol = NONE;
         else
@@ -1101,18 +1098,10 @@ namespace show
     {
         std::stringstream headers_stream;
         
-        switch( protocol )
-        {
-        default:
-            headers_stream << "HTTP/1.0 ";
-            break;
-        case HTTP_1_1:
+        if( protocol == HTTP_1_1 )
             headers_stream << "HTTP/1.1 ";
-            break;
-        case HTTP_2_0:
-            headers_stream << "HTTP/1.2 ";
-            break;
-        }
+        else
+            headers_stream << "HTTP/1.0 ";
         
         // Marshall response code & description
         headers_stream
