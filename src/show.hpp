@@ -50,7 +50,7 @@ namespace show
     
     
     class _simple_socket;
-    class _socket;
+    class connection;
     class server;
     class request;
     class response;
@@ -181,7 +181,7 @@ namespace show
         );
     };
     
-    class _socket : public _simple_socket, public std::streambuf
+    class connection : public _simple_socket, public std::streambuf
     {
         friend class server;
         
@@ -195,7 +195,7 @@ namespace show
         unsigned int _port;
         int          _timeout;
         
-        _socket(
+        connection(
             socket_fd          fd,
             const std::string& address,
             unsigned int       port,
@@ -301,7 +301,7 @@ namespace show
         virtual void flush();
         
     protected:
-        std::shared_ptr< _socket > serve_socket;
+        std::shared_ptr< connection > serve_socket;
         
         virtual std::streamsize xsputn(
             const char_type* s,
@@ -491,9 +491,9 @@ namespace show
             return WRITE;
     }
     
-    // _socket -----------------------------------------------------------------
+    // connection -----------------------------------------------------------------
     
-    _socket::_socket(
+    connection::connection(
         socket_fd          fd,
         const std::string& address,
         unsigned int       port,
@@ -513,18 +513,18 @@ namespace show
         );
     }
     
-    int _socket::timeout() const
+    int connection::timeout() const
     {
         return _timeout;
     }
     
-    int _socket::timeout( int t )
+    int connection::timeout( int t )
     {
         _timeout = t;
         return _timeout;
     }
     
-    void _socket::flush()
+    void connection::flush()
     {
         buffer_size_t send_offset = 0;
         
@@ -568,12 +568,12 @@ namespace show
         );
     }
     
-    std::streamsize _socket::showmanyc()
+    std::streamsize connection::showmanyc()
     {
         return egptr() - gptr();
     }
     
-    _socket::int_type _socket::underflow()
+    connection::int_type connection::underflow()
     {
         if( showmanyc() <= 0 )
         {
@@ -620,7 +620,7 @@ namespace show
         return traits_type::to_int_type( *gptr() );
     }
     
-    std::streamsize _socket::xsgetn(
+    std::streamsize connection::xsgetn(
         char_type* s,
         std::streamsize count
     )
@@ -644,7 +644,7 @@ namespace show
         return i;
     }
     
-    _socket::int_type _socket::pbackfail( int_type c )
+    connection::int_type connection::pbackfail( int_type c )
     {
         /*
         Parameters:
@@ -712,7 +712,7 @@ namespace show
         }
     }
     
-    std::streamsize _socket::xsputn(
+    std::streamsize connection::xsputn(
         const char_type* s,
         std::streamsize count
     )
@@ -730,7 +730,7 @@ namespace show
         return chars_written;
     }
     
-    _socket::int_type _socket::overflow( int_type ch )
+    connection::int_type connection::overflow( int_type ch )
     {
         try
         {
@@ -778,7 +778,7 @@ namespace show
         // of major compilers.
     }
     
-    request::request( std::shared_ptr< _socket > s ) :
+    request::request( std::shared_ptr< connection > s ) :
         serve_socket(           s                       ),
         client_address(         s -> address            ),
         client_port(            s -> port               ),
@@ -1247,7 +1247,7 @@ namespace show
         delete listen_socket;
     }
     
-    request server::serve()
+    std::shared_ptr< connection > server::serve()
     {
         if( _timeout != 0 )
             listen_socket -> wait_for(
