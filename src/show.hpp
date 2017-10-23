@@ -232,7 +232,7 @@ namespace show
     class request : public std::streambuf
     {
         friend class response;
-        friend class server;
+        friend class connection;
         
     public:
         enum content_length_flag_type
@@ -247,10 +247,11 @@ namespace show
         
         bool eof() const;
         
+        request( std::shared_ptr< connection > );
         request( request&& );   // See note in implementation
         
     protected:
-        std::shared_ptr< _socket > serve_socket;
+        std::shared_ptr< connection > serve_socket;
         
         http_protocol              _protocol;
         std::string                _protocol_string;
@@ -262,8 +263,6 @@ namespace show
         unsigned long long         _content_length;
         
         unsigned long long read_content;
-        
-        request( std::shared_ptr< _socket > );
         
         virtual std::streamsize showmanyc();
         virtual int_type        underflow();
@@ -327,7 +326,7 @@ namespace show
         );
         ~server();
         
-        request serve();
+        std::shared_ptr< connection > serve();
         
         const std::string& address() const;
         unsigned int       port()    const;
@@ -336,6 +335,7 @@ namespace show
         int timeout( int t );
     };
     
+    // TODO: use `std::runtime_error` etc.
     class exception : public std::exception
     {
     protected:
@@ -351,12 +351,14 @@ namespace show
     class        url_decode_error : public exception { using exception::exception; };
     class     base64_decode_error : public exception { using exception::exception; };
     
-    // Does not inherit from std::exception as this isn't meant to signal a
+    // Do not inherit from std::exception as these aren't meant to signal a
     // strict error state
     class connection_timeout
     {
         // TODO: information about which connection, etc.
     };
+    class disconnected
+    {};
     
     
     // Functions ///////////////////////////////////////////////////////////////
@@ -550,6 +552,8 @@ namespace show
                 
                 if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                     throw connection_timeout();
+                else if( errno_copy == ECONNRESET )
+                    throw disconnected();
                 else if( errno_copy != EINTR )
                     // EINTR means the send() was interrupted and we just need
                     // to try again
@@ -596,10 +600,20 @@ namespace show
                 
                 if( bytes_read == -1 )
                 {
+                    // char* nc = {};
+                    // buffer_size_t bytes_sent = send(
+                    //     descriptor,
+                    //     nc,
+                    //     0,
+                    //     0
+                    // );
+                    
                     auto errno_copy = errno;
                     
                     if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                         throw connection_timeout();
+                    else if( errno_copy == ECONNRESET )
+                        throw disconnected();
                     else if( errno_copy != EINTR )
                         // EINTR means the read() was interrupted and we just
                         // need to try again
@@ -1296,14 +1310,12 @@ namespace show
                 );
         }
         
-        return request(
-            std::shared_ptr< _socket >(
-                new _socket(
-                    serve_socket,
-                    std::string( address_buffer ),
-                    client_address.sin6_port,
-                    timeout()
-                )
+        return std::shared_ptr< connection >(
+            new connection(
+                serve_socket,
+                std::string( address_buffer ),
+                client_address.sin6_port,
+                timeout()
             )
         );
     }

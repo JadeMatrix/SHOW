@@ -129,7 +129,7 @@ int main( int argc, char* argv[] )
 {
     if( argc < 3 )
     {
-        std::cout << "need host & port";
+        std::cerr << "need host & port" << std::endl;
         return 1;
     }
     
@@ -138,46 +138,98 @@ int main( int argc, char* argv[] )
         << show::version.name
         << " v"
         << show::version.string
-        << "\n"
+        << std::endl
     ;
+    
+    const int timeout = 2 /* seconds */;
     
     try
     {
         show::server test_server(
             argv[ 1 ],
             std::stoi( argv[ 2 ] ),
-            2
+            timeout
         );
         
         while( true )
             try
             {
-                show::request request( test_server.serve() );
+                // DEVEL:
+                // show::connection connection( test_server.serve() );
+                std::shared_ptr< show::connection > connection(
+                    test_server.serve()
+                );
                 
-                std::cout
-                    << "got a request from "
-                    << request.client_address
-                    << ":"
-                    << request.client_port
-                    << "\n"
-                ;
+                // std::cout
+                //     << "connection from "
+                //     << request.client_address
+                //     << ":"
+                //     << request.client_port
+                //     << std::endl
+                // ;
                 
-                request_handler( request );
+                connection -> timeout( timeout );
+                
+                while( true )
+                    try
+                    {
+                        show::request request( connection /*-> next()*/ );
+                        
+                        std::cout
+                            << "got a "
+                            << request.protocol_string
+                            << " "
+                            << request.method
+                            << " request from "
+                            << request.client_address
+                            << ":"
+                            << request.client_port
+                            << "\n"
+                        ;
+                        
+                        request_handler( request );
+                        
+                        if( request.protocol <= show::HTTP_1_0 )
+                            break;
+                    }
+                    catch( show::connection_timeout& ct )
+                    {
+                        std::cout
+                            << "timed out waiting on client, retrying..."
+                            << std::endl
+                        ;
+                    }
+                    catch( show::disconnected& dc )
+                    {
+                        std::cout << "client disconnected" << std::endl;
+                        break;
+                    }
             }
             catch( show::connection_timeout& ct )
             {
-                std::cout << "timeout exceeded! looping...\n";
-                continue;
+                std::cout
+                    << "timed out waiting for connection, looping..."
+                    << std::endl
+                ;
             }
     }
     catch( show::exception& e )
     {
-        std::cout << e.what();
+        std::cerr
+            << "uncaught exception in main(): "
+            << e.what()
+            << std::endl
+        ;
         return -1;
     }
     catch( ... )
     {
+        std::cerr
+            << "uncaught non-std::exception in main()"
+            << std::endl
+        ;
         return -1;
     }
+    
     return 0;
 }
