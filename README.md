@@ -3,7 +3,7 @@
 [![stable version](https://img.shields.io/github/release/JadeMatrix/SHOW.svg?label=stable)](https://github.com/JadeMatrix/SHOW/releases/latest)
 [![latest version](https://img.shields.io/github/release/JadeMatrix/SHOW/all.svg?label=latest)](https://github.com/JadeMatrix/SHOW/releases)
 
-The goal of SHOW is to make an idiomatic library for tiny, standalone webserverlets written for modern C++.  Currently requires C++11 or higher and a POSIX operating system.
+The goal of SHOW is to make an idiomatic library for standalone webserver applications written for modern C++.  Currently requires C++11 or higher and a POSIX operating system.
 
 SHOW uses the `zlib` license.
 
@@ -175,8 +175,8 @@ Version information can be found in the `show::version` struct:
 
 | Field | Description |
 | --- | --- |
-| `show::version::name` | Name of the server — `"SHOW"` — as a `std::string` |
-| `show::version::major` | The major version as an `int` |
-| `show::version::minor` | The minor version as an `int` |
-| `show::version::revision` | The revision as an `int` |
-| `show::version::string` | `"major.minor.revision"` as a `std::string` |
+| `show::version.name` | Name of the server — `"SHOW"` — as a `std::string` |
+| `show::version.major` | The major version as an `int` |
+| `show::version.minor` | The minor version as an `int` |
+| `show::version.revision` | The revision as an `int` |
+| `show::version.string` | `"major.minor.revision"` as a `std::string` |
