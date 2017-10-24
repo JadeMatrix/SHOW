@@ -988,6 +988,10 @@ namespace show
                         else
                             check_for_multiline_header = true;
                         break;
+                    case ' ':
+                    case '\t':
+                        if( value_buffer.size() < 1 )
+                            break;
                     default:
                         if( check_for_multiline_header )
                         {
@@ -1001,13 +1005,12 @@ namespace show
                             check_for_multiline_header = false;
                             
                             parse_state = READING_HEADER_NAME;
-                            
-                            break;
                         }
-                    case ' ':
-                    case '\t':
-                        value_buffer += current_char;
-                        check_for_multiline_header = false;
+                        else
+                        {
+                            value_buffer += current_char;
+                            check_for_multiline_header = false;
+                        }
                         break;
                     }
                 }
