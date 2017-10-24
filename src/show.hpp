@@ -251,7 +251,7 @@ namespace show
         request( request&& );   // See note in implementation
         
     protected:
-        std::shared_ptr< connection > serve_socket;
+        std::shared_ptr< connection > _connection;
         
         http_protocol              _protocol;
         std::string                _protocol_string;
@@ -300,7 +300,7 @@ namespace show
         virtual void flush();
         
     protected:
-        std::shared_ptr< connection > serve_socket;
+        std::shared_ptr< connection > _connection;
         
         virtual std::streamsize xsputn(
             const char_type* s,
@@ -759,9 +759,9 @@ namespace show
     }
     
     request::request( request&& o ) :
-        client_address(                     o.serve_socket -> address   ),
-        client_port(                        o.serve_socket -> port      ),
-        serve_socket(            std::move( o.serve_socket            ) ),
+        client_address(                     o._connection -> address    ),
+        client_port(                        o._connection -> port       ),
+        _connection(             std::move( o._connection             ) ),
         read_content(            std::move( o.read_content            ) ),
         _protocol(               std::move( o._protocol               ) ),
         _protocol_string(        std::move( o._protocol_string        ) ),
@@ -779,10 +779,10 @@ namespace show
     }
     
     request::request( std::shared_ptr< connection > s ) :
-        serve_socket(           s                       ),
-        client_address(         s -> address            ),
-        client_port(            s -> port               ),
-        read_content(           0                       )
+        _connection(    s            ),
+        client_address( s -> address ),
+        client_port(    s -> port    ),
+        read_content(   0            )
     {
         bool reading = true;
         int bytes_read;
@@ -806,7 +806,7 @@ namespace show
         
         while( reading )
         {
-            char current_char = serve_socket -> sbumpc();
+            char current_char = _connection -> sbumpc();
             
             // \r\n does not make the FSM parser happy
             if( in_endline_seq )
@@ -1045,7 +1045,7 @@ namespace show
         if( eof() )
             return -1;
         else
-            return serve_socket -> showmanyc();
+            return _connection -> showmanyc();
     }
     
     request::int_type request::underflow()
@@ -1053,7 +1053,7 @@ namespace show
         if( eof() )
             return traits_type::eof();
         else
-            return serve_socket -> underflow();
+            return _connection -> underflow();
     }
     
     std::streamsize request::xsgetn(
@@ -1064,11 +1064,11 @@ namespace show
         std::streamsize read;
         
         if( unknown_content_length )
-            read = serve_socket -> sgetn( s, count );
+            read = _connection -> sgetn( s, count );
         else if( !eof() )
         {
             std::streamsize remaining = _content_length - read_content;
-            read = serve_socket -> sgetn(
+            read = _connection -> sgetn(
                 s,
                 count > remaining ? remaining : count
             );
@@ -1082,7 +1082,7 @@ namespace show
     
     request::int_type request::pbackfail( int_type c )
     {
-        request::int_type result = serve_socket -> pbackfail( c );
+        request::int_type result = _connection -> pbackfail( c );
         
         if( traits_type::not_eof( result ) )
             --read_content;
@@ -1097,7 +1097,7 @@ namespace show
         http_protocol  protocol,
         response_code& code,
         headers_t    & headers
-    ) : serve_socket( r.serve_socket )
+    ) : _connection( r._connection )
     {
         std::stringstream headers_stream;
         
@@ -1150,7 +1150,7 @@ namespace show
     
     void response::flush()
     {
-        serve_socket -> flush();
+        _connection -> flush();
     }
     
     std::streamsize response::xsputn(
@@ -1158,12 +1158,12 @@ namespace show
         std::streamsize  count
     )
     {
-        return serve_socket -> sputn( s, count );
+        return _connection -> sputn( s, count );
     }
     
     response::int_type response::overflow( int_type ch )
     {
-        return serve_socket -> overflow( ch );
+        return _connection -> overflow( ch );
     }
     
     // server ------------------------------------------------------------------
