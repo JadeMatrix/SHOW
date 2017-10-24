@@ -351,14 +351,12 @@ namespace show
     class        url_decode_error : public exception { using exception::exception; };
     class     base64_decode_error : public exception { using exception::exception; };
     
-    // Do not inherit from std::exception as these aren't meant to signal a
+    // Does not inherit from std::exception as this isn't meant to signal a
     // strict error state
     class connection_timeout
     {
         // TODO: information about which connection, etc.
     };
-    class disconnected
-    {};
     
     
     // Functions ///////////////////////////////////////////////////////////////
@@ -552,8 +550,6 @@ namespace show
                 
                 if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                     throw connection_timeout();
-                else if( errno_copy == ECONNRESET )
-                    throw disconnected();
                 else if( errno_copy != EINTR )
                     // EINTR means the send() was interrupted and we just need
                     // to try again
@@ -600,20 +596,10 @@ namespace show
                 
                 if( bytes_read == -1 )
                 {
-                    // char* nc = {};
-                    // buffer_size_t bytes_sent = send(
-                    //     descriptor,
-                    //     nc,
-                    //     0,
-                    //     0
-                    // );
-                    
                     auto errno_copy = errno;
                     
                     if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                         throw connection_timeout();
-                    else if( errno_copy == ECONNRESET )
-                        throw disconnected();
                     else if( errno_copy != EINTR )
                         // EINTR means the read() was interrupted and we just
                         // need to try again

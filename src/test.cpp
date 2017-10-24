@@ -160,14 +160,6 @@ int main( int argc, char* argv[] )
                     test_server.serve()
                 );
                 
-                // std::cout
-                //     << "connection from "
-                //     << request.client_address
-                //     << ":"
-                //     << request.client_port
-                //     << std::endl
-                // ;
-                
                 connection -> timeout( timeout );
                 
                 while( true )
@@ -189,19 +181,33 @@ int main( int argc, char* argv[] )
                         
                         request_handler( request );
                         
+                        auto connection_header = request.headers.find(
+                            "Connection"
+                        );
+                        if(
+                            connection_header != request.headers.end()
+                            && connection_header -> second.size() == 1
+                        )
+                        {
+                            const std::string& ch_val(
+                                connection_header -> second[ 0 ]
+                            );
+                            if( ch_val == "keep-alive" )
+                                continue;
+                            else if( ch_val == "close" )
+                                break;
+                        }
+                        
                         if( request.protocol <= show::HTTP_1_0 )
                             break;
+                        // else continue (HTTP/1.1+ default to keep-alive)
                     }
                     catch( show::connection_timeout& ct )
                     {
                         std::cout
-                            << "timed out waiting on client, retrying..."
+                            << "timed out waiting on client, closing connection"
                             << std::endl
                         ;
-                    }
-                    catch( show::disconnected& dc )
-                    {
-                        std::cout << "client disconnected" << std::endl;
                         break;
                     }
             }
