@@ -49,7 +49,7 @@ namespace show
     // Forward declarations ////////////////////////////////////////////////////
     
     
-    class _simple_socket;
+    class _socket;
     class connection;
     class server;
     class request;
@@ -141,12 +141,12 @@ namespace show
     // Classes /////////////////////////////////////////////////////////////////
     
     
-    class _simple_socket
+    class _socket
     {
         friend class server;
         
     protected:
-        _simple_socket(
+        _socket(
             socket_fd          fd,
             const std::string& address,
             unsigned int       port
@@ -172,7 +172,7 @@ namespace show
         
         const socket_fd descriptor;
         
-        ~_simple_socket();
+        ~_socket();
         
         wait_for_t wait_for(
             wait_for_t         wf,
@@ -181,7 +181,7 @@ namespace show
         );
     };
     
-    class connection : public _simple_socket, public std::streambuf
+    class connection : public _socket, public std::streambuf
     {
         friend class server;
         
@@ -316,7 +316,7 @@ namespace show
     protected:
         int _timeout;
         
-        _simple_socket* listen_socket;
+        _socket* listen_socket;
         
     public:
         server(
@@ -381,9 +381,9 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     
-    // _simple_socket ----------------------------------------------------------
+    // _socket -----------------------------------------------------------------
     
-    _simple_socket::_simple_socket(
+    _socket::_socket(
         socket_fd          fd,
         const std::string& address,
         unsigned int       port
@@ -401,7 +401,7 @@ namespace show
         );
     }
     
-    void _simple_socket::setsockopt(
+    void _socket::setsockopt(
         int         optname,
         void*       value,
         int         value_size,
@@ -423,12 +423,12 @@ namespace show
             );
     }
     
-    _simple_socket::~_simple_socket()
+    _socket::~_socket()
     {
         close( descriptor );
     }
     
-    _simple_socket::wait_for_t _simple_socket::wait_for(
+    _socket::wait_for_t _socket::wait_for(
         wait_for_t         wf,
         int                timeout,
         const std::string& purpose
@@ -499,7 +499,7 @@ namespace show
         unsigned int       port,
         int                timeout
     ) :
-        _simple_socket( fd, address, port )
+        _socket( fd, address, port )
     {
         this -> timeout( timeout );
         setg(
@@ -1186,7 +1186,7 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
-        listen_socket = new _simple_socket(
+        listen_socket = new _socket(
             listen_socket_fd,
             address,
             port
@@ -1254,7 +1254,7 @@ namespace show
     {
         if( _timeout != 0 )
             listen_socket -> wait_for(
-                _simple_socket::wait_for_t::READ,
+                _socket::wait_for_t::READ,
                 _timeout,
                 "listen"
             );
