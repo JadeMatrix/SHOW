@@ -184,6 +184,8 @@ namespace show
     class connection : public _socket, public std::streambuf
     {
         friend class server;
+        friend class request;
+        friend class response;
         
     protected:
         static const buffer_size_t BUFFER_SIZE =   1024;
@@ -201,10 +203,6 @@ namespace show
             unsigned int       port,
             int                timeout
         );
-        
-    public:
-        int timeout() const;
-        int timeout( int t );
         
         void flush();
         
@@ -227,6 +225,10 @@ namespace show
         virtual int_type overflow(
             int_type ch = std::char_traits< char >::eof()
         );
+        
+    public:
+        int timeout() const;
+        int timeout( int t );
     };
     
     class request : public std::streambuf
