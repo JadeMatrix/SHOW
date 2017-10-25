@@ -154,18 +154,14 @@ int main( int argc, char* argv[] )
         while( true )
             try
             {
-                // DEVEL:
-                // show::connection connection( test_server.serve() );
-                std::shared_ptr< show::connection > connection(
-                    test_server.serve()
-                );
+                show::connection connection( test_server.serve() );
                 
-                connection -> timeout( timeout );
+                connection.timeout( timeout );
                 
                 while( true )
                     try
                     {
-                        show::request request( connection /*-> next()*/ );
+                        show::request request( connection );
                         
                         std::cout
                             << "got a "
