@@ -228,7 +228,7 @@ namespace show
         );
         
     public:
-        connection( connection&& ); // See note in implementation
+        connection( connection&& );
         ~connection();
         
         int timeout() const;
@@ -756,7 +756,7 @@ namespace show
         _port(         std::move( o._port         ) ),
         _timeout(      std::move( o._timeout      ) )
     {
-        // COMMENTME:
+        // See comment in `request::request(&&)` implementation
     }
     
     connection::~connection()
