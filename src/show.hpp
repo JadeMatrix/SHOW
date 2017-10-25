@@ -436,7 +436,7 @@ namespace show
     {
         if( timeout == 0 )
             // 0-second timeouts must be handled in the code that called
-            // `wait_for()`, and 0s will cause `pselect()` to error
+            // `wait_for()`, as 0s will cause `pselect()` to error
             throw socket_error(
                 "0-second timeouts can't be handled by wait_for()"
             );
@@ -774,8 +774,8 @@ namespace show
     {
         // `request` can use neither an implicit nor explicit default move
         // constructor, as that relies on the `std::streambuf` implementation to
-        // be move-friendly, which unfortunately it doesn't seem to be for any
-        // of major compilers.
+        // be move-friendly, which unfortunately it doesn't seem to be for some
+        // of the major compilers.
     }
     
     request::request( std::shared_ptr< connection > s ) :
