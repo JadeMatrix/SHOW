@@ -31,8 +31,8 @@ int main( int argc, char* argv[] )
                     show::request request( connection );
                     
                     show::response_code code = {
-                        501,
-                        "Not Implemented"
+                        200,
+                        "OK"
                     };
                     show::headers_t headers = {
                         // Set the Server header to display the SHOW version
