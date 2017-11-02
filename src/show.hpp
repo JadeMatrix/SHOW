@@ -295,10 +295,10 @@ namespace show
     {
     public:
         response(
-            request      & r,
-            http_protocol  protocol,
-            response_code& code,
-            headers_t    & headers
+            request            & r,
+            http_protocol        protocol,
+            const response_code& code,
+            const headers_t    & headers
         );
         // TODO: warn that ~response() may try to flush
         ~response();
@@ -1118,10 +1118,10 @@ namespace show
     // response ----------------------------------------------------------------
     
     response::response(
-        request      & r,
-        http_protocol  protocol,
-        response_code& code,
-        headers_t    & headers
+        request            & r,
+        http_protocol        protocol,
+        const response_code& code,
+        const headers_t    & headers
     ) : _connection( r._connection )
     {
         std::stringstream headers_stream;
