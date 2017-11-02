@@ -272,6 +272,7 @@ namespace show
         
         virtual std::streamsize showmanyc();
         virtual int_type        underflow();
+        virtual int_type        uflow();
         virtual std::streamsize xsgetn(
             char_type* s,
             std::streamsize count
@@ -1085,6 +1086,14 @@ namespace show
             return traits_type::eof();
         else
             return _connection.underflow();
+    }
+    
+    request::int_type request::uflow()
+    {
+        request::int_type c = _connection.uflow();
+        if( c != traits_type::eof() )
+            ++read_content;
+        return c;
     }
     
     std::streamsize request::xsgetn(
