@@ -14,8 +14,18 @@ clang++ -std=c++11 -I ../src ../examples/$NAME.cpp -o $NAME
 
 # `hello_world`
 
-The most basic server possible — returns *200 OK* with a plaintext "Hello World" message for every request.
+The most basic server possible — returns *200 OK* with a plaintext "Hello World" message for every request.  You can test this server either with `curl`:
+
+```sh
+curl -i 0.0.0.0:9090
+```
+
+or by navigating to `http://0.0.0.0:9090/` in your browser.
 
 # `echo`
 
-Echoes back the contents of any *POST* request.  Very simple and unsafe — see [`streaming_echo`](#streaming_echo) for a more thorough implementation.
+Echoes back the contents of any *POST* request.  Very simple and unsafe — see [`streaming_echo`](#streaming_echo) for a more thorough implementation.  You can test this server with
+
+```sh
+curl -i -X POST -d "Knock knock" -H "Content-Type: text/plain" 0.0.0.0:9090
+```
