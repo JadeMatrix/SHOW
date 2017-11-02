@@ -1070,7 +1070,13 @@ namespace show
         if( eof() )
             return -1;
         else
-            return _connection.showmanyc();
+        {
+            // Don't just return `remaining` as that may cause reading to hang
+            // on unresponsive clients (trying to read bytes we don't have yet)
+            std::streamsize remaining     = _content_length - read_content;
+            std::streamsize in_connection = _connection.showmanyc();
+            return in_connection < remaining ? in_connection : remaining;
+        }
     }
     
     request::int_type request::underflow()
