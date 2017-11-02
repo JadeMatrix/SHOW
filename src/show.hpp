@@ -272,6 +272,7 @@ namespace show
         
         virtual std::streamsize showmanyc();
         virtual int_type        underflow();
+        virtual int_type        uflow();
         virtual std::streamsize xsgetn(
             char_type* s,
             std::streamsize count
@@ -295,10 +296,10 @@ namespace show
     {
     public:
         response(
-            request      & r,
-            http_protocol  protocol,
-            response_code& code,
-            headers_t    & headers
+            request            & r,
+            http_protocol        protocol,
+            const response_code& code,
+            const headers_t    & headers
         );
         // TODO: warn that ~response() may try to flush
         ~response();
@@ -1070,7 +1071,13 @@ namespace show
         if( eof() )
             return -1;
         else
-            return _connection.showmanyc();
+        {
+            // Don't just return `remaining` as that may cause reading to hang
+            // on unresponsive clients (trying to read bytes we don't have yet)
+            std::streamsize remaining     = _content_length - read_content;
+            std::streamsize in_connection = _connection.showmanyc();
+            return in_connection < remaining ? in_connection : remaining;
+        }
     }
     
     request::int_type request::underflow()
@@ -1079,6 +1086,14 @@ namespace show
             return traits_type::eof();
         else
             return _connection.underflow();
+    }
+    
+    request::int_type request::uflow()
+    {
+        request::int_type c = _connection.uflow();
+        if( c != traits_type::eof() )
+            ++read_content;
+        return c;
     }
     
     std::streamsize request::xsgetn(
@@ -1118,10 +1133,10 @@ namespace show
     // response ----------------------------------------------------------------
     
     response::response(
-        request      & r,
-        http_protocol  protocol,
-        response_code& code,
-        headers_t    & headers
+        request            & r,
+        http_protocol        protocol,
+        const response_code& code,
+        const headers_t    & headers
     ) : _connection( r._connection )
     {
         std::stringstream headers_stream;
