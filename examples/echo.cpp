@@ -78,7 +78,7 @@ void handle_POST_request( show::request& request )
 int main( int argc, char* argv[] )
 {
     std::string  host    = "::";    // IPv6 loopback (0.0.0.0 in IPv4)
-    unsigned int port    = 9091;    // Some random higher port
+    unsigned int port    = 9090;    // Some random higher port
     int          timeout = 10;      // Connection timeout in seconds
     
     try
