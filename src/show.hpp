@@ -194,8 +194,6 @@ namespace show
         _socket      _serve_socket;
         char*        get_buffer;
         char*        put_buffer;
-        std::string  _address;
-        unsigned int _port;
         int          _timeout;
         
         connection(
@@ -228,6 +226,9 @@ namespace show
         );
         
     public:
+        const std::string & client_address;
+        const unsigned int& client_port;
+        
         connection( connection&& );
         ~connection();
         
@@ -510,7 +511,9 @@ namespace show
         unsigned int       port,
         int                timeout
     ) :
-        _serve_socket( fd, address, port )
+        _serve_socket(  fd, address, port     ),
+        client_address( _serve_socket.address ),
+        client_port(    _serve_socket.port    )
     {
         get_buffer = new char[ BUFFER_SIZE ];
         put_buffer = new char[ BUFFER_SIZE ];
@@ -756,12 +759,12 @@ namespace show
     }
     
     connection::connection( connection&& o ) :
-        _serve_socket( std::move( o._serve_socket ) ),
-        get_buffer(    std::move( o.get_buffer    ) ),
-        put_buffer(    std::move( o.put_buffer    ) ),
-        _address(      std::move( o._address      ) ),
-        _port(         std::move( o._port         ) ),
-        _timeout(      std::move( o._timeout      ) )
+        _serve_socket(  std::move( o._serve_socket  ) ),
+        get_buffer(     std::move( o.get_buffer     ) ),
+        put_buffer(     std::move( o.put_buffer     ) ),
+        client_address(            o.client_address   ),
+        client_port(               o.client_port      ),
+        _timeout(       std::move( o._timeout       ) )
     {
         // See comment in `request::request(&&)` implementation
     }
@@ -791,18 +794,18 @@ namespace show
     }
     
     request::request( request&& o ) :
-        client_address(                     o._connection._address      ),
-        client_port(                        o._connection._port         ),
-        _connection(                        o._connection               ),
-        read_content(            std::move( o.read_content            ) ),
-        _protocol(               std::move( o._protocol               ) ),
-        _protocol_string(        std::move( o._protocol_string        ) ),
-        _method(                 std::move( o._method                 ) ),
-        _path(                   std::move( o._path                   ) ),
-        _query_args(             std::move( o._query_args             ) ),
-        _headers(                std::move( o._headers                ) ),
-        _unknown_content_length( std::move( o._unknown_content_length ) ),
-        _content_length(         std::move( o._content_length         ) )
+        client_address(                     o._connection.client_address ),
+        client_port(                        o._connection.client_port    ),
+        _connection(                        o._connection                ),
+        read_content(            std::move( o.read_content             ) ),
+        _protocol(               std::move( o._protocol                ) ),
+        _protocol_string(        std::move( o._protocol_string         ) ),
+        _method(                 std::move( o._method                  ) ),
+        _path(                   std::move( o._path                    ) ),
+        _query_args(             std::move( o._query_args              ) ),
+        _headers(                std::move( o._headers                 ) ),
+        _unknown_content_length( std::move( o._unknown_content_length  ) ),
+        _content_length(         std::move( o._content_length          ) )
     {
         // `request` can use neither an implicit nor explicit default move
         // constructor, as that relies on the `std::streambuf` implementation to
@@ -810,11 +813,11 @@ namespace show
         // of the major compilers.
     }
     
-    request::request( connection& s ) :
-        _connection(    s          ),
-        client_address( s._address ),
-        client_port(    s._port    ),
-        read_content(   0          )
+    request::request( connection& c ) :
+        _connection(    c                ),
+        client_address( c.client_address ),
+        client_port(    c.client_port    ),
+        read_content(   0                )
     {
         bool reading = true;
         int bytes_read;
