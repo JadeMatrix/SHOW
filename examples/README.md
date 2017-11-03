@@ -29,3 +29,7 @@ Echoes back the contents of any *POST* request.  Very simple and unsafe — see 
 ```sh
 curl -i -X POST -d "Knock knock" -H "Content-Type: text/plain" 0.0.0.0:9090
 ```
+
+# `http_1_1`
+
+Demonstrates how to integrate SHOW's HTTP/1.1 support into your application.

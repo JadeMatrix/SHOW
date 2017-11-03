@@ -21,3 +21,7 @@ add_executable(
     echo
     ../examples/echo.cpp
 )
+add_executable(
+    http_1_1
+    ../examples/http_1_1.cpp
+)
