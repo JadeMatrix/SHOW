@@ -5,21 +5,9 @@
 
 The goal of SHOW is to make an idiomatic library for standalone webserver applications written for modern C++.  Currently requires C++11 or higher and a POSIX operating system.
 
+Both HTTP/1.0 and HTTP/1.1 are supported.  SHOW assumes a modern approach to application hosting, and is intended to be run behind a full reverse proxy such as [nginx](https://nginx.org/).  As such, SHOW will not support HTTP/2 or TLS (HTTPS).  Instead, you should write your applications to serve local HTTP/1.x requests.
+
 SHOW uses the [`zlib` license](LICENSE).
-
-### Feature status
-
-| Support for | Status |
-| --- | --- |
-| Linux | working on CentOS 7 |
-| OS X / macOS | working, tested on 10.12.6 |
-| ~~Windows~~ |  |
-| IPv4 | working |
-| IPv6 | working |
-| HTTP/1.0 | working |
-| HTTP/1.1 | working |
-
-SHOW assumes a modern approach to application hosting, and is intended to be run behind a full reverse proxy such as [nginx](https://nginx.org/).  As such, SHOW will not support HTTP/2 or TLS (HTTPS).  Instead, you should write your applications to serve local HTTP/1.x requests.
 
 ## How to use
 
