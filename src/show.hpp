@@ -358,11 +358,15 @@ namespace show
     class        url_decode_error : public exception { using exception::exception; };
     class     base64_decode_error : public exception { using exception::exception; };
     
-    // Does not inherit from std::exception as this isn't meant to signal a
-    // strict error state
+    // Do not inherit from std::exception as these aren't meant to signal strict
+    // error states
     class connection_timeout
     {
         // TODO: information about which connection, etc.
+    };
+    class client_disconnected
+    {
+        // TODO: information about which client, etc.
     };
     
     
@@ -592,7 +596,7 @@ namespace show
                     BUFFER_SIZE
                 );
                 
-                if( bytes_read == -1 )
+                if( bytes_read == -1 )  // Error
                 {
                     auto errno_copy = errno;
                     
@@ -606,6 +610,8 @@ namespace show
                             + std::string( std::strerror( errno_copy ) )
                         );
                 }
+                else if( bytes_read == 0 )  // EOF
+                    throw client_disconnected();
             }
             
             setg(
