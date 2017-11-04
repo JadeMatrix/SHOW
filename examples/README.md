@@ -12,6 +12,8 @@ then either run `make` to build all examples, or `make $NAME` to build a specifi
 clang++ -std=c++11 -I ../src ../examples/$NAME.cpp -o $NAME
 ```
 
+Each of these servers can be tested from a second terminal window.
+
 # `hello_world`
 
 The most basic server possible — returns *200 OK* with a plaintext "Hello World" message for every request.  You can test this server either with `curl`:
@@ -32,4 +34,25 @@ curl -i -X POST -d "Knock knock" -H "Content-Type: text/plain" 0.0.0.0:9090
 
 # `http_1_1`
 
-Demonstrates how to integrate SHOW's HTTP/1.1 support into your application.
+Demonstrates how to integrate SHOW's HTTP/1.1 support into your application.  The easiest way to test this server is with [Netcat](https://en.wikipedia.org/wiki/Netcat); after starting the server, connect with
+
+```sh
+nc 0.0.0.0 9090
+```
+
+Then, before 10 seconds have passed (that's the connection timeout hard-coded into this server), paste any number of HTTP requests.  Here are two simple requests (note that the two trailing newlines are required for the first one!):
+
+```http
+GET / HTTP/1.1
+Content-Length: 0
+
+
+```
+
+```http
+POST /foo/bar HTTP/1.1
+Content-Length: 11
+Content-Type: text/plain
+
+Hello World
+```
