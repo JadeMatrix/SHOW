@@ -25,3 +25,7 @@ add_executable(
     http_1_1
     ../examples/http_1_1.cpp
 )
+add_executable(
+    streaming_echo
+    ../examples/streaming_echo.cpp
+)

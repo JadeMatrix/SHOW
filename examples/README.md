@@ -40,7 +40,7 @@ Demonstrates how to integrate SHOW's HTTP/1.1 support into your application.  Th
 nc 0.0.0.0 9090
 ```
 
-Then, before 10 seconds have passed (that's the connection timeout hard-coded into this server), paste any number of HTTP requests.  Here are two simple requests (note that the two trailing newlines are required for the first one!):
+Then, before 10 seconds have passed (that's the connection timeout hard-coded into this server), paste at least one HTTP request; you can wait up to 10 seconds between pastes.  Here are two simple requests (note that the two trailing newlines are required for the first one!):
 
 ```http
 GET / HTTP/1.1
@@ -56,3 +56,32 @@ Content-Type: text/plain
 
 Hello World
 ```
+
+# `streaming_echo`
+
+A more advanced echo server that streams large requests using `std::istream` and responds using `std::ostream`.  Run & test it like `http_1_1`, but use a longer request you can enter in parts.  For example, first paste this into Netcat:
+
+```http
+POST /foo/bar HTTP/1.0
+Content-Length: 240
+Content-Type: text/plain
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+```
+
+Then paste this:
+
+```http
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+```
+
+and finally this:
+
+```http
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+```
+
+The server should echo back each of the three lines as soon as you paste them in.  Note that there is a newline following each of those data chunks.  This might not show up with some Markdown renderers, so try opening this file in a plaintext editor and copying from there.
