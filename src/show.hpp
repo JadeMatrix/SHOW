@@ -555,6 +555,8 @@ namespace show
                 
                 if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                     throw connection_timeout();
+                else if( errno_copy == ECONNRESET )
+                    throw client_disconnected();
                 else if( errno_copy != EINTR )
                     // EINTR means the send() was interrupted and we just need
                     // to try again
@@ -605,6 +607,8 @@ namespace show
                     
                     if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                         throw connection_timeout();
+                    else if( errno_copy == ECONNRESET )
+                        throw client_disconnected();
                     else if( errno_copy != EINTR )
                         // EINTR means the read() was interrupted and we just
                         // need to try again
@@ -1094,14 +1098,22 @@ namespace show
         if( eof() )
             return traits_type::eof();
         else
-            return _connection.underflow();
+        {
+            request::int_type c = _connection.uflow();
+            if( c == traits_type::eof() )
+                throw client_disconnected();
+            return c;
+        }
     }
     
     request::int_type request::uflow()
     {
+        if( eof() )
+            return traits_type::eof();
         request::int_type c = _connection.uflow();
-        if( c != traits_type::eof() )
-            ++read_content;
+        if( c == traits_type::eof() )
+            throw client_disconnected();
+        ++read_content;
         return c;
     }
     
