@@ -85,3 +85,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ```
 
 The server should echo back each of the three lines as soon as you paste them in.  Note that there is a newline following each of those data chunks.  This might not show up with some Markdown renderers, so try opening this file in a plaintext editor and copying from there.
+
+# `fileserve`
+
+A basic file server that serves a single directory and guesses [MIME types](https://en.wikipedia.org/wiki/Media_type#mime.types).  The code contains conditional sections that use C++17's `filesystem` library if it is available; otherwise it uses the POSIX `dir`/`dirent`.
+
+To try this example, start it using the `fileserve` executable then navigate to `http://0.0.0.0:9090/` in your browser.

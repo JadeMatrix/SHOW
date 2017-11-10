@@ -29,3 +29,7 @@ add_executable(
     streaming_echo
     ../examples/streaming_echo.cpp
 )
+add_executable(
+    fileserve
+    ../examples/fileserve.cpp
+)
