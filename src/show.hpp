@@ -642,7 +642,7 @@ namespace show
         
         while( i < count )
         {
-            request::int_type gotc = sbumpc();
+            int_type gotc = sbumpc();
             
             if( gotc == traits_type::eof() )
                 break;
@@ -1099,7 +1099,7 @@ namespace show
             return traits_type::eof();
         else
         {
-            request::int_type c = _connection.uflow();
+            int_type c = _connection.uflow();
             if( c == traits_type::eof() )
                 throw client_disconnected();
             return c;
@@ -1110,7 +1110,7 @@ namespace show
     {
         if( eof() )
             return traits_type::eof();
-        request::int_type c = _connection.uflow();
+        int_type c = _connection.uflow();
         if( c == traits_type::eof() )
             throw client_disconnected();
         ++read_content;
@@ -1143,7 +1143,7 @@ namespace show
     
     request::int_type request::pbackfail( int_type c )
     {
-        request::int_type result = _connection.pbackfail( c );
+        int_type result = _connection.pbackfail( c );
         
         if(
             traits_type::not_eof( result )
