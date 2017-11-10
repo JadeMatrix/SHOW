@@ -642,7 +642,7 @@ namespace show
         
         while( i < count )
         {
-            request::int_type gotc = sbumpc();
+            int_type gotc = sbumpc();
             
             if( gotc == traits_type::eof() )
                 break;
@@ -663,7 +663,7 @@ namespace show
             requested
         http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
         */
-        if( traits_type::not_eof( c ) )
+        if( traits_type::not_eof( c ) == traits_type::to_int_type( c ) )
         {
             if( gptr() > eback() )
             {
@@ -734,7 +734,7 @@ namespace show
             chars_written < count
             && traits_type::not_eof(
                 sputc( traits_type::to_char_type( s[ chars_written ] ) )
-            )
+            ) == traits_type::to_int_type( s[ chars_written ] )
         )
             ++chars_written;
         
@@ -752,7 +752,7 @@ namespace show
             return traits_type::eof();
         }
         
-        if( traits_type::not_eof( ch ) )
+        if( traits_type::not_eof( ch ) == traits_type::to_int_type( ch ) )
         {
             *( pptr() ) = traits_type::to_char_type( ch );
             pbump( 1 );
@@ -1099,7 +1099,7 @@ namespace show
             return traits_type::eof();
         else
         {
-            request::int_type c = _connection.uflow();
+            int_type c = _connection.uflow();
             if( c == traits_type::eof() )
                 throw client_disconnected();
             return c;
@@ -1110,7 +1110,7 @@ namespace show
     {
         if( eof() )
             return traits_type::eof();
-        request::int_type c = _connection.uflow();
+        int_type c = _connection.uflow();
         if( c == traits_type::eof() )
             throw client_disconnected();
         ++read_content;
@@ -1143,9 +1143,12 @@ namespace show
     
     request::int_type request::pbackfail( int_type c )
     {
-        request::int_type result = _connection.pbackfail( c );
+        int_type result = _connection.pbackfail( c );
         
-        if( traits_type::not_eof( result ) )
+        if(
+            traits_type::not_eof( result )
+                == traits_type::to_int_type( result )
+        )
             --read_content;
         
         return result;
