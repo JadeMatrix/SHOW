@@ -44,7 +44,9 @@ class no_such_path : public std::runtime_error
     using std::runtime_error::runtime_error;
 };
 
-std::vector< std::string > scan_directory( const std::string& root )
+std::vector< std::pair< std::string, bool > > scan_directory(
+    const std::string& root
+)
 {
 #if __cplusplus >= 201703L
     
@@ -52,7 +54,7 @@ std::vector< std::string > scan_directory( const std::string& root )
     
 #else
     
-    std::vector< std::string > subs;
+    std::vector< std::pair< std::string, bool > > subs;
     struct dirent* dir;
     DIR* d = opendir( root.c_str() );
     
@@ -71,7 +73,10 @@ std::vector< std::string > scan_directory( const std::string& root )
             && dir -> d_type != DT_SOCK
             && dir -> d_type != DT_WHT
         )
-            subs.push_back( dir -> d_name );
+            subs.push_back( {
+                std::string( dir -> d_name ),
+                dir -> d_type == DT_DIR
+            } );
     }
     
     closedir( d );
@@ -172,10 +177,10 @@ void handle_GET_request(
         )
             content
                 << "<p><a href=\""
-                << *iter
-                << ( is_directory( path_string + "/" + *iter ) ? "/" : "" )
+                << iter -> first
+                << ( iter -> second ? "/" : "" )
                 << "\">"
-                << *iter
+                << iter -> first
                 << "</a></p>"
             ;
         
