@@ -32,13 +32,6 @@ const show::headers_t::value_type server_header = {
 #endif
 
 
-const std::string listing_begin =
-    "<!doctype html><html><head><meta charset=utf-8>"
-    "<title>blah</title></head><body>"
-;
-const std::string listing_end = "</body></html>";
-
-
 class no_such_path : public std::runtime_error
 {
     using std::runtime_error::runtime_error;
@@ -95,10 +88,9 @@ bool is_directory( const std::string& path )
 #else
     
     DIR* d = opendir( path.c_str() );
-    bool is_dir = ( bool )d;
-    if( is_dir )
+    if( d != NULL )
         closedir( d );
-    return is_dir;
+    return ( bool )d;
     
 #endif
 }
@@ -148,7 +140,7 @@ void handle_GET_request(
     const std::string& rel_dir
 )
 {
-    std::string path_string = rel_dir;
+    std::string path_string;
     
     for(
         auto iter = request.path.begin();
@@ -164,11 +156,19 @@ void handle_GET_request(
         path_string += *iter;
     }
     
-    if( is_directory( path_string ) )
+    std::string full_path_string = rel_dir + path_string;
+    
+    if( is_directory( full_path_string ) )
     {
-        std::vector< std::string > children = scan_directory( path_string );
+        auto children = scan_directory( full_path_string );
         
-        std::stringstream content( listing_begin );
+        std::stringstream content(
+            "<!doctype html><html><head><meta charset=utf-8><title>"
+        );
+        content
+            << path_string
+            << "/</title></head><body>"
+        ;
         
         for(
             auto iter = children.begin();
@@ -184,7 +184,7 @@ void handle_GET_request(
                 << "</a></p>"
             ;
         
-        content << listing_end;
+        content << "</body></html>";
         
         show::response response(
             request,
