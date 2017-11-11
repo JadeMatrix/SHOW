@@ -3,17 +3,12 @@
 
 #include <show.hpp>
 
-#include <iostream> // std::cout, std::cerr
-#include <string>   // std::string, std::to_string()
-#include <sstream>  // std::stringstream
-#include <map>      // std::map
-#include <fstream>  // std::ifstream
-
-#if __cplusplus >= 201703L
-#include <filesystem>
-#else
-#include <sys/dir.h>
-#endif
+#include <iostream>     // std::cout, std::cerr
+#include <string>       // std::string, std::to_string()
+#include <sstream>      // std::stringstream
+#include <map>          // std::map
+#include <fstream>      // std::ifstream
+#include <exception>    // std::runtime_error
 
 
 // Set a Server header to display the SHOW version
@@ -27,93 +22,14 @@ const show::headers_t::value_type server_header = {
 };
 
 
-struct node
-{
-    enum {
-        FILE,
-        DIRECTORY
-    } node_type;
-    std::map< std::string, node > subnodes;
-};
+// Utilities ///////////////////////////////////////////////////////////////////
 
-node scan_directory(
-    const std::string& preroot,
-    const std::string& root
-)
-{
+
 #if __cplusplus >= 201703L
-    
-    
-    
+#include <filesystem>
 #else
-    
-    // https://stackoverflow.com/questions/4204666/how-to-list-files-in-a-directory-in-a-c-program
-    // https://faq.cprogramming.com/cgi-bin/smartfaq.cgi?answer=1046380353&id=1044780608
-    
-    std::string full_dir = ( preroot == "" ? root : preroot + "/" + root );
-    node subtree = { node::FILE, {} };
-    
-    DIR* d = opendir( full_dir.c_str() );
-    if( d )
-    {
-        subtree.node_type = node::DIRECTORY;
-        
-        struct dirent* dir;
-        while( ( dir = readdir( d ) ) != NULL )
-        {
-            std::string node_name( dir -> d_name );
-            
-            if(
-                node_name == "."
-                || node_name == ".."
-                || dir -> d_type == DT_UNKNOWN
-                || dir -> d_type == DT_FIFO
-                || dir -> d_type == DT_BLK
-                || dir -> d_type == DT_SOCK
-                || dir -> d_type == DT_WHT
-            )
-                continue;
-            
-            subtree.subnodes[ node_name ] = scan_directory(
-                full_dir,
-                node_name
-            );
-        }
-        closedir( d );
-    }
-    
-    return subtree;
-    
+#include <sys/dir.h>
 #endif
-}
-
-void print_directory_tree(
-    const std::string& node_name,
-    const node& tree,
-    unsigned int level = 0
-)
-{
-    for( unsigned int i = 0; i < level; ++i )
-        std::cout << ( i + 1 < level ? "| " : "|-" );
-    
-    std::cout
-        << node_name
-        << ( tree.node_type == node::DIRECTORY ? "/" : "" )
-        << std::endl
-    ;
-    
-    if( tree.node_type == node::DIRECTORY /*&& level < 4*/ )
-        for(
-            auto iter = tree.subnodes.begin();
-            iter != tree.subnodes.end();
-            ++iter
-        )
-            print_directory_tree(
-                iter -> first,
-                iter -> second,
-                level + 1
-            );
-}
 
 
 const std::string listing_begin =
@@ -122,6 +38,65 @@ const std::string listing_begin =
 ;
 const std::string listing_end = "</body></html>";
 
+
+class no_such_path : public std::runtime_error
+{
+    using std::runtime_error::runtime_error;
+};
+
+std::vector< std::string > scan_directory( const std::string& root )
+{
+#if __cplusplus >= 201703L
+    
+    #error todo
+    
+#else
+    
+    std::vector< std::string > subs;
+    struct dirent* dir;
+    DIR* d = opendir( root.c_str() );
+    
+    if( d == NULL )
+        throw no_such_path( root );
+    
+    while( ( dir = readdir( d ) ) != NULL )
+    {
+        std::string sub_name( dir -> d_name );
+        if(
+            sub_name != "."
+            && sub_name != ".."
+            && dir -> d_type != DT_UNKNOWN
+            && dir -> d_type != DT_FIFO
+            && dir -> d_type != DT_BLK
+            && dir -> d_type != DT_SOCK
+            && dir -> d_type != DT_WHT
+        )
+            subs.push_back( dir -> d_name );
+    }
+    
+    closedir( d );
+    
+    return subs;
+    
+#endif
+}
+
+bool is_directory( const std::string& path )
+{
+#if __cplusplus >= 201703L
+    
+    #error todo
+    
+#else
+    
+    DIR* d = opendir( path.c_str() );
+    bool is_dir = ( bool )d;
+    if( is_dir )
+        closedir( d );
+    return is_dir;
+    
+#endif
+}
 
 std::string guess_mime_type( const std::string& file_name )
 {
@@ -159,14 +134,15 @@ std::string guess_mime_type( const std::string& file_name )
     return "application/octet-stream";
 }
 
+
+// Server //////////////////////////////////////////////////////////////////////
+
+
 void handle_GET_request(
     show::request& request,
     const std::string& rel_dir
 )
 {
-    node tree = scan_directory( "", rel_dir );
-    node* current_subtree = &tree;
-    
     std::string path_string = rel_dir;
     
     for(
@@ -176,45 +152,30 @@ void handle_GET_request(
     )
     {
         if( *iter == "" )
+            // Skip empty path elements; i.e., treat "//" as "/"
             continue;
         
-        auto in_subs = current_subtree -> subnodes.find( *iter );
-        if( in_subs == current_subtree -> subnodes.end() )
-        {
-            show::response response(
-                request,
-                show::http_protocol::HTTP_1_0,
-                { 404, "Not Found" },
-                {
-                    server_header,
-                    { "Content-Length", { "0" } }
-                }
-            );
-            return;
-        }
-        else
-        {
-            path_string += "/";
-            path_string += in_subs -> first;
-            current_subtree = &( in_subs -> second );
-        }
+        path_string += "/";
+        path_string += *iter;
     }
     
-    if( current_subtree -> node_type == node::DIRECTORY )
+    if( is_directory( path_string ) )
     {
+        std::vector< std::string > children = scan_directory( path_string );
+        
         std::stringstream content( listing_begin );
         
         for(
-            auto iter = current_subtree -> subnodes.begin();
-            iter != current_subtree -> subnodes.end();
+            auto iter = children.begin();
+            iter != children.end();
             ++iter
         )
             content
                 << "<p><a href=\""
-                << iter -> first
-                << ( iter -> second.node_type == node::DIRECTORY ? "/" : "" )
+                << *iter
+                << ( is_directory( path_string + "/" + *iter ) ? "/" : "" )
                 << "\">"
-                << iter -> first
+                << *iter
                 << "</a></p>"
             ;
         
@@ -252,132 +213,60 @@ void handle_GET_request(
             << std::endl
         ;
         
-        std::streamsize remaining;
-        
-        {
-            std::ifstream file(
-                path_string,
-                std::ios::binary | std::ios::ate | std::ios::in
-            );
-            
-            if( !file.is_open() )
-            {
-                // DEBUG:
-                std::cout
-                    << "could not open file "
-                    << path_string
-                    << std::endl
-                ;
-                show::response response(
-                    request,
-                    show::http_protocol::HTTP_1_0,
-                    { 404, "Not Found" },
-                    {
-                        server_header,
-                        { "Content-Length", { "0" } }
-                    }
-                );
-                return;
-            }
-            
-            remaining = file.tellg();
-            file.close();
-        }
-        
-        show::response response(
-            request,
-            show::http_protocol::HTTP_1_0,
-            { 200, "OK" },
-            {
-                server_header,
-                { "Content-Type", { mime_type } },
-                { "Content-Length", {
-                    std::to_string( remaining )
-                } }
-            }
-        );
-        
-        // file.seekg( 0, std::ios::beg );
-        // // DEBUG:
-        // file = std::ifstream(
-        //     path_string,
-        //     std::ios::binary | std::ios::in
-        // );
-        
-        // char buffer[ 1024 ];
-        
-        // while( file.good() && remaining > 0 )
-        // {
-        //     std::streamsize to_read = remaining < 1024 ? remaining : 1024;
-            
-        //     file.read( buffer, to_read );
-        //     response.sputn( buffer, to_read );
-        //     response.flush();
-            
-        //     remaining -= to_read;
-            
-        //     // DEBUG:
-        //     std::cout
-        //         << remaining
-        //         << " bytes remaining"
-        //         << std::endl
-        //     ;
-        // }
-        
-        // std::streampos size;
-        char * memblock;
-        // remaining = file.tellg();
-        
-        std::cout
-            << "file "
-            << path_string
-            << " is "
-            << remaining
-            << " bytes"
-            << std::endl
-        ;
-        
-        // file.close();
-        // file = std::ifstream(
-        //     path_string,
-        //     std::ios::binary | std::ios::in
-        // );
-        
         std::ifstream file(
             path_string,
-            std::ios::binary | std::ios::in
+            std::ios::binary | std::ios::ate | std::ios::in
         );
         
-        memblock = new char [remaining];
-        if( !memblock )
-            throw show::exception( "alloc error" );
-        // file.seekg (0, std::ios::beg);
-        file.read (memblock, remaining);
-        if( !file.good() )
-            throw show::exception( "file broked" );
-        file.close();
-        response.sputn( memblock, remaining );
-        response.flush();
-        
-        std::cout
-            << "served "
-            << path_string
-            << std::endl
-        ;
-        delete memblock;
-        
-        // auto read = file.readsome( buffer, 1024 );
-        // response.sputn( buffer, read );
-        // served_size += read;
-        // // DEBUG:
-        // std::cout
-        //     << "served "
-        //     << served_size
-        //     << "/"
-        //     << file_size
-        //     << " bytes, done"
-        //     << std::endl
-        // ;
+        if( !file.is_open() )
+        {
+            // DEBUG:
+            std::cout
+                << "could not open file "
+                << path_string
+                << std::endl
+            ;
+            show::response response(
+                request,
+                show::http_protocol::HTTP_1_0,
+                { 404, "Not Found" },
+                {
+                    server_header,
+                    { "Content-Length", { "0" } }
+                }
+            );
+        }
+        else
+        {
+            std::streamsize remaining = file.tellg();
+            file.seekg( 0, std::ios::beg );
+            
+            show::response response(
+                request,
+                show::http_protocol::HTTP_1_0,
+                { 200, "OK" },
+                {
+                    server_header,
+                    { "Content-Type", { mime_type } },
+                    { "Content-Length", {
+                        std::to_string( remaining )
+                    } }
+                }
+            );
+            
+            char buffer[ 1024 ];
+            
+            while( file.read( buffer, sizeof( buffer ) ) )
+                response.sputn( buffer, sizeof( buffer ) );
+            response.sputn( buffer, file.gcount() );
+            
+            // DEBUG:
+            std::cout
+                << "served "
+                << path_string
+                << std::endl
+            ;
+        }
     }
 }
 
@@ -393,8 +282,6 @@ int main( int argc, char* argv[] )
         ;
         return -1;
     }
-    // else
-    //     print_directory_tree( argv[ 1 ], scan_directory( "", argv[ 1 ] ) );
     
     std::string  host    = "::";    // IPv6 loopback (0.0.0.0 in IPv4)
     unsigned int port    = 9090;    // Some random higher port
