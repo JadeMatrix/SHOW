@@ -26,49 +26,90 @@ const show::headers_t::value_type server_header = {
 
 
 #if __cplusplus >= 201703L
-#include <filesystem>
+#include <filesystem>   // std::filesystem::*
 #else
-#include <sys/dir.h>
+#include <sys/dir.h>    // dirent, DIR, opendir(), readdir(), closedir()
+#include <sys/stat.h>   // stat, lstat()
 #endif
 
 
+// A simple exception to throw to expedite returning 404s
 class no_such_path : public std::runtime_error
 {
-    using std::runtime_error::runtime_error;
+public:
+    no_such_path() : std::runtime_error( "no such path" ) {};
 };
 
+// Scan a directory and return a list of any of its direct children that are
+// either files or directories.  Each std::pair returned is the name of a child
+// and whether it is a directory.
 std::vector< std::pair< std::string, bool > > scan_directory(
     const std::string& root
 )
 {
-#if __cplusplus >= 201703L
+#if __cplusplus >= 201703L  // Use std::filesystem
     
-    #error todo
+    std::vector< std::pair< std::string, bool > > subs;
     
-#else
+    if( !std::filesystem::is_directory( path ) )
+        throw no_such_path( root );
+    
+    for( auto& entry : std::filesystem::directory_iterator( root ) )
+    {
+        // Only list directories, regular files, and symlinks, and skip special
+        // entries for "this directory" and "parent directory"
+        if(
+               entry -> path().filename() != "."
+            && entry -> path().filename() != ".."
+            && (
+                   std::filesystem::is_directory(    entry -> path() )
+                || std::filesystem::is_regular_file( entry -> path() )
+                || std::filesystem::is_symlink(      entry -> path() )
+            )
+        )
+            subs.push_back( {
+                entry -> path().filename()
+            } );
+    }
+    
+    return subs;
+    
+#else   // Use POSIX's dir/dirent
     
     std::vector< std::pair< std::string, bool > > subs;
     struct dirent* dir;
     DIR* d = opendir( root.c_str() );
     
     if( d == NULL )
-        throw no_such_path( root );
+        throw no_such_path();
     
     while( ( dir = readdir( d ) ) != NULL )
     {
         std::string sub_name( dir -> d_name );
+        
+        // While in theory the `dirent` type should contain node type info, this
+        // isn't true for all implementations, so use `lstat()` on every child
+        // instead.
+        struct stat stat_info;
+        if( lstat( ( root + "/" + sub_name ).c_str(), &stat_info ) )
+            continue;
+        
+        // Only list directories, regular files, and symlinks, and skip special
+        // entries for "this directory" and "parent directory"
         if(
-            sub_name != "."
+               sub_name != "."
             && sub_name != ".."
-            && dir -> d_type != DT_UNKNOWN
-            && dir -> d_type != DT_FIFO
-            && dir -> d_type != DT_BLK
-            && dir -> d_type != DT_SOCK
-            && dir -> d_type != DT_WHT
+            && (
+                // `st_mode` from `lstat()` must be masked with `S_IFMT` to get
+                // the type information segment.
+                   ( stat_info.st_mode & S_IFMT ) == S_IFDIR
+                || ( stat_info.st_mode & S_IFMT ) == S_IFREG
+                || ( stat_info.st_mode & S_IFMT ) == S_IFLNK
+            )
         )
             subs.push_back( {
                 std::string( dir -> d_name ),
-                dir -> d_type == DT_DIR
+                ( stat_info.st_mode & S_IFMT ) == S_IFDIR
             } );
     }
     
@@ -79,13 +120,14 @@ std::vector< std::pair< std::string, bool > > scan_directory(
 #endif
 }
 
+// `true` if the path exists and names a directory, `false` otherwise.
 bool is_directory( const std::string& path )
 {
-#if __cplusplus >= 201703L
+#if __cplusplus >= 201703L  // Use std::filesystem
     
-    #error todo
+    return std::filesystem::is_directory( path );
     
-#else
+#else   // Use POSIX's dir/dirent
     
     DIR* d = opendir( path.c_str() );
     if( d != NULL )
@@ -95,40 +137,42 @@ bool is_directory( const std::string& path )
 #endif
 }
 
-std::string guess_mime_type( const std::string& file_name )
+// Simple MIME type guessing based on a few common file extensions.  If you feel
+// like adding more, take a look at
+// http://hul.harvard.edu/ois/////systems/wax/wax-public-help/mimetypes.htm
+std::string guess_mime_type( const std::string& path )
 {
-    // http://hul.harvard.edu/ois/////systems/wax/wax-public-help/mimetypes.htm
-    for(
-        auto i = file_name.size() - 1;
-        i > 0; // This prevents treating .-files as only an extension
-        --i
-    )
-        if( file_name[ i ] == '.' )
-        {
-            if( i == file_name.size() - 1 )
-                break;
-            
-            std::string extension( file_name, i + 1 );
-            
-            if( extension == "txt" )
-                return "text/plain; charset=utf-8";
-            else if( extension == "html" || extension == "htm" )
-                return "text/html; charset=utf-8";
-            else if( extension == "jpg" || extension == "jpeg" )
-                return "image/jpeg";
-            else if( extension == "png" )
-                return "image/png";
-            else if( extension == "gif" )
-                return "image/gif";
-            else if( extension == "webm" )
-                return "video/webm";
-            else if( extension == "mp3" )
-                return "audio/mpeg3";
-            else
-                break;
-        }
+    std::string extension;
     
-    return "application/octet-stream";
+#if __cplusplus >= 201703L  // Use std::filesystem
+    
+    extension = std::filesystem::path( path ).extension()
+    
+#else
+    
+    std::string::size_type found = path.rfind( '.' );
+    if( found != std::string::npos )
+        extension = path.substr( found );
+    
+#endif
+    
+    if( extension == ".txt" )
+        return "text/plain; charset=utf-8";
+    else if( extension == ".html" || extension == ".htm" )
+        return "text/html; charset=utf-8";
+    else if( extension == ".jpeg" || extension == ".jpg" )
+        return "image/jpeg";
+    else if( extension == ".png" )
+        return "image/png";
+    else if( extension == ".gif" )
+        return "image/gif";
+    else if( extension == ".webm" )
+        return "video/webm";
+    else if( extension == ".mp3" )
+        return "audio/mpeg3";
+    else
+        // Default MIME type for raw binary
+        return "application/octet-stream";
 }
 
 
@@ -140,111 +184,70 @@ void handle_GET_request(
     const std::string& rel_dir
 )
 {
-    std::string path_string;
-    
-    for(
-        auto iter = request.path.begin();
-        iter != request.path.end();
-        ++iter
-    )
+    try
     {
-        if( *iter == "" )
-            // Skip empty path elements; i.e., treat "//" as "/"
-            continue;
-        
-        path_string += "/";
-        path_string += *iter;
-    }
-    
-    std::string full_path_string = rel_dir + path_string;
-    
-    if( is_directory( full_path_string ) )
-    {
-        auto children = scan_directory( full_path_string );
-        
-        std::stringstream content(
-            "<!doctype html><html><head><meta charset=utf-8><title>"
-        );
-        content
-            << path_string
-            << "/</title></head><body>"
-        ;
+        std::string path_string;
         
         for(
-            auto iter = children.begin();
-            iter != children.end();
+            auto iter = request.path.begin();
+            iter != request.path.end();
             ++iter
         )
-            content
-                << "<p><a href=\""
-                << iter -> first
-                << ( iter -> second ? "/" : "" )
-                << "\">"
-                << iter -> first
-                << "</a></p>"
-            ;
-        
-        content << "</body></html>";
-        
-        show::response response(
-            request,
-            show::http_protocol::HTTP_1_0,
-            { 200, "OK" },
+        {
+            if( *iter == "" )
+                // Skip empty path elements; i.e., treat "//" as "/"
+                continue;
+            else if( *iter == ".." )
             {
-                server_header,
-                { "Content-Type", {
-                    "text/html; charset=utf-8"
-                } },
-                { "Content-Length", {
-                    std::to_string( content.str().size() )
-                } }
+                // Prevent directory traversal attacks by sending 404 for any
+                // path containing "..".  cURL and most browsers will normalize
+                // these before sending the request; however an attacker can
+                // still send a raw HTTP request with a malignant path using
+                // Netcat or similar.  In a more advanced fileserver you may
+                // want to normalize the path and check if it is within your
+                // serve root, rather than reject any request path containing
+                // "..".
+                throw no_such_path();
+                return;
             }
-        );
-        
-        response.sputn(
-            content.str().c_str(),
-            content.str().size()
-        );
-    }
-    else
-    {
-        std::string file_name = *( request.path.rbegin() );
-        std::string mime_type = guess_mime_type( file_name );
-        
-        // DEBUG:
-        std::cout
-            << "serving "
-            << path_string
-            << std::endl
-        ;
-        
-        std::ifstream file(
-            path_string,
-            std::ios::binary | std::ios::ate | std::ios::in
-        );
-        
-        if( !file.is_open() )
-        {
-            // DEBUG:
-            std::cout
-                << "could not open file "
-                << path_string
-                << std::endl
-            ;
-            show::response response(
-                request,
-                show::http_protocol::HTTP_1_0,
-                { 404, "Not Found" },
-                {
-                    server_header,
-                    { "Content-Length", { "0" } }
-                }
-            );
+            
+            path_string += "/";
+            path_string += *iter;
         }
-        else
+        
+        // Keep a seperate string `full_path_string` to represent the path on
+        // the server's system; this path should never be send back to the
+        // client -- use `path_string` instead.
+        std::string full_path_string = rel_dir + path_string;
+        
+        if( is_directory( full_path_string ) )
         {
-            std::streamsize remaining = file.tellg();
-            file.seekg( 0, std::ios::beg );
+            auto children = scan_directory( full_path_string );
+            
+            // Send back a directory listing as an HTML5 page
+            std::stringstream content;
+            content
+                << "<!doctype html><html><head><meta charset=utf-8><title>"
+                << path_string
+                << "/</title></head><body>"
+            ;
+            
+            for(
+                auto iter = children.begin();
+                iter != children.end();
+                ++iter
+            )
+                content
+                    << "<p><a href=\""
+                    << iter -> first
+                    << ( iter -> second ? "/" : "" )
+                    << "\">"
+                    << iter -> first
+                    << ( iter -> second ? "/" : "" )
+                    << "</a></p>"
+                ;
+            
+            content << "</body></html>";
             
             show::response response(
                 request,
@@ -252,26 +255,72 @@ void handle_GET_request(
                 { 200, "OK" },
                 {
                     server_header,
-                    { "Content-Type", { mime_type } },
+                    { "Content-Type", {
+                        "text/html; charset=utf-8"
+                    } },
                     { "Content-Length", {
-                        std::to_string( remaining )
+                        std::to_string( content.str().size() )
                     } }
                 }
             );
             
-            char buffer[ 1024 ];
-            
-            while( file.read( buffer, sizeof( buffer ) ) )
-                response.sputn( buffer, sizeof( buffer ) );
-            response.sputn( buffer, file.gcount() );
-            
-            // DEBUG:
-            std::cout
-                << "served "
-                << path_string
-                << std::endl
-            ;
+            response.sputn(
+                content.str().c_str(),
+                content.str().size()
+            );
         }
+        else
+        {
+            // Open the file in binary input mode, with the cursor starting at
+            // the end so we can get the file size
+            std::ifstream file(
+                full_path_string,
+                std::ios::binary | std::ios::in | std::ios::ate
+            );
+            
+            if( !file.is_open() )
+                throw no_such_path();
+            else
+            {
+                // Get the position of the cursor, which will be the file size
+                std::streamsize remaining = file.tellg();
+                // Return the cursor to the beginning of the file for reading
+                file.seekg( 0, std::ios::beg );
+            
+                show::response response(
+                    request,
+                    show::http_protocol::HTTP_1_0,
+                    { 200, "OK" },
+                    {
+                        server_header,
+                        { "Content-Type", { guess_mime_type( path_string ) } },
+                        { "Content-Length", {
+                            std::to_string( remaining )
+                        } }
+                    }
+                );
+                
+                // Read & return the file in kilobyte-sized chunks until less
+                // than a kilobyte is left, then read & return that much
+                char buffer[ 1024 ];
+                while( file.read( buffer, sizeof( buffer ) ) )
+                    response.sputn( buffer, sizeof( buffer ) );
+                response.sputn( buffer, file.gcount() );
+            }
+        }
+    }
+    catch( no_such_path& e )
+    {
+        // Return a 404 for any file- or path-related errors
+        show::response response(
+            request,
+            show::http_protocol::HTTP_1_0,
+            { 404, "Not Found" },
+            {
+                server_header,
+                { "Content-Length", { "0" } }
+            }
+        );
     }
 }
 
