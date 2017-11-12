@@ -1,6 +1,6 @@
 #include <show.hpp>
 
-#include <iostream> // std::cerr
+#include <iostream> // std::cout, std::cerr
 #include <string>   // std::string, std::to_string()
 
 
