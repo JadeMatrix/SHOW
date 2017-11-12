@@ -1,6 +1,3 @@
-// DEBUG:
-#include <iostream>
-
 #include <show.hpp>
 
 #include <iostream>     // std::cout, std::cerr
