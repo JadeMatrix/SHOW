@@ -21,13 +21,13 @@ void request_handler( show::request& request )
         200,
         "OK"
     };
-    show::headers_t headers;
-    
-    headers[ "Server" ].push_back(
-        show::version.name
-        + " v"
-        + show::version.string
-    );
+    show::headers_t headers = {
+        { "Server", {
+            show::version.name
+            + " v"
+            + show::version.string
+        } }
+    };
     
     std::string response_content;
     std::streambuf* response_content_buf = nullptr;
@@ -154,18 +154,12 @@ int main( int argc, char* argv[] )
         while( true )
             try
             {
-                // DEVEL:
-                // show::connection connection( test_server.serve() );
-                std::shared_ptr< show::connection > connection(
-                    test_server.serve()
-                );
-                
-                connection -> timeout( timeout );
+                show::connection connection( test_server.serve() );
                 
                 while( true )
                     try
                     {
-                        show::request request( connection /*-> next()*/ );
+                        show::request request( connection );
                         
                         std::cout
                             << "got a "
