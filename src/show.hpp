@@ -1,6 +1,3 @@
-// TODO: when supporting HTTP/1.1, support pipelining requests
-
-
 #pragma once
 #ifndef SHOW_HPP
 #define SHOW_HPP
@@ -10,7 +7,6 @@
 #include <exception>
 #include <iomanip>
 #include <map>
-#include <memory>
 #include <sstream>
 #include <stack>
 #include <streambuf>
@@ -38,7 +34,7 @@ namespace show
         int minor;
         int revision;
         std::string string;
-    } version = { "SHOW", 0, 6, 1, "0.6.1" };
+    } version = { "SHOW", 0, 7, 0, "0.7.0" };
     
     const char* base64_chars_standard =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -49,8 +45,8 @@ namespace show
     // Forward declarations ////////////////////////////////////////////////////
     
     
-    class _simple_socket;
     class _socket;
+    class connection;
     class server;
     class request;
     class response;
@@ -59,17 +55,16 @@ namespace show
     // Basic types /////////////////////////////////////////////////////////////
     
     
-    typedef int socket_fd;
+    using socket_fd = int;
     // `int` instead of `size_t` because this is a buffer for POSIX `read()`
-    typedef int buffer_size_t;
+    using buffer_size_t = int;
     
     enum http_protocol
     {
         NONE     =  0,
         UNKNOWN  =  1,
         HTTP_1_0 = 10,
-        HTTP_1_1 = 11,
-        HTTP_2_0 = 20
+        HTTP_1_1 = 11
     };
     
     struct response_code
@@ -78,10 +73,10 @@ namespace show
         std::string description;
     };
     
-    typedef std::map<
+    using query_args_t = std::map<
         std::string,
         std::vector< std::string >
-    > query_args_t;
+    >;
     
     // Locale-independent ASCII uppercase
     char _ASCII_upper( char c )
@@ -132,22 +127,23 @@ namespace show
         }
     };
     
-    typedef std::map<
+    using headers_t = std::map<
         std::string,
         std::vector< std::string >,
         _less_ignore_case_ASCII
-    > headers_t;
+    >;
     
     
     // Classes /////////////////////////////////////////////////////////////////
     
     
-    class _simple_socket
+    class _socket
     {
         friend class server;
+        friend class connection;
         
     protected:
-        _simple_socket(
+        _socket(
             socket_fd          fd,
             const std::string& address,
             unsigned int       port
@@ -173,7 +169,7 @@ namespace show
         
         const socket_fd descriptor;
         
-        ~_simple_socket();
+        ~_socket();
         
         wait_for_t wait_for(
             wait_for_t         wf,
@@ -182,30 +178,27 @@ namespace show
         );
     };
     
-    class _socket : public _simple_socket, public std::streambuf
+    class connection : public std::streambuf
     {
         friend class server;
+        friend class request;
+        friend class response;
         
     protected:
         static const buffer_size_t BUFFER_SIZE =   1024;
         static const char          ASCII_ACK   = '\x06';
         
-        char         get_buffer[ BUFFER_SIZE ];
-        char         put_buffer[ BUFFER_SIZE ];
-        std::string  _address;
-        unsigned int _port;
+        _socket      _serve_socket;
+        char*        get_buffer = nullptr;
+        char*        put_buffer = nullptr;
         int          _timeout;
         
-        _socket(
+        connection(
             socket_fd          fd,
             const std::string& address,
             unsigned int       port,
             int                timeout
         );
-        
-    public:
-        int timeout() const;
-        int timeout( int t );
         
         void flush();
         
@@ -228,12 +221,22 @@ namespace show
         virtual int_type overflow(
             int_type ch = std::char_traits< char >::eof()
         );
+        
+    public:
+        const std::string & client_address;
+        const unsigned int& client_port;
+        
+        connection( connection&& );
+        ~connection();
+        
+        int timeout() const;
+        int timeout( int t );
     };
     
     class request : public std::streambuf
     {
         friend class response;
-        friend class server;
+        friend class connection;
         
     public:
         enum content_length_flag_type
@@ -248,10 +251,11 @@ namespace show
         
         bool eof() const;
         
+        request( connection& );
         request( request&& );   // See note in implementation
         
     protected:
-        std::shared_ptr< _socket > serve_socket;
+        connection& _connection;
         
         http_protocol              _protocol;
         std::string                _protocol_string;
@@ -264,10 +268,9 @@ namespace show
         
         unsigned long long read_content;
         
-        request( std::shared_ptr< _socket > );
-        
         virtual std::streamsize showmanyc();
         virtual int_type        underflow();
+        virtual int_type        uflow();
         virtual std::streamsize xsgetn(
             char_type* s,
             std::streamsize count
@@ -291,10 +294,10 @@ namespace show
     {
     public:
         response(
-            request      & r,
-            http_protocol  protocol,
-            response_code& code,
-            headers_t    & headers
+            request            & r,
+            http_protocol        protocol,
+            const response_code& code,
+            const headers_t    & headers
         );
         // TODO: warn that ~response() may try to flush
         ~response();
@@ -302,7 +305,7 @@ namespace show
         virtual void flush();
         
     protected:
-        std::shared_ptr< _socket > serve_socket;
+        connection& _connection;
         
         virtual std::streamsize xsputn(
             const char_type* s,
@@ -318,7 +321,7 @@ namespace show
     protected:
         int _timeout;
         
-        _simple_socket* listen_socket;
+        _socket* listen_socket;
         
     public:
         server(
@@ -328,7 +331,7 @@ namespace show
         );
         ~server();
         
-        request serve();
+        connection serve();
         
         const std::string& address() const;
         unsigned int       port()    const;
@@ -337,6 +340,7 @@ namespace show
         int timeout( int t );
     };
     
+    // TODO: use `std::runtime_error` etc.
     class exception : public std::exception
     {
     protected:
@@ -352,11 +356,15 @@ namespace show
     class        url_decode_error : public exception { using exception::exception; };
     class     base64_decode_error : public exception { using exception::exception; };
     
-    // Does not inherit from std::exception as this isn't meant to signal a
-    // strict error state
+    // Do not inherit from std::exception as these aren't meant to signal strict
+    // error states
     class connection_timeout
     {
         // TODO: information about which connection, etc.
+    };
+    class client_disconnected
+    {
+        // TODO: information about which client, etc.
     };
     
     
@@ -382,9 +390,9 @@ namespace show
     // Implementations /////////////////////////////////////////////////////////
     
     
-    // _simple_socket ----------------------------------------------------------
+    // _socket -----------------------------------------------------------------
     
-    _simple_socket::_simple_socket(
+    _socket::_socket(
         socket_fd          fd,
         const std::string& address,
         unsigned int       port
@@ -402,7 +410,7 @@ namespace show
         );
     }
     
-    void _simple_socket::setsockopt(
+    void _socket::setsockopt(
         int         optname,
         void*       value,
         int         value_size,
@@ -424,12 +432,12 @@ namespace show
             );
     }
     
-    _simple_socket::~_simple_socket()
+    _socket::~_socket()
     {
         close( descriptor );
     }
     
-    _simple_socket::wait_for_t _simple_socket::wait_for(
+    _socket::wait_for_t _socket::wait_for(
         wait_for_t         wf,
         int                timeout,
         const std::string& purpose
@@ -437,7 +445,7 @@ namespace show
     {
         if( timeout == 0 )
             // 0-second timeouts must be handled in the code that called
-            // `wait_for()`, and 0s will cause `pselect()` to error
+            // `wait_for()`, as 0s will cause `pselect()` to error
             throw socket_error(
                 "0-second timeouts can't be handled by wait_for()"
             );
@@ -492,16 +500,20 @@ namespace show
             return WRITE;
     }
     
-    // _socket -----------------------------------------------------------------
+    // connection -----------------------------------------------------------------
     
-    _socket::_socket(
+    connection::connection(
         socket_fd          fd,
         const std::string& address,
         unsigned int       port,
         int                timeout
     ) :
-        _simple_socket( fd, address, port )
+        _serve_socket(  fd, address, port     ),
+        client_address( _serve_socket.address ),
+        client_port(    _serve_socket.port    )
     {
+        get_buffer = new char[ BUFFER_SIZE ];
+        put_buffer = new char[ BUFFER_SIZE ];
         this -> timeout( timeout );
         setg(
             get_buffer,
@@ -514,32 +526,21 @@ namespace show
         );
     }
     
-    int _socket::timeout() const
-    {
-        return _timeout;
-    }
-    
-    int _socket::timeout( int t )
-    {
-        _timeout = t;
-        return _timeout;
-    }
-    
-    void _socket::flush()
+    void connection::flush()
     {
         buffer_size_t send_offset = 0;
         
         while( pptr() - ( pbase() + send_offset ) > 0 )
         {
             if( _timeout != 0 )
-                wait_for(
-                    WRITE,
+                _serve_socket.wait_for(
+                    _socket::WRITE,
                     _timeout,
                     "response send"
                 );
             
             buffer_size_t bytes_sent = send(
-                descriptor,
+                _serve_socket.descriptor,
                 pbase() + send_offset,
                 pptr() - ( pbase() + send_offset ),
                 0
@@ -551,6 +552,8 @@ namespace show
                 
                 if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                     throw connection_timeout();
+                else if( errno_copy == ECONNRESET )
+                    throw client_disconnected();
                 else if( errno_copy != EINTR )
                     // EINTR means the send() was interrupted and we just need
                     // to try again
@@ -569,12 +572,12 @@ namespace show
         );
     }
     
-    std::streamsize _socket::showmanyc()
+    std::streamsize connection::showmanyc()
     {
         return egptr() - gptr();
     }
     
-    _socket::int_type _socket::underflow()
+    connection::int_type connection::underflow()
     {
         if( showmanyc() <= 0 )
         {
@@ -583,24 +586,26 @@ namespace show
             while( bytes_read < 1 )
             {
                 if( _timeout != 0 )
-                    wait_for(
-                        READ,
+                    _serve_socket.wait_for(
+                        _socket::READ,
                         _timeout,
                         "request read"
                     );
                 
                 bytes_read = read(
-                    descriptor,
+                    _serve_socket.descriptor,
                     eback(),
                     BUFFER_SIZE
                 );
                 
-                if( bytes_read == -1 )
+                if( bytes_read == -1 )  // Error
                 {
                     auto errno_copy = errno;
                     
                     if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                         throw connection_timeout();
+                    else if( errno_copy == ECONNRESET )
+                        throw client_disconnected();
                     else if( errno_copy != EINTR )
                         // EINTR means the read() was interrupted and we just
                         // need to try again
@@ -609,6 +614,8 @@ namespace show
                             + std::string( std::strerror( errno_copy ) )
                         );
                 }
+                else if( bytes_read == 0 )  // EOF
+                    throw client_disconnected();
             }
             
             setg(
@@ -621,7 +628,7 @@ namespace show
         return traits_type::to_int_type( *gptr() );
     }
     
-    std::streamsize _socket::xsgetn(
+    std::streamsize connection::xsgetn(
         char_type* s,
         std::streamsize count
     )
@@ -632,7 +639,7 @@ namespace show
         
         while( i < count )
         {
-            request::int_type gotc = sbumpc();
+            int_type gotc = sbumpc();
             
             if( gotc == traits_type::eof() )
                 break;
@@ -645,7 +652,7 @@ namespace show
         return i;
     }
     
-    _socket::int_type _socket::pbackfail( int_type c )
+    connection::int_type connection::pbackfail( int_type c )
     {
         /*
         Parameters:
@@ -653,7 +660,7 @@ namespace show
             requested
         http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
         */
-        if( traits_type::not_eof( c ) )
+        if( traits_type::not_eof( c ) == traits_type::to_int_type( c ) )
         {
             if( gptr() > eback() )
             {
@@ -713,7 +720,7 @@ namespace show
         }
     }
     
-    std::streamsize _socket::xsputn(
+    std::streamsize connection::xsputn(
         const char_type* s,
         std::streamsize count
     )
@@ -724,14 +731,14 @@ namespace show
             chars_written < count
             && traits_type::not_eof(
                 sputc( traits_type::to_char_type( s[ chars_written ] ) )
-            )
+            ) == traits_type::to_int_type( s[ chars_written ] )
         )
             ++chars_written;
         
         return chars_written;
     }
     
-    _socket::int_type _socket::overflow( int_type ch )
+    connection::int_type connection::overflow( int_type ch )
     {
         try
         {
@@ -742,7 +749,7 @@ namespace show
             return traits_type::eof();
         }
         
-        if( traits_type::not_eof( ch ) )
+        if( traits_type::not_eof( ch ) == traits_type::to_int_type( ch ) )
         {
             *( pptr() ) = traits_type::to_char_type( ch );
             pbump( 1 );
@@ -750,6 +757,34 @@ namespace show
         }
         else
             return traits_type::to_int_type( ( char )ASCII_ACK );
+    }
+    
+    connection::connection( connection&& o ) :
+        _serve_socket(  std::move( o._serve_socket  ) ),
+        get_buffer(     std::move( o.get_buffer     ) ),
+        put_buffer(     std::move( o.put_buffer     ) ),
+        client_address(            o.client_address   ),
+        client_port(               o.client_port      ),
+        _timeout(       std::move( o._timeout       ) )
+    {
+        // See comment in `request::request(&&)` implementation
+    }
+    
+    connection::~connection()
+    {
+        if( get_buffer ) delete get_buffer;
+        if( put_buffer ) delete put_buffer;
+    }
+    
+    int connection::timeout() const
+    {
+        return _timeout;
+    }
+    
+    int connection::timeout( int t )
+    {
+        _timeout = t;
+        return _timeout;
     }
     
     // request -----------------------------------------------------------------
@@ -760,30 +795,30 @@ namespace show
     }
     
     request::request( request&& o ) :
-        client_address(                     o.serve_socket -> address   ),
-        client_port(                        o.serve_socket -> port      ),
-        serve_socket(            std::move( o.serve_socket            ) ),
-        read_content(            std::move( o.read_content            ) ),
-        _protocol(               std::move( o._protocol               ) ),
-        _protocol_string(        std::move( o._protocol_string        ) ),
-        _method(                 std::move( o._method                 ) ),
-        _path(                   std::move( o._path                   ) ),
-        _query_args(             std::move( o._query_args             ) ),
-        _headers(                std::move( o._headers                ) ),
-        _unknown_content_length( std::move( o._unknown_content_length ) ),
-        _content_length(         std::move( o._content_length         ) )
+        client_address(                     o._connection.client_address ),
+        client_port(                        o._connection.client_port    ),
+        _connection(                        o._connection                ),
+        read_content(            std::move( o.read_content             ) ),
+        _protocol(               std::move( o._protocol                ) ),
+        _protocol_string(        std::move( o._protocol_string         ) ),
+        _method(                 std::move( o._method                  ) ),
+        _path(                   std::move( o._path                    ) ),
+        _query_args(             std::move( o._query_args              ) ),
+        _headers(                std::move( o._headers                 ) ),
+        _unknown_content_length( std::move( o._unknown_content_length  ) ),
+        _content_length(         std::move( o._content_length          ) )
     {
         // `request` can use neither an implicit nor explicit default move
         // constructor, as that relies on the `std::streambuf` implementation to
-        // be move-friendly, which unfortunately it doesn't seem to be for any
-        // of major compilers.
+        // be move-friendly, which unfortunately it doesn't seem to be for some
+        // of the major compilers.
     }
     
-    request::request( std::shared_ptr< _socket > s ) :
-        serve_socket(           s                       ),
-        client_address(         s -> address            ),
-        client_port(            s -> port               ),
-        read_content(           0                       )
+    request::request( connection& c ) :
+        _connection(    c                ),
+        client_address( c.client_address ),
+        client_port(    c.client_port    ),
+        read_content(   0                )
     {
         bool reading = true;
         int bytes_read;
@@ -807,7 +842,7 @@ namespace show
         
         while( reading )
         {
-            char current_char = serve_socket -> sbumpc();
+            char current_char = _connection.sbumpc();
             
             // \r\n does not make the FSM parser happy
             if( in_endline_seq )
@@ -975,6 +1010,10 @@ namespace show
                         else
                             check_for_multiline_header = true;
                         break;
+                    case ' ':
+                    case '\t':
+                        if( value_buffer.size() < 1 )
+                            break;
                     default:
                         if( check_for_multiline_header )
                         {
@@ -988,13 +1027,12 @@ namespace show
                             check_for_multiline_header = false;
                             
                             parse_state = READING_HEADER_NAME;
-                            
-                            break;
                         }
-                    case ' ':
-                    case '\t':
-                        value_buffer += current_char;
-                        check_for_multiline_header = false;
+                        else
+                        {
+                            value_buffer += current_char;
+                            check_for_multiline_header = false;
+                        }
                         break;
                     }
                 }
@@ -1008,8 +1046,6 @@ namespace show
             _protocol = HTTP_1_0;
         else if( protocol_string_upper == "HTTP/1.1" )
             _protocol = HTTP_1_1;
-        else if( protocol_string_upper == "HTTP/2.0" )
-            _protocol = HTTP_2_0;
         else if( protocol_string_upper == "" )
             _protocol = NONE;
         else
@@ -1045,7 +1081,13 @@ namespace show
         if( eof() )
             return -1;
         else
-            return serve_socket -> showmanyc();
+        {
+            // Don't just return `remaining` as that may cause reading to hang
+            // on unresponsive clients (trying to read bytes we don't have yet)
+            std::streamsize remaining     = _content_length - read_content;
+            std::streamsize in_connection = _connection.showmanyc();
+            return in_connection < remaining ? in_connection : remaining;
+        }
     }
     
     request::int_type request::underflow()
@@ -1053,7 +1095,23 @@ namespace show
         if( eof() )
             return traits_type::eof();
         else
-            return serve_socket -> underflow();
+        {
+            int_type c = _connection.uflow();
+            if( c == traits_type::eof() )
+                throw client_disconnected();
+            return c;
+        }
+    }
+    
+    request::int_type request::uflow()
+    {
+        if( eof() )
+            return traits_type::eof();
+        int_type c = _connection.uflow();
+        if( c == traits_type::eof() )
+            throw client_disconnected();
+        ++read_content;
+        return c;
     }
     
     std::streamsize request::xsgetn(
@@ -1064,11 +1122,11 @@ namespace show
         std::streamsize read;
         
         if( unknown_content_length )
-            read = serve_socket -> sgetn( s, count );
+            read = _connection.sgetn( s, count );
         else if( !eof() )
         {
             std::streamsize remaining = _content_length - read_content;
-            read = serve_socket -> sgetn(
+            read = _connection.sgetn(
                 s,
                 count > remaining ? remaining : count
             );
@@ -1082,9 +1140,12 @@ namespace show
     
     request::int_type request::pbackfail( int_type c )
     {
-        request::int_type result = serve_socket -> pbackfail( c );
+        int_type result = _connection.pbackfail( c );
         
-        if( traits_type::not_eof( result ) )
+        if(
+            traits_type::not_eof( result )
+                == traits_type::to_int_type( result )
+        )
             --read_content;
         
         return result;
@@ -1093,26 +1154,18 @@ namespace show
     // response ----------------------------------------------------------------
     
     response::response(
-        request      & r,
-        http_protocol  protocol,
-        response_code& code,
-        headers_t    & headers
-    ) : serve_socket( r.serve_socket )
+        request            & r,
+        http_protocol        protocol,
+        const response_code& code,
+        const headers_t    & headers
+    ) : _connection( r._connection )
     {
         std::stringstream headers_stream;
         
-        switch( protocol )
-        {
-        default:
-            headers_stream << "HTTP/1.0 ";
-            break;
-        case HTTP_1_1:
+        if( protocol == HTTP_1_1 )
             headers_stream << "HTTP/1.1 ";
-            break;
-        case HTTP_2_0:
-            headers_stream << "HTTP/1.2 ";
-            break;
-        }
+        else
+            headers_stream << "HTTP/1.0 ";
         
         // Marshall response code & description
         headers_stream
@@ -1158,7 +1211,7 @@ namespace show
     
     void response::flush()
     {
-        serve_socket -> flush();
+        _connection.flush();
     }
     
     std::streamsize response::xsputn(
@@ -1166,12 +1219,12 @@ namespace show
         std::streamsize  count
     )
     {
-        return serve_socket -> sputn( s, count );
+        return _connection.sputn( s, count );
     }
     
     response::int_type response::overflow( int_type ch )
     {
-        return serve_socket -> overflow( ch );
+        return _connection.overflow( ch );
     }
     
     // server ------------------------------------------------------------------
@@ -1194,7 +1247,7 @@ namespace show
                 + std::string( std::strerror( errno ) )
             );
         
-        listen_socket = new _simple_socket(
+        listen_socket = new _socket(
             listen_socket_fd,
             address,
             port
@@ -1258,11 +1311,11 @@ namespace show
         delete listen_socket;
     }
     
-    request server::serve()
+    connection server::serve()
     {
         if( _timeout != 0 )
             listen_socket -> wait_for(
-                _simple_socket::wait_for_t::READ,
+                _socket::wait_for_t::READ,
                 _timeout,
                 "listen"
             );
@@ -1307,15 +1360,11 @@ namespace show
                 );
         }
         
-        return request(
-            std::shared_ptr< _socket >(
-                new _socket(
-                    serve_socket,
-                    std::string( address_buffer ),
-                    client_address.sin6_port,
-                    timeout()
-                )
-            )
+        return connection(
+            serve_socket,
+            std::string( address_buffer ),
+            client_address.sin6_port,
+            timeout()
         );
     }
     
@@ -1332,6 +1381,7 @@ namespace show
     {
         return _timeout;
     }
+    
     int server::timeout( int t )
     {
         _timeout = t;
