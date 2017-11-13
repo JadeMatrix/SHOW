@@ -33,3 +33,7 @@ add_executable(
     fileserve
     ../examples/fileserve.cpp
 )
+add_executable(
+    multiple_clients
+    ../examples/multiple_clients.cpp
+)

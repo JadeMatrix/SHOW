@@ -97,3 +97,7 @@ To try this example, start it with a directory:
 ```
 
 then navigate to `http://0.0.0.0:9090/` in your browser.
+
+# `multiple_clients`
+
+A multi-threaded server that handles one connection per thread, as a real application should.  This server doesn't do much except return *501 Not Implemented* for every request.
