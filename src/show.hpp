@@ -192,8 +192,8 @@ namespace show
         static const char          ASCII_ACK   = '\x06';
         
         _socket      _serve_socket;
-        char*        get_buffer;
-        char*        put_buffer;
+        char*        get_buffer = nullptr;
+        char*        put_buffer = nullptr;
         int          _timeout;
         
         connection(
@@ -775,8 +775,8 @@ namespace show
     
     connection::~connection()
     {
-        delete get_buffer;
-        delete put_buffer;
+        if( get_buffer ) delete get_buffer;
+        if( put_buffer ) delete put_buffer;
     }
     
     int connection::timeout() const
