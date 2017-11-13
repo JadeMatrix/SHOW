@@ -1,6 +1,3 @@
-// TODO: when supporting HTTP/1.1, support pipelining requests
-
-
 #pragma once
 #ifndef SHOW_HPP
 #define SHOW_HPP
