@@ -34,7 +34,7 @@ int main( int argc, char* argv[] )
                         200,
                         "OK"
                     };
-                    show::headers_t headers = {
+                    show::headers_type headers = {
                         // Set the Server header to display the SHOW version
                         { "Server", {
                             show::version.name

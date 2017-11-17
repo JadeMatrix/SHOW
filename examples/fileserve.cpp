@@ -9,7 +9,7 @@
 
 
 // Set a Server header to display the SHOW version
-const show::headers_t::value_type server_header = {
+const show::headers_type::value_type server_header = {
     "Server",
     {
         show::version.name
@@ -186,8 +186,8 @@ void handle_GET_request(
         std::string path_string;
         
         for(
-            auto iter = request.path.begin();
-            iter != request.path.end();
+            auto iter = request.path().begin();
+            iter != request.path().end();
             ++iter
         )
         {
@@ -357,7 +357,7 @@ int main( int argc, char* argv[] )
                     show::request request( connection );
                     
                     // Only accept GET requests
-                    if( request.method != "GET" )
+                    if( request.method() != "GET" )
                     {
                         show::response response(
                             request,
@@ -374,7 +374,7 @@ int main( int argc, char* argv[] )
                 {
                     std::cout
                         << "client "
-                        << connection.client_address
+                        << connection.client_address()
                         << " disconnected, closing connection"
                         << std::endl
                     ;
@@ -383,7 +383,7 @@ int main( int argc, char* argv[] )
                 {
                     std::cout
                         << "timed out waiting on client "
-                        << connection.client_address
+                        << connection.client_address()
                         << ", closing connection"
                         << std::endl
                     ;

@@ -52,7 +52,7 @@ namespace show
     
     using socket_fd = int;
     // `int` instead of `size_t` because this is a buffer for POSIX `read()`
-    using buffer_size_t = int;
+    using buffer_size_type = int;
     
     enum http_protocol
     {
@@ -68,7 +68,7 @@ namespace show
         std::string description;
     };
     
-    using query_args_t = std::map<
+    using query_args_type = std::map<
         std::string,
         std::vector< std::string >
     >;
@@ -122,7 +122,7 @@ namespace show
         }
     };
     
-    using headers_t = std::map<
+    using headers_type = std::map<
         std::string,
         std::vector< std::string >,
         _less_ignore_case_ASCII
@@ -155,7 +155,7 @@ namespace show
         const std::string  address;
         const unsigned int port;
         
-        enum wait_for_t
+        enum wait_for_type
         {
             READ       = 1,
             WRITE      = 2,
@@ -166,8 +166,8 @@ namespace show
         
         ~_socket();
         
-        wait_for_t wait_for(
-            wait_for_t         wf,
+        wait_for_type wait_for(
+            wait_for_type      wf,
             int                timeout,
             const std::string& purpose
         );
@@ -180,8 +180,8 @@ namespace show
         friend class response;
         
     protected:
-        static const buffer_size_t BUFFER_SIZE =   1024;
-        static const char          ASCII_ACK   = '\x06';
+        static const buffer_size_type BUFFER_SIZE =   1024;
+        static const char             ASCII_ACK   = '\x06';
         
         _socket      _serve_socket;
         char*        get_buffer = nullptr;
@@ -218,8 +218,8 @@ namespace show
         );
         
     public:
-        const std::string & client_address;
-        const unsigned int& client_port;
+        const std::string & client_address() { return _serve_socket.address; };
+        const unsigned int& client_port   () { return _serve_socket.port;    };
         
         connection( connection&& );
         ~connection();
@@ -241,8 +241,8 @@ namespace show
             MAYBE
         };
         
-        const std::string & client_address;
-        const unsigned int& client_port;
+        const std::string & client_address() { return _connection.client_address(); };
+        const unsigned int& client_port   () { return _connection.client_port   (); };
         
         bool eof() const;
         
@@ -256,8 +256,8 @@ namespace show
         std::string                _protocol_string;
         std::string                _method;
         std::vector< std::string > _path;
-        query_args_t               _query_args;
-        headers_t                  _headers;
+        query_args_type            _query_args;
+        headers_type               _headers;
         content_length_flag_type   _unknown_content_length;
         unsigned long long         _content_length;
         
@@ -275,14 +275,15 @@ namespace show
         );
         
     public:
-        const http_protocol             & protocol               = _protocol;
-        const std::string               & protocol_string        = _protocol_string;
-        const std::string               & method                 = _method;
-        const std::vector< std::string >& path                   = _path;
-        const query_args_t              & query_args             = _query_args;
-        const headers_t                 & headers                = _headers;
-        const content_length_flag_type  & unknown_content_length = _unknown_content_length;
-        unsigned long long              & content_length         = _content_length;
+        
+        const http_protocol             & protocol              () { return _protocol;               };
+        const std::string               & protocol_string       () { return _protocol_string;        };
+        const std::string               & method                () { return _method;                 };
+        const std::vector< std::string >& path                  () { return _path;                   };
+        const query_args_type           & query_args            () { return _query_args;             };
+        const headers_type              & headers               () { return _headers;                };
+        const content_length_flag_type  & unknown_content_length() { return _unknown_content_length; };
+        unsigned long long              & content_length        () { return _content_length;         };
     };
     
     class response : public std::streambuf
@@ -292,7 +293,7 @@ namespace show
             request            & r,
             http_protocol        protocol,
             const response_code& code,
-            const headers_t    & headers
+            const headers_type & headers
         );
         // TODO: warn that ~response() may try to flush
         ~response();
@@ -422,8 +423,8 @@ namespace show
         close( descriptor );
     }
     
-    _socket::wait_for_t _socket::wait_for(
-        wait_for_t         wf,
+    _socket::wait_for_type _socket::wait_for(
+        wait_for_type      wf,
         int                timeout,
         const std::string& purpose
     )
@@ -438,8 +439,8 @@ namespace show
         fd_set read_descriptors, write_descriptors;
         timespec timeout_spec = { timeout, 0 };
         
-        bool r = wf & wait_for_t::READ;
-        bool w = wf & wait_for_t::WRITE;
+        bool r = wf & wait_for_type::READ;
+        bool w = wf & wait_for_type::WRITE;
         
         if( r )
         {
@@ -493,10 +494,9 @@ namespace show
         unsigned int       port,
         int                timeout
     ) :
-        _serve_socket(  fd, address, port     ),
-        client_address( _serve_socket.address ),
-        client_port(    _serve_socket.port    )
+        _serve_socket(  fd, address, port     )
     {
+        // TODO: Only allocate once needed
         get_buffer = new char[ BUFFER_SIZE ];
         put_buffer = new char[ BUFFER_SIZE ];
         this -> timeout( timeout );
@@ -513,7 +513,7 @@ namespace show
     
     void connection::flush()
     {
-        buffer_size_t send_offset = 0;
+        buffer_size_type send_offset = 0;
         
         while( pptr() - ( pbase() + send_offset ) > 0 )
         {
@@ -524,7 +524,7 @@ namespace show
                     "response send"
                 );
             
-            buffer_size_t bytes_sent = send(
+            buffer_size_type bytes_sent = send(
                 _serve_socket.descriptor,
                 pbase() + send_offset,
                 pptr() - ( pbase() + send_offset ),
@@ -566,7 +566,7 @@ namespace show
     {
         if( showmanyc() <= 0 )
         {
-            buffer_size_t bytes_read = 0;
+            buffer_size_type bytes_read = 0;
             
             while( bytes_read < 1 )
             {
@@ -748,8 +748,6 @@ namespace show
         _serve_socket(  std::move( o._serve_socket  ) ),
         get_buffer(     std::move( o.get_buffer     ) ),
         put_buffer(     std::move( o.put_buffer     ) ),
-        client_address(            o.client_address   ),
-        client_port(               o.client_port      ),
         _timeout(       std::move( o._timeout       ) )
     {
         // See comment in `request::request(&&)` implementation
@@ -776,12 +774,10 @@ namespace show
     
     bool request::eof() const
     {
-        return !unknown_content_length && read_content >= _content_length;
+        return !_unknown_content_length && read_content >= _content_length;
     }
     
     request::request( request&& o ) :
-        client_address(                     o._connection.client_address ),
-        client_port(                        o._connection.client_port    ),
         _connection(                        o._connection                ),
         read_content(            std::move( o.read_content             ) ),
         _protocol(               std::move( o._protocol                ) ),
@@ -801,8 +797,6 @@ namespace show
     
     request::request( connection& c ) :
         _connection(    c                ),
-        client_address( c.client_address ),
-        client_port(    c.client_port    ),
         read_content(   0                )
     {
         bool reading = true;
@@ -1106,7 +1100,7 @@ namespace show
     {
         std::streamsize read;
         
-        if( unknown_content_length )
+        if( _unknown_content_length )
             read = _connection.sgetn( s, count );
         else if( !eof() )
         {
@@ -1142,7 +1136,7 @@ namespace show
         request            & r,
         http_protocol        protocol,
         const response_code& code,
-        const headers_t    & headers
+        const headers_type & headers
     ) : _connection( r._connection )
     {
         std::stringstream headers_stream;
@@ -1300,7 +1294,7 @@ namespace show
     {
         if( _timeout != 0 )
             listen_socket -> wait_for(
-                _socket::wait_for_t::READ,
+                _socket::wait_for_type::READ,
                 _timeout,
                 "listen"
             );

@@ -7,7 +7,7 @@
 
 
 // Set a Server header to display the SHOW version
-const show::headers_t::value_type server_header = {
+const show::headers_type::value_type server_header = {
     "Server",
     {
         show::version.name
@@ -22,7 +22,7 @@ const std::streamsize buffer_size = 256;
 void handle_POST_request( show::request& request )
 {
     // Always require a Content-Length header for this application
-    if( request.unknown_content_length )
+    if( request.unknown_content_length() )
         show::response response(
             request,
             show::http_protocol::HTTP_1_0,
@@ -31,19 +31,19 @@ void handle_POST_request( show::request& request )
         );
     else
     {
-        show::headers_t headers = {
+        show::headers_type headers = {
             {
                 "Content-Length",
                 // Header values must be strings
-                { std::to_string( request.content_length ) }
+                { std::to_string( request.content_length() ) }
             }
         };
         
         // Replicate the Content-Type header of the request if it exists,
         // otherwise assume plain text
-        auto content_type_header = request.headers.find( "Content-Type" );
+        auto content_type_header = request.headers().find( "Content-Type" );
         if(
-            content_type_header != request.headers.end()
+            content_type_header != request.headers().end()
             && content_type_header -> second.size() == 1
         )
             headers[ "Content-Type" ].push_back(
@@ -85,7 +85,7 @@ void handle_POST_request( show::request& request )
             {
                 std::cout
                     << "failed to read data from client "
-                    << request.client_address
+                    << request.client_address()
                     << ", disconnecting"
                     << std::endl
                 ;
@@ -135,7 +135,7 @@ int main( int argc, char* argv[] )
                     show::request request( connection );
                     
                     // Only accept POST requests
-                    if( request.method != "POST" )
+                    if( request.method() != "POST" )
                     {
                         show::response response(
                             request,
@@ -152,7 +152,7 @@ int main( int argc, char* argv[] )
                 {
                     std::cout
                         << "client "
-                        << connection.client_address
+                        << connection.client_address()
                         << " disconnected, closing connection"
                         << std::endl
                     ;
@@ -162,7 +162,7 @@ int main( int argc, char* argv[] )
                 {
                     std::cout
                         << "timed out waiting on client "
-                        << connection.client_address
+                        << connection.client_address()
                         << ", closing connection"
                         << std::endl
                     ;

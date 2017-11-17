@@ -6,7 +6,7 @@
 
 
 // Set a Server header to display the SHOW version
-const show::headers_t::value_type server_header = {
+const show::headers_type::value_type server_header = {
     "Server",
     {
         show::version.name
@@ -25,7 +25,7 @@ void handle_connection( show::connection* connection )
         show::request request( *connection );
         
         // See the HTTP/1.1 example for an explanation
-        if( !request.unknown_content_length )
+        if( !request.unknown_content_length() )
             while( !request.eof() ) request.sbumpc();
         
         show::response response(
@@ -43,7 +43,7 @@ void handle_connection( show::connection* connection )
     {
         std::cout
             << "client "
-            << connection -> client_address
+            << connection -> client_address()
             << " disconnected, closing connection"
             << std::endl
         ;
@@ -52,7 +52,7 @@ void handle_connection( show::connection* connection )
     {
         std::cout
             << "timed out waiting on client "
-            << connection -> client_address
+            << connection -> client_address()
             << ", closing connection"
             << std::endl
         ;

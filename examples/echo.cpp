@@ -6,7 +6,7 @@
 
 
 // Set a Server header to display the SHOW version
-const show::headers_t::value_type server_header = {
+const show::headers_type::value_type server_header = {
     "Server",
     {
         show::version.name
@@ -18,9 +18,9 @@ const show::headers_t::value_type server_header = {
 
 void handle_POST_request( show::request& request )
 {
-    show::headers_t headers = { server_header };
+    show::headers_type headers = { server_header };
     
-    if( request.unknown_content_length )
+    if( request.unknown_content_length() )
     {
         // Always require a Content-Length header for this application
         show::response response(
@@ -37,14 +37,14 @@ void handle_POST_request( show::request& request )
     {
         headers[ "Content-Length" ].push_back(
             // Header values must be strings
-            std::to_string( request.content_length )
+            std::to_string( request.content_length() )
         );
         
         // Replicate the Content-Type header of the request if it exists,
         // otherwise assume plain text
-        auto content_type_header = request.headers.find( "Content-Type" );
+        auto content_type_header = request.headers().find( "Content-Type" );
         if(
-            content_type_header != request.headers.end()
+            content_type_header != request.headers().end()
             && content_type_header -> second.size() == 1
         )
             headers[ "Content-Type" ].push_back(
@@ -98,7 +98,7 @@ int main( int argc, char* argv[] )
                 {
                     show::request request( connection );
                     
-                    if( request.method == "POST" )
+                    if( request.method() == "POST" )
                     {
                         handle_POST_request( request );
                     }

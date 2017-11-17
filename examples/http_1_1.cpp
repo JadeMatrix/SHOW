@@ -26,7 +26,7 @@ int main( int argc, char* argv[] )
                 
                 std::cout
                     << "client "
-                    << connection.client_address
+                    << connection.client_address()
                     << " connected"
                     << std::endl
                 ;
@@ -38,9 +38,9 @@ int main( int argc, char* argv[] )
                         
                         std::cout
                             << "serving a "
-                            << request.method
+                            << request.method()
                             << " request for client "
-                            << request.client_address
+                            << request.client_address()
                             << std::endl
                         ;
                         
@@ -51,23 +51,23 @@ int main( int argc, char* argv[] )
                         // constructor will chocke & throw an exception (which
                         // in a real server you'd want to catch & return as a
                          // 400).
-                        if( !request.unknown_content_length )
+                        if( !request.unknown_content_length() )
                             while( !request.eof() ) request.sbumpc();
                         
-                        bool is_1p1 = request.protocol == show::HTTP_1_1;
+                        bool is_1p1 = request.protocol() == show::HTTP_1_1;
                         
                         std::string message(
                             "HTTP/"
                             + std::string( is_1p1 ? "1.1" : "1.0" )
                             + " "
-                            + request.method
+                            + request.method()
                             + " request from "
-                            + request.client_address
+                            + request.client_address()
                             + " on path /"
                         );
                         for(
-                            auto iter = request.path.begin();
-                            iter != request.path.end();
+                            auto iter = request.path().begin();
+                            iter != request.path().end();
                             ++iter
                         )
                         {
@@ -79,7 +79,7 @@ int main( int argc, char* argv[] )
                             200,
                             "OK"
                         };
-                        show::headers_t headers = {
+                        show::headers_type headers = {
                             // Set the Server header to display the SHOW version
                             { "Server", {
                                 show::version.name
@@ -107,11 +107,11 @@ int main( int argc, char* argv[] )
                         // "Connection" header; this application defers to this
                         // header's value (if it exists) before checking the
                         // protocol version.
-                        auto connection_header = request.headers.find(
+                        auto connection_header = request.headers().find(
                             "Connection"
                         );
                         if(
-                            connection_header != request.headers.end()
+                            connection_header != request.headers().end()
                             && connection_header -> second.size() == 1
                         )
                         {
@@ -130,7 +130,7 @@ int main( int argc, char* argv[] )
                             //   >= HTTP/1.1 : keep connection open
                         }
                         
-                        if( request.protocol <= show::HTTP_1_0 )
+                        if( request.protocol() <= show::HTTP_1_0 )
                             break;
                         // else continue (HTTP/1.1+ default to keep-alive)
                     }
@@ -138,7 +138,7 @@ int main( int argc, char* argv[] )
                     {
                         std::cout
                             << "client "
-                            << connection.client_address
+                            << connection.client_address()
                             << " disconnected, closing connection"
                             << std::endl
                         ;
@@ -148,7 +148,7 @@ int main( int argc, char* argv[] )
                     {
                         std::cout
                             << "timed out waiting on client "
-                            << connection.client_address
+                            << connection.client_address()
                             << ", closing connection"
                             << std::endl
                         ;
