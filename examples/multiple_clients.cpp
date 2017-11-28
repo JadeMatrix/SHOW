@@ -68,9 +68,6 @@ void handle_connection( show::connection* connection )
 }
 
 
-std::list< std::thread > workers;
-
-
 int main( int argc, char* argv[] )
 {
     try
@@ -90,10 +87,11 @@ int main( int argc, char* argv[] )
         {
             try
             {
-                workers.push_back( std::thread(
+                std::thread worker(
                     handle_connection,
                     new show::connection( test_server.serve() )
-                ) );
+                );
+                worker.detach();
             }
             catch( show::connection_timeout& ct )
             {
@@ -102,17 +100,6 @@ int main( int argc, char* argv[] )
                     << std::endl
                 ;
             }
-            
-            // Clean up any finished workers
-            auto iter = workers.begin();
-            while( iter != workers.end() )
-                if( iter -> joinable() )
-                {
-                    iter -> join();
-                    workers.erase( iter++ );
-                }
-                else
-                    ++iter;
         }
         
         return 0;
