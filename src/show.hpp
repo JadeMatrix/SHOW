@@ -74,13 +74,13 @@ namespace show
     >;
     
     // Locale-independent ASCII uppercase
-    char _ASCII_upper( char c )
+    inline char _ASCII_upper( char c )
     {
         if( c >= 'a' && c <= 'z' )
             c |= ~0x20;
         return c;
     }
-    std::string _ASCII_upper( std::string s )
+    inline std::string _ASCII_upper( std::string s )
     {
         std::string out;
         for(
@@ -378,7 +378,7 @@ namespace show
     
     // _socket -----------------------------------------------------------------
     
-    _socket::_socket(
+    inline _socket::_socket(
         socket_fd          fd,
         const std::string& address,
         unsigned int       port
@@ -396,7 +396,7 @@ namespace show
         );
     }
     
-    void _socket::setsockopt(
+    inline void _socket::setsockopt(
         int         optname,
         void*       value,
         int         value_size,
@@ -418,12 +418,12 @@ namespace show
             );
     }
     
-    _socket::~_socket()
+    inline _socket::~_socket()
     {
         close( descriptor );
     }
     
-    _socket::wait_for_type _socket::wait_for(
+    inline _socket::wait_for_type _socket::wait_for(
         wait_for_type      wf,
         int                timeout,
         const std::string& purpose
@@ -488,7 +488,7 @@ namespace show
     
     // connection -----------------------------------------------------------------
     
-    connection::connection(
+    inline connection::connection(
         socket_fd          fd,
         const std::string& address,
         unsigned int       port,
@@ -511,7 +511,7 @@ namespace show
         );
     }
     
-    void connection::flush()
+    inline void connection::flush()
     {
         buffer_size_type send_offset = 0;
         
@@ -557,12 +557,12 @@ namespace show
         );
     }
     
-    std::streamsize connection::showmanyc()
+    inline std::streamsize connection::showmanyc()
     {
         return egptr() - gptr();
     }
     
-    connection::int_type connection::underflow()
+    inline connection::int_type connection::underflow()
     {
         if( showmanyc() <= 0 )
         {
@@ -613,7 +613,7 @@ namespace show
         return traits_type::to_int_type( *gptr() );
     }
     
-    std::streamsize connection::xsgetn(
+    inline std::streamsize connection::xsgetn(
         char_type* s,
         std::streamsize count
     )
@@ -637,7 +637,7 @@ namespace show
         return i;
     }
     
-    connection::int_type connection::pbackfail( int_type c )
+    inline connection::int_type connection::pbackfail( int_type c )
     {
         /*
         Parameters:
@@ -705,7 +705,7 @@ namespace show
         }
     }
     
-    std::streamsize connection::xsputn(
+    inline std::streamsize connection::xsputn(
         const char_type* s,
         std::streamsize count
     )
@@ -723,7 +723,7 @@ namespace show
         return chars_written;
     }
     
-    connection::int_type connection::overflow( int_type ch )
+    inline connection::int_type connection::overflow( int_type ch )
     {
         try
         {
@@ -744,7 +744,7 @@ namespace show
             return traits_type::to_int_type( ( char )ASCII_ACK );
     }
     
-    connection::connection( connection&& o ) :
+    inline connection::connection( connection&& o ) :
         _serve_socket(  std::move( o._serve_socket  ) ),
         get_buffer(     std::move( o.get_buffer     ) ),
         put_buffer(     std::move( o.put_buffer     ) ),
@@ -753,18 +753,18 @@ namespace show
         // See comment in `request::request(&&)` implementation
     }
     
-    connection::~connection()
+    inline connection::~connection()
     {
         if( get_buffer ) delete get_buffer;
         if( put_buffer ) delete put_buffer;
     }
     
-    int connection::timeout() const
+    inline int connection::timeout() const
     {
         return _timeout;
     }
     
-    int connection::timeout( int t )
+    inline int connection::timeout( int t )
     {
         _timeout = t;
         return _timeout;
@@ -772,12 +772,12 @@ namespace show
     
     // request -----------------------------------------------------------------
     
-    bool request::eof() const
+    inline bool request::eof() const
     {
         return !_unknown_content_length && read_content >= _content_length;
     }
     
-    request::request( request&& o ) :
+    inline request::request( request&& o ) :
         _connection(                        o._connection                ),
         read_content(            std::move( o.read_content             ) ),
         _protocol(               std::move( o._protocol                ) ),
@@ -795,7 +795,7 @@ namespace show
         // of the major compilers.
     }
     
-    request::request( connection& c ) :
+    inline request::request( connection& c ) :
         _connection(    c                ),
         read_content(   0                )
     {
@@ -1055,7 +1055,7 @@ namespace show
             _unknown_content_length = YES;
     }
     
-    std::streamsize request::showmanyc()
+    inline std::streamsize request::showmanyc()
     {
         if( eof() )
             return -1;
@@ -1069,7 +1069,7 @@ namespace show
         }
     }
     
-    request::int_type request::underflow()
+    inline request::int_type request::underflow()
     {
         if( eof() )
             return traits_type::eof();
@@ -1082,7 +1082,7 @@ namespace show
         }
     }
     
-    request::int_type request::uflow()
+    inline request::int_type request::uflow()
     {
         if( eof() )
             return traits_type::eof();
@@ -1093,7 +1093,7 @@ namespace show
         return c;
     }
     
-    std::streamsize request::xsgetn(
+    inline std::streamsize request::xsgetn(
         char_type* s,
         std::streamsize count
     )
@@ -1117,7 +1117,7 @@ namespace show
         return read;
     }
     
-    request::int_type request::pbackfail( int_type c )
+    inline request::int_type request::pbackfail( int_type c )
     {
         int_type result = _connection.pbackfail( c );
         
@@ -1132,7 +1132,7 @@ namespace show
     
     // response ----------------------------------------------------------------
     
-    response::response(
+    inline response::response(
         request            & r,
         http_protocol        protocol,
         const response_code& code,
@@ -1183,17 +1183,17 @@ namespace show
         );
     }
     
-    response::~response()
+    inline response::~response()
     {
         flush();
     }
     
-    void response::flush()
+    inline void response::flush()
     {
         _connection.flush();
     }
     
-    std::streamsize response::xsputn(
+    inline std::streamsize response::xsputn(
         const char_type* s,
         std::streamsize  count
     )
@@ -1201,14 +1201,14 @@ namespace show
         return _connection.sputn( s, count );
     }
     
-    response::int_type response::overflow( int_type ch )
+    inline response::int_type response::overflow( int_type ch )
     {
         return _connection.overflow( ch );
     }
     
     // server ------------------------------------------------------------------
     
-    server::server(
+    inline server::server(
         const std::string& address,
         unsigned int       port,
         int                timeout
@@ -1285,12 +1285,12 @@ namespace show
             );
     }
     
-    server::~server()
+    inline server::~server()
     {
         delete listen_socket;
     }
     
-    connection server::serve()
+    inline connection server::serve()
     {
         if( _timeout != 0 )
             listen_socket -> wait_for(
@@ -1347,21 +1347,22 @@ namespace show
         );
     }
     
-    const std::string& server::address() const
+    inline const std::string& server::address() const
     {
         return listen_socket -> address;
     }
-    unsigned int server::port() const
+    
+    inline unsigned int server::port() const
     {
         return listen_socket -> port;
     }
     
-    int server::timeout() const
+    inline int server::timeout() const
     {
         return _timeout;
     }
     
-    int server::timeout( int t )
+    inline int server::timeout( int t )
     {
         _timeout = t;
         return _timeout;
@@ -1369,7 +1370,7 @@ namespace show
     
     // Functions ---------------------------------------------------------------
     
-    std::string url_encode(
+    inline std::string url_encode(
         const std::string& o,
         bool use_plus_space
     ) noexcept
@@ -1407,7 +1408,7 @@ namespace show
         return encoded.str();
     }
     
-    std::string url_decode( const std::string& o )
+    inline std::string url_decode( const std::string& o )
     {
         std::string decoded;
         std::string hex_convert_space = "00";

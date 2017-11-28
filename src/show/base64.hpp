@@ -29,7 +29,7 @@ namespace show
     };
     
     
-    std::string base64_encode(
+    inline std::string base64_encode(
         const std::string& o,
         const char* chars
     ) noexcept
@@ -102,7 +102,7 @@ namespace show
         return encoded;
     }
     
-    std::string base64_decode( const std::string& o, const char* chars )
+    inline std::string base64_decode( const std::string& o, const char* chars )
     {
         /*unsigned*/ char current_octet;
         std::string decoded;
