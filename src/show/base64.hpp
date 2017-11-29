@@ -8,9 +8,9 @@
 
 namespace show
 {
-    const char* base64_chars_standard =
+    static const char* base64_chars_standard =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    const char* base64_chars_urlsafe  =
+    static const char* base64_chars_urlsafe  =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     
     
