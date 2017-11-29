@@ -36,9 +36,9 @@ namespace show
         std::string string;
     } version = { "SHOW", 0, 7, 2, "0.7.2" };
     
-    const char* base64_chars_standard =
+    static const char* base64_chars_standard =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    const char* base64_chars_urlsafe  =
+    static const char* base64_chars_urlsafe  =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     
     
