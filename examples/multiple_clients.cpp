@@ -26,7 +26,7 @@ void handle_connection( show::connection* connection )
         
         // See the HTTP/1.1 example for an explanation
         if( !request.unknown_content_length() )
-            while( !request.eof() ) request.sbumpc();
+            request.flush();
         
         show::response response(
             request,

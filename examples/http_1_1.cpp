@@ -52,7 +52,7 @@ int main( int argc, char* argv[] )
                         // in a real server you'd want to catch & return as a
                          // 400).
                         if( !request.unknown_content_length() )
-                            while( !request.eof() ) request.sbumpc();
+                            request.flush();
                         
                         bool is_1p1 = request.protocol() == show::HTTP_1_1;
                         

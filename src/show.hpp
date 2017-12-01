@@ -249,6 +249,8 @@ namespace show
         request( connection& );
         request( request&& );   // See note in implementation
         
+        void flush();
+        
     protected:
         connection& _connection;
         
@@ -793,6 +795,11 @@ namespace show
         // constructor, as that relies on the `std::streambuf` implementation to
         // be move-friendly, which unfortunately it doesn't seem to be for some
         // of the major compilers.
+    }
+    
+    inline void request::flush()
+    {
+        while( !eof() ) sbumpc();
     }
     
     inline request::request( connection& c ) :
