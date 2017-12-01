@@ -115,7 +115,7 @@ int main( int argc, char* argv[] )
                         );
                     }
                 }
-                catch( show::connection_timeout& ct )
+                catch( const show::connection_timeout& ct )
                 {
                     std::cout
                         << "timed out waiting on client, closing connection"
@@ -124,7 +124,7 @@ int main( int argc, char* argv[] )
                     break;
                 }
             }
-            catch( show::connection_timeout& ct )
+            catch( const show::connection_timeout& ct )
             {
                 std::cout
                     << "timed out waiting for connection, looping..."
@@ -132,10 +132,10 @@ int main( int argc, char* argv[] )
                 ;
             }
     }
-    catch( show::exception& e )
+    catch( const std::exception& e )
     {
         std::cerr
-            << "uncaught exception in main(): "
+            << "uncaught std::exception in main(): "
             << e.what()
             << std::endl
         ;

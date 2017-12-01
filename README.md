@@ -62,7 +62,7 @@ while( true )
         show::connection connection( my_server.serve() );
         // handle request(s) here
     }
-    catch( show::connection_timeout& ct )
+    catch( const show::connection_timeout& ct )
     {
         std::cout
             << "timed out waiting for a connection, looping..."
@@ -123,12 +123,12 @@ while( true )
             request_content_stream >> my_integer;
             std::cout << "client sent " << my_integer << "\n";
         }
-        catch( show::connection_timeout& ct )
+        catch( const show::connection_timeout& ct )
         {
             std::cout << "got a request, but client timed out!\n";
         }
     }
-    catch( show::connection_timeout& ct )
+    catch( const show::connection_timeout& ct )
     {
         std::cout
             << "timed out waiting for a connection, looping..."
