@@ -355,14 +355,12 @@ namespace show
     
     // Do not inherit from std::exception as these aren't meant to signal strict
     // error states
-    class connection_timeout
+    class connection_interrupted
     {
-        // TODO: information about which connection, etc.
+        // TODO: information about which connection/client, etc.
     };
-    class client_disconnected
-    {
-        // TODO: information about which client, etc.
-    };
+    class connection_timeout  : public connection_interrupted {};
+    class client_disconnected : public connection_interrupted {};
     
     
     // Functions ///////////////////////////////////////////////////////////////
