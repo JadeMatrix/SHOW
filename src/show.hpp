@@ -747,10 +747,10 @@ namespace show
     }
     
     inline connection::connection( connection&& o ) :
-        _serve_socket(  std::move( o._serve_socket  ) ),
-        get_buffer(     std::move( o.get_buffer     ) ),
-        put_buffer(     std::move( o.put_buffer     ) ),
-        _timeout(       std::move( o._timeout       ) )
+        _serve_socket( std::move( o._serve_socket ) ),
+        get_buffer(    std::move( o.get_buffer    ) ),
+        put_buffer(    std::move( o.put_buffer    ) ),
+        _timeout(      std::move( o._timeout      ) )
     {
         // See comment in `request::request(&&)` implementation
     }
@@ -803,8 +803,8 @@ namespace show
     }
     
     inline request::request( connection& c ) :
-        _connection(    c                ),
-        read_content(   0                )
+        _connection(  c ),
+        read_content( 0 )
     {
         bool reading = true;
         int bytes_read;
