@@ -19,7 +19,7 @@ There are a few important points to keep in mind, however:
 
 HTTP/1.1 — and HTTP/1.0 with an extension — allow multiple requests to be pipelined on the same TCP connection.  Don't try to extract another request from a connection before you've finished handling the last one (the `response` object has been destroyed)!  If you don't want to even send a response for a given pipelined request, you must close the connection, otherwise the client will think you're responding to the first unanswered request.  SHOW can't know with certainty where on the connection one request ends and another starts — it's just the nature of pipelined HTTP.  Sure, the *Content-Length* header could be used, and [chunked transfer encoding](https://en.wikipedia.org/wiki/Chunked_transfer_encoding) has well-established semantics, but if neither are used it is up to your application to figure out the end of the request's content.  In general, you should reject requests whose length you can't readily figure out, but SHOW leaves that decision up to the programmer.
 
-Another thing SHOW doesn't prevent you from doing is creating multiple responses to the same request.  This is mainly for simplicity and because it's very unlikely to happen in a well-structured program.  Doing this may throw an exception in the future; for now, just don't do it!
+Another thing SHOW doesn't prevent you from doing is creating multiple responses to the same request.  This is mainly for simplicity and because it's very unlikely to happen in a well-structured program (aside from *1xx* HTTP/1.1 responses).  Doing this may throw an exception in the future; for now, just don't do it!
 
 ### Including
 
