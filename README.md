@@ -2,6 +2,7 @@
 
 [![stable version](https://img.shields.io/github/release/JadeMatrix/SHOW.svg?label=stable)](https://github.com/JadeMatrix/SHOW/releases/latest)
 [![latest version](https://img.shields.io/github/release/JadeMatrix/SHOW/all.svg?label=latest)](https://github.com/JadeMatrix/SHOW/releases)
+[![latest version](https://img.shields.io/badge/devel-v0.8.0-orange.svg)](https://github.com/JadeMatrix/SHOW/tree/v0.8.0)
 
 The goal of SHOW is to make an idiomatic library for standalone webserver applications written for modern C++.  SHOW is simple in the same way the standard library is simple — it doesn't make any design decisions for the programmer, instead giving them whatever tools they need to build their application.
 
