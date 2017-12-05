@@ -138,7 +138,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'SimpleHeader-OnlyWebserver.tex', u'Simple Header-Only Webserver Documentation',
+    (master_doc, 'SimpleHeader-OnlyWebserver.tex', u'SHOW Documentation',
      u'Joseph Durel', 'manual'),
 ]
 
@@ -148,7 +148,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'simpleheader-onlywebserver', u'Simple Header-Only Webserver Documentation',
+    (master_doc, 'simpleheader-onlywebserver', u'SHOW Documentation',
      [author], 1)
 ]
 
@@ -159,7 +159,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'SimpleHeader-OnlyWebserver', u'Simple Header-Only Webserver Documentation',
+    (master_doc, 'SimpleHeader-OnlyWebserver', u'SHOW Documentation',
      author, 'SimpleHeader-OnlyWebserver', 'One line description of project.',
      'Miscellaneous'),
 ]
