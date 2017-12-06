@@ -893,10 +893,15 @@ namespace show
                         break;
                     case '/':
                         if( _path.size() > 0 )
-                        {
-                            *_path.rbegin() = url_decode( *_path.rbegin() );
-                            _path.push_back( "" );
-                        }
+                            try
+                            {
+                                *_path.rbegin() = url_decode( *_path.rbegin() );
+                                _path.push_back( "" );
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         break;
                     default:
                         if( _path.size() < 1 )
@@ -910,7 +915,14 @@ namespace show
                         parse_state != READING_PATH
                         && _path.size() > 0
                     )
-                        *_path.rbegin() = url_decode( *_path.rbegin() );
+                        try
+                        {
+                            *_path.rbegin() = url_decode( *_path.rbegin() );
+                        }
+                        catch( const url_decode_error& ude )
+                        {
+                            throw request_parse_error( ude.what() );
+                        }
                 }
                 break;
                 
@@ -925,23 +937,32 @@ namespace show
                     case ' ':
                     case '&':
                         if( key_buffer_stack.size() > 1 )
-                        {
-                            value_buffer = url_decode(
-                                key_buffer_stack.top()
-                            );
-                            key_buffer_stack.pop();
-                        }
+                            try
+                            {
+                                value_buffer = url_decode(
+                                    key_buffer_stack.top()
+                                );
+                                key_buffer_stack.pop();
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         else
                             value_buffer = "";
                         
                         while( !key_buffer_stack.empty() )
-                        {
-                            _query_args[
-                                url_decode( key_buffer_stack.top() )
-                            ].push_back( value_buffer );
-                            
-                            key_buffer_stack.pop();
-                        }
+                            try
+                            {
+                                _query_args[
+                                    url_decode( key_buffer_stack.top() )
+                                ].push_back( value_buffer );
+                                key_buffer_stack.pop();
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         
                         if( current_char == '\n' )
                             parse_state = READING_HEADER_NAME;
