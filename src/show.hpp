@@ -287,7 +287,7 @@ namespace show
         const query_args_t              & query_args             = _query_args;
         const headers_t                 & headers                = _headers;
         const content_length_flag_type  & unknown_content_length = _unknown_content_length;
-        unsigned long long              & content_length         = _content_length;
+        const unsigned long long        & content_length         = _content_length;
     };
     
     class response : public std::streambuf
@@ -350,11 +350,10 @@ namespace show
         virtual const char* what() const noexcept { return message.c_str(); };
     };
     
-    class            socket_error : public exception { using exception::exception; };
-    class     request_parse_error : public exception { using exception::exception; };
-    class response_marshall_error : public exception { using exception::exception; };
-    class        url_decode_error : public exception { using exception::exception; };
-    class     base64_decode_error : public exception { using exception::exception; };
+    class        socket_error : public exception { using exception::exception; };
+    class request_parse_error : public exception { using exception::exception; };
+    class    url_decode_error : public exception { using exception::exception; };
+    class base64_decode_error : public exception { using exception::exception; };
     
     // Do not inherit from std::exception as these aren't meant to signal strict
     // error states
@@ -374,13 +373,13 @@ namespace show
     std::string url_encode(
         const std::string& o,
         bool use_plus_space = true
-    ) noexcept;
+    );
     std::string url_decode( const std::string& );
     
     std::string base64_encode(
         const std::string& o,
         const char* chars = base64_chars_standard
-    ) noexcept;
+    );
     std::string base64_decode(
         const std::string& o,
         const char* chars = base64_chars_standard
@@ -893,10 +892,15 @@ namespace show
                         break;
                     case '/':
                         if( _path.size() > 0 )
-                        {
-                            *_path.rbegin() = url_decode( *_path.rbegin() );
-                            _path.push_back( "" );
-                        }
+                            try
+                            {
+                                *_path.rbegin() = url_decode( *_path.rbegin() );
+                                _path.push_back( "" );
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         break;
                     default:
                         if( _path.size() < 1 )
@@ -910,7 +914,14 @@ namespace show
                         parse_state != READING_PATH
                         && _path.size() > 0
                     )
-                        *_path.rbegin() = url_decode( *_path.rbegin() );
+                        try
+                        {
+                            *_path.rbegin() = url_decode( *_path.rbegin() );
+                        }
+                        catch( const url_decode_error& ude )
+                        {
+                            throw request_parse_error( ude.what() );
+                        }
                 }
                 break;
                 
@@ -925,23 +936,32 @@ namespace show
                     case ' ':
                     case '&':
                         if( key_buffer_stack.size() > 1 )
-                        {
-                            value_buffer = url_decode(
-                                key_buffer_stack.top()
-                            );
-                            key_buffer_stack.pop();
-                        }
+                            try
+                            {
+                                value_buffer = url_decode(
+                                    key_buffer_stack.top()
+                                );
+                                key_buffer_stack.pop();
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         else
                             value_buffer = "";
                         
                         while( !key_buffer_stack.empty() )
-                        {
-                            _query_args[
-                                url_decode( key_buffer_stack.top() )
-                            ].push_back( value_buffer );
-                            
-                            key_buffer_stack.pop();
-                        }
+                            try
+                            {
+                                _query_args[
+                                    url_decode( key_buffer_stack.top() )
+                                ].push_back( value_buffer );
+                                key_buffer_stack.pop();
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         
                         if( current_char == '\n' )
                             parse_state = READING_HEADER_NAME;
@@ -1394,7 +1414,7 @@ namespace show
     inline std::string url_encode(
         const std::string& o,
         bool use_plus_space
-    ) noexcept
+    )
     {
         std::stringstream encoded;
         
@@ -1477,7 +1497,7 @@ namespace show
     inline std::string base64_encode(
         const std::string& o,
         const char* chars
-    ) noexcept
+    )
     {
         unsigned char current_sextet;
         std::string encoded;
