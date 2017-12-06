@@ -374,13 +374,13 @@ namespace show
     std::string url_encode(
         const std::string& o,
         bool use_plus_space = true
-    ) noexcept;
+    );
     std::string url_decode( const std::string& );
     
     std::string base64_encode(
         const std::string& o,
         const char* chars = base64_chars_standard
-    ) noexcept;
+    );
     std::string base64_decode(
         const std::string& o,
         const char* chars = base64_chars_standard
@@ -1394,7 +1394,7 @@ namespace show
     inline std::string url_encode(
         const std::string& o,
         bool use_plus_space
-    ) noexcept
+    )
     {
         std::stringstream encoded;
         
@@ -1477,7 +1477,7 @@ namespace show
     inline std::string base64_encode(
         const std::string& o,
         const char* chars
-    ) noexcept
+    )
     {
         unsigned char current_sextet;
         std::string encoded;
