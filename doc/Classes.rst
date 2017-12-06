@@ -5,7 +5,7 @@ Classes & Types
 Classes
 =======
 
-The public interfaces to the main SHOW classes are outlined in the following documents:
+The public interfaces to the main SHOW classes are documented on the following pages:
 
 .. toctree::
     :maxdepth: 2
@@ -20,59 +20,124 @@ Types
 
 .. cpp:enum:: show::http_protocol
     
-    ``NONE``, ``UNKOWN``, ``HTTP_1_0``, ``HTTP_1_1``; there is no ``HTTP_2`` as HTTP/2 is supported at the reverse proxy level
+    Symbolizes the possibly HTTP protocols understood by SHOW.  The enum members are:
+    
+    +--------------+---------------------------------------------------------+
+    | ``HTTP_1_0`` | HTTP/1.0                                                |
+    +--------------+---------------------------------------------------------+
+    | ``HTTP_1_1`` | HTTP/1.1                                                |
+    +--------------+---------------------------------------------------------+
+    | ``NONE``     | The request did not specify a protocol version          |
+    +--------------+---------------------------------------------------------+
+    | ``UNKOWN``   | The protocol specified by the request wasn't recognized |
+    +--------------+---------------------------------------------------------+
+    
+    There is no ``HTTP_2`` as SHOW is not intended to handle HTTP/2 requests.  These are much better handled by a reverse proxy such as `NGINX <https://wiki.nginx.org/>`_, which will convert them into HTTP/1.0 or HTTP/1.1 requests for SHOW.
 
 .. cpp:class:: show::response_code
     
+    A simple utility ``struct`` that encapsulates the numerical code and description for an HTTP status code.  An object of this type can easily be statically initialized like so::
+        
+        show::response_code rc = { 404, "Not Found" };
     
+    See the `list of HTTP status codes <https://en.wikipedia.org/wiki/List_of_HTTP_status_codes>`_ on Wikipedia for an easy reference for the standard code & description values.
+    
+    The two fields are defined as:
+    
+    .. cpp:member:: unsigned short code
+    
+    .. cpp:member:: std::string description
 
 .. cpp:class:: show::query_args_t
     
+    An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string > >`, and can be statically initialized like one::
+        
+        show::query_args_t args = {
+            { "tag", { "foo", "bar" } },
+            { "page", { "3" } }
+        };
     
+    This creates a variable ``args`` which represents the query string ``?tag=foo&tag=bar&page=3``.
+    
+    .. seealso::
+        
+        :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
+        
+        :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
 .. cpp:class:: show::headers_t
     
+    An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string >, show::_less_ignore_case_ASCII >`, where :cpp:class:`show::_less_ignore_case_ASCII` is a case-insensitive `compare <http://en.cppreference.com/w/cpp/container/map>`_ for :cpp:class:`std::map`.
     
+    While HTTP header names are typically given in ``Dashed-Title-Case``, they are technically case-insensitive.  Additionally, in general a given header name may appear more than once in a request or response.  This type satisfies both these constraints.
+    
+    Headers can be statically initialized::
+        
+        show::headers_t headers = {
+            { "Content-Type", { "text/plain" } },
+            { "Set-Cookie", {
+                "cookie1=foobar",
+                "cookie2=SGVsbG8gV29ybGQh"
+            } }
+        };
+    
+    .. seealso::
+        
+        :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
+        
+        :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
+
 Throwables
 ==========
 
-Not all of these are strictly exceptions.
+Not all of these strictly represent an error state when throw; some signal common situations that should be treated very much in the same way as exceptions.  SHOW's throwables are broken into two categories — connection interruptions and exceptions.
 
 Connection interruptions
 ------------------------
 
 .. cpp:class:: show::connection_timeout
     
+    An object of this type will be thrown in two general situations:
     
+    * A server object timed out waiting for a new connection
+    * A connection, request, or client timed out reading from or sending to a client
+    
+    In the first situation, generally the application will simply loop and start waiting again.  In the second case, the application may want to close the connection or continue waiting with either the same timoute or some kind of falloff.  Either way the action will be application-specific.
 
 .. cpp:class:: show::client_disconnected
     
-    
+    This is thrown when SHOW detects that a client has broken connection with the server and no further communication can occur.
 
 Exceptions
 ----------
 
 .. cpp:class:: show::exception : std::exception
     
-    
+    A common base class for all of SHOW's exceptions
 
 .. cpp:class:: show::socket_error : show::exception
     
+    An unrecoverable, low-level error occurred inside SHOW.  If thrown while handling a connection, the connection will no longer be valid but the server should be fine.  If thrown while creating or working with a server, the server object itself is in an unrecoverable state and can no longer serve.
     
+    The nature of this error when thrown by a server typically implies trying again will not work.  If the application is designed to serve on a single IP/port, you will most likely want to exit the program with an error.
 
 .. cpp:class:: show::request_parse_error : show::exception
     
+    Thrown when creating a request object from a connection and SHOW encounters something it can't manage to interpret into a :cpp:class:`show::request`.
     
-
-.. cpp:class:: show::response_marshall_error : show::exception
-    
-    
+    As parsing the offending request almost certainly failed midway, garbage data will likely in the connection's buffer.  Currently, the only safe way to handle this exception is to close the connection.
 
 .. cpp:class:: show::url_decode_error : show::exception
     
+    Thrown by :cpp:func:`show::url_decode` when the input is not a valid `URL- or percent-encoded <https://en.wikipedia.org/wiki/Percent-encoding>`_ string.
     
+    .. note::
+        :cpp:func:`show::url_encode` shouldn't throw an exception, as any string can be converted to percent-encoding.
 
 .. cpp:class:: show::base64_decode_error : show::exception
     
+    Thrown by :cpp:func:`show::base64_decode` when the input is not valid `base-64 <https://en.wikipedia.org/wiki/Base64>`_.
     
+    .. note::
+        :cpp:func:`show::base64_encode` shouldn't throw an exception, as any string can be converted to base-64.
 
