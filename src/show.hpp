@@ -350,11 +350,10 @@ namespace show
         virtual const char* what() const noexcept { return message.c_str(); };
     };
     
-    class            socket_error : public exception { using exception::exception; };
-    class     request_parse_error : public exception { using exception::exception; };
-    class response_marshall_error : public exception { using exception::exception; };
-    class        url_decode_error : public exception { using exception::exception; };
-    class     base64_decode_error : public exception { using exception::exception; };
+    class        socket_error : public exception { using exception::exception; };
+    class request_parse_error : public exception { using exception::exception; };
+    class    url_decode_error : public exception { using exception::exception; };
+    class base64_decode_error : public exception { using exception::exception; };
     
     // Do not inherit from std::exception as these aren't meant to signal strict
     // error states
