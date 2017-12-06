@@ -287,7 +287,7 @@ namespace show
         const query_args_t              & query_args             = _query_args;
         const headers_t                 & headers                = _headers;
         const content_length_flag_type  & unknown_content_length = _unknown_content_length;
-        unsigned long long              & content_length         = _content_length;
+        const unsigned long long        & content_length         = _content_length;
     };
     
     class response : public std::streambuf
