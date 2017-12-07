@@ -234,7 +234,7 @@ namespace show
         friend class connection;
         
     public:
-        enum content_length_flag_type
+        enum content_length_flag
         {
             NO = 0,
             YES,
@@ -260,7 +260,7 @@ namespace show
         std::vector< std::string > _path;
         query_args_type            _query_args;
         headers_type               _headers;
-        content_length_flag_type   _unknown_content_length;
+        content_length_flag        _unknown_content_length;
         unsigned long long         _content_length;
         
         unsigned long long read_content;
@@ -283,8 +283,8 @@ namespace show
         const std::vector< std::string >& path                  () { return _path;                   };
         const query_args_type           & query_args            () { return _query_args;             };
         const headers_type              & headers               () { return _headers;                };
-        const content_length_flag_type  & unknown_content_length() { return _unknown_content_length; };
         unsigned long long              & content_length        () { return _content_length;         };
+        const content_length_flag       & unknown_content_length() { return _unknown_content_length; };
     };
     
     class response : public std::streambuf
