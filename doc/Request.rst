@@ -139,7 +139,12 @@ Request
         
         Whether the content length of the request could be interpreted
         
-        This member may be a bit confusing because it is "*un*-known" rather than "know".  It's convenient for :cpp:type:`content_length_flag_type` to evaluate to a boolean value, but there are two possible reasons the content length would be unknown.  Either the request did not send a *Content-Length* header, or the value supplied is not an integer.  In many languages (including C++), 0 is ``false`` and any other value is ``true``; so the boolean value needs to be ``false`` for a known content length and ``true`` for anything else.
+        This member may be a bit confusing because it is "*un*-known" rather than "know".  It's convenient for :cpp:type:`content_length_flag_type` to evaluate to a boolean value, but there are two possible reasons the content length would be unknown.  Either
+        
+        1. the request did not send a *Content-Length* header, or
+        2. the value supplied is not an integer or multiple *Content-Length* headers were sent.
+        
+        In many languages (including C++), 0 is ``false`` and any other value is ``true``; so the boolean value needs to be ``false`` for a known content length and ``true`` for anything else.
     
     .. cpp:member:: unsigned long long content_length
         

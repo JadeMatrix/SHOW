@@ -39,7 +39,7 @@ That's it, you've made a server that sits there forever until it gets a connecti
 Handling a Connection
 =====================
 
-For each call of ``my_server.serve()`` a single :cpp:class:`connection` object will be returned or a :cpp:class`connection_timeout` thrown. You may want to use something like this::
+For each call of ``my_server.serve()`` a single :cpp:class:`connection` object will be returned or a :cpp:class:`connection_timeout` thrown. You may want to use something like this::
     
     while( true )
         try
@@ -65,7 +65,7 @@ Reading Requests
 
 :cpp:class:`request` objects have a number of ``const`` fields containing the HTTP request's metadata; you can see descriptions of them all in the docs for the class.
 
-Note that these fields do not include the request content, if any. This is because HTTP allows the request content to be streamed to the server. In other words, the server can interpret the headers then wait for the client to send data over a period of time. For this purpose, :cpp:class`request` inherits from :cpp:class:`streambuf`, implementing the read/get functionality. You can use the raw :cpp:class:`std::streambuf` methods to read the incoming data, or create a :cpp:class:`std::istream` from the request object for :cpp:var:`std::cin`-like behavior.
+Note that these fields do not include the request content, if any. This is because HTTP allows the request content to be streamed to the server. In other words, the server can interpret the headers then wait for the client to send data over a period of time. For this purpose, :cpp:class:`request` inherits from :cpp:class:`std::streambuf`, implementing the read/get functionality. You can use the raw :cpp:class:`std::streambuf` methods to read the incoming data, or create a :cpp:class:`std::istream` from the request object for :cpp:var:`std::cin`-like behavior.
 
 For example, if your server is expecting the client to *POST* a single integer, you can use::
     
@@ -84,33 +84,30 @@ Also note that individual request operations may timeout, so the entire serve co
         try
         {
             show::connection connection( my_server.serve() );
-            show::request request( connection );
-            std::istream request_content_stream( request );
             try
             {
+                show::request request( connection );
+                std::istream request_content_stream( request );
                 int my_integer;
                 request_content_stream >> my_integer;
                 std::cout << "client sent " << my_integer << "\n";
             }
             catch( const show::connection_timeout& ct )
             {
-                std::cout << "got a request, but client disconnected!\n";
+                std::cout << "got a request, but client disconnected!" << std::endl;
             }
             catch( const show::connection_timeout& ct )
             {
-                std::cout << "got a request, but client timed out!\n";
+                std::cout << "got a request, but client timed out!" << std::endl;
             }
         }
         catch( const show::connection_timeout& ct )
         {
-            std::cout
-                << "timed out waiting for a connection, looping..."
-                << std::endl
-            ;
+            std::cout << "timed out waiting for a connection, looping..." << std::endl;
             continue;
         }
 
-If this feels complicated, it is.  Network programming like this reveals the worst parts of distributed programming, and there's a lot that can go wrong between the client and the server.
+If this feels complicated, it is.  Network programming like this reveals the worst parts of distributed programming, as there's a lot that can go wrong between the client and the server.
 
 .. seealso::
     
