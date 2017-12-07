@@ -299,7 +299,6 @@ namespace show
             const response_code& code,
             const headers_t    & headers
         );
-        // TODO: warn that ~response() may try to flush
         ~response();
         
         virtual void flush();
