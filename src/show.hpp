@@ -230,7 +230,7 @@ namespace show
         ~connection();
         
         int timeout() const;
-        int timeout( int t );
+        int timeout( int );
     };
     
     class request : public std::streambuf
@@ -336,7 +336,7 @@ namespace show
         unsigned int       port()    const;
         
         int timeout() const;
-        int timeout( int t );
+        int timeout( int );
     };
     
     // TODO: use `std::runtime_error` etc.
