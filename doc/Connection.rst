@@ -20,15 +20,15 @@ Connection
         
         Destructor for a connection, which closes it; any requests or responses created on this connection can no longer be read from or written to
     
-    .. cpp:member:: const std::string& client_address
+    .. cpp:function:: const std::string& client_address() const
         
         The IP address of the connected client
     
-    .. cpp:member:: const unsigned int& client_port
+    .. cpp:function:: unsigned int client_port() const
         
         The port of the connected client
     
-    .. cpp:function:: int timeout()
+    .. cpp:function:: int timeout() const
         
         Get the current timeout of this connection, initially inherited from the server the connection is created from
     

@@ -50,11 +50,11 @@ Types
     
     .. cpp:member:: std::string description
 
-.. cpp:class:: query_args_t
+.. cpp:class:: query_args_type
     
     An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string > >`, and can be statically initialized like one::
         
-        show::query_args_t args = {
+        show::query_args_type args = {
             { "tag", { "foo", "bar" } },
             { "page", { "3" } }
         };
@@ -67,7 +67,7 @@ Types
         
         * :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
-.. cpp:class:: headers_t
+.. cpp:class:: headers_type
     
     An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string >, show::_less_ignore_case_ASCII >`, where :cpp:class:`show::_less_ignore_case_ASCII` is a case-insensitive `compare <http://en.cppreference.com/w/cpp/container/map>`_ for :cpp:class:`std::map`.
     
@@ -75,7 +75,7 @@ Types
     
     Headers can be statically initialized::
         
-        show::headers_t headers = {
+        show::headers_type headers = {
             { "Content-Type", { "text/plain" } },
             { "Set-Cookie", {
                 "cookie1=foobar",
