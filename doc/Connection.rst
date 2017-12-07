@@ -16,7 +16,7 @@ Connection
     
     .. cpp:function:: show::connection::~connection()
         
-        Destructor for a connection, which closes it
+        Destructor for a connection, which closes it; any requests or responses created on this connection can no longer be read from or written to
     
     .. cpp:member:: const std::string& show::connection::client_address
         
