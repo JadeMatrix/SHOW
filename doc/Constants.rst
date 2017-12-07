@@ -29,18 +29,3 @@ All constants are ``const``-qualified.
     .. cpp:member:: std::string string
         
         A string representing the major, minor, and revision version numbers
-
-.. cpp:var:: char* base64_chars_standard
-    
-    The standard set of `base-64 characters`_ for use with :cpp:func:`base64_encode()` and :cpp:func:`base64_decode()`
-    
-    .. _base-64 characters: https://en.wikipedia.org/wiki/Base64
-
-.. cpp:var:: char* base64_chars_urlsafe
-    
-    The URL_safe set of `base-64 characters`_ for use with :cpp:func:`base64_encode()` and :cpp:func:`base64_decode()`, making the following replacements:
-    
-    .. _base-64 characters: https://en.wikipedia.org/wiki/Base64
-    
-    * ``+`` → ``-``
-    * ``/`` → ``_``

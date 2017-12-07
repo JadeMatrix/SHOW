@@ -12,6 +12,7 @@ Welcome to SHOW's documentation!
     Classes
     Functions
     Constants
+    Utilities
 
 
 

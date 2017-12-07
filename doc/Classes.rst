@@ -139,11 +139,3 @@ Exceptions
     
     .. note::
         :cpp:func:`url_encode()` shouldn't throw an exception, as any string can be converted to percent-encoding.
-
-.. cpp:class:: base64_decode_error : exception
-    
-    Thrown by :cpp:func:`base64_decode()` when the input is not valid `base-64 <https://en.wikipedia.org/wiki/Base64>`_.
-    
-    .. note::
-        :cpp:func:`base64_encode()` shouldn't throw an exception, as any string can be converted to base-64.
-
