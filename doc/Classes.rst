@@ -100,7 +100,7 @@ Connection interruptions
     An object of this type will be thrown in two general situations:
     
     * A server object timed out waiting for a new connection
-    * A connection, request, or client timed out reading from or sending to a client
+    * A connection, request, or response timed out reading from or sending to a client
     
     In the first situation, generally the application will simply loop and start waiting again.  In the second case, the application may want to close the connection or continue waiting with either the same timoute or some kind of falloff.  Either way the action will be application-specific.
 
@@ -114,6 +114,10 @@ Exceptions
 .. cpp:class:: show::exception : std::exception
     
     A common base class for all of SHOW's exceptions
+    
+    .. seealso::
+        
+        :cpp:type:`std::exception` on `cppreference.com <http://en.cppreference.com/w/cpp/error/exception>`_
 
 .. cpp:class:: show::socket_error : show::exception
     
