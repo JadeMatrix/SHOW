@@ -218,8 +218,8 @@ namespace show
         );
         
     public:
-        const std::string & client_address() { return _serve_socket.address; };
-        const unsigned int& client_port   () { return _serve_socket.port;    };
+        const std::string& client_address() const { return _serve_socket.address; };
+        const unsigned int client_port   () const { return _serve_socket.port;    };
         
         connection( connection&& );
         ~connection();
@@ -241,8 +241,8 @@ namespace show
             MAYBE
         };
         
-        const std::string & client_address() { return _connection.client_address(); };
-        const unsigned int& client_port   () { return _connection.client_port   (); };
+        const std::string& client_address() const { return _connection.client_address(); };
+        const unsigned int client_port   () const { return _connection.client_port   (); };
         
         bool eof() const;
         
@@ -277,14 +277,14 @@ namespace show
         );
         
     public:
-        const http_protocol             & protocol              () { return _protocol;               };
-        const std::string               & protocol_string       () { return _protocol_string;        };
-        const std::string               & method                () { return _method;                 };
-        const std::vector< std::string >& path                  () { return _path;                   };
-        const query_args_type           & query_args            () { return _query_args;             };
-        const headers_type              & headers               () { return _headers;                };
-        unsigned long long              & content_length        () { return _content_length;         };
-        const content_length_flag       & unknown_content_length() { return _unknown_content_length; };
+        http_protocol                     protocol              () const { return _protocol;               };
+        const std::string               & protocol_string       () const { return _protocol_string;        };
+        const std::string               & method                () const { return _method;                 };
+        const std::vector< std::string >& path                  () const { return _path;                   };
+        const query_args_type           & query_args            () const { return _query_args;             };
+        const headers_type              & headers               () const { return _headers;                };
+        content_length_flag             & unknown_content_length() const { return _unknown_content_length; };
+        unsigned long long                content_length        () const { return _content_length;         };
     };
     
     class response : public std::streambuf
