@@ -225,7 +225,7 @@ namespace show
         ~connection();
         
         int timeout() const;
-        int timeout( int t );
+        int timeout( int );
     };
     
     class request : public std::streambuf
@@ -277,7 +277,6 @@ namespace show
         );
         
     public:
-        
         const http_protocol             & protocol              () { return _protocol;               };
         const std::string               & protocol_string       () { return _protocol_string;        };
         const std::string               & method                () { return _method;                 };
@@ -297,7 +296,6 @@ namespace show
             const response_code& code,
             const headers_type & headers
         );
-        // TODO: warn that ~response() may try to flush
         ~response();
         
         virtual void flush();
@@ -335,7 +333,7 @@ namespace show
         unsigned int       port()    const;
         
         int timeout() const;
-        int timeout( int t );
+        int timeout( int );
     };
     
     // TODO: use `std::runtime_error` etc.
@@ -348,10 +346,9 @@ namespace show
         virtual const char* what() const noexcept { return message.c_str(); };
     };
     
-    class            socket_error : public exception { using exception::exception; };
-    class     request_parse_error : public exception { using exception::exception; };
-    class response_marshall_error : public exception { using exception::exception; };
-    class        url_decode_error : public exception { using exception::exception; };
+    class        socket_error : public exception { using exception::exception; };
+    class request_parse_error : public exception { using exception::exception; };
+    class    url_decode_error : public exception { using exception::exception; };
     
     // Do not inherit from std::exception as these aren't meant to signal strict
     // error states
@@ -369,7 +366,7 @@ namespace show
     std::string url_encode(
         const std::string& o,
         bool use_plus_space = true
-    ) noexcept;
+    );
     std::string url_decode( const std::string& );
     
     
@@ -494,7 +491,7 @@ namespace show
         unsigned int       port,
         int                timeout
     ) :
-        _serve_socket(  fd, address, port     )
+        _serve_socket( fd, address, port )
     {
         // TODO: Only allocate once needed
         get_buffer = new char[ BUFFER_SIZE ];
@@ -877,10 +874,15 @@ namespace show
                         break;
                     case '/':
                         if( _path.size() > 0 )
-                        {
-                            *_path.rbegin() = url_decode( *_path.rbegin() );
-                            _path.push_back( "" );
-                        }
+                            try
+                            {
+                                *_path.rbegin() = url_decode( *_path.rbegin() );
+                                _path.push_back( "" );
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         break;
                     default:
                         if( _path.size() < 1 )
@@ -894,7 +896,14 @@ namespace show
                         parse_state != READING_PATH
                         && _path.size() > 0
                     )
-                        *_path.rbegin() = url_decode( *_path.rbegin() );
+                        try
+                        {
+                            *_path.rbegin() = url_decode( *_path.rbegin() );
+                        }
+                        catch( const url_decode_error& ude )
+                        {
+                            throw request_parse_error( ude.what() );
+                        }
                 }
                 break;
                 
@@ -909,23 +918,32 @@ namespace show
                     case ' ':
                     case '&':
                         if( key_buffer_stack.size() > 1 )
-                        {
-                            value_buffer = url_decode(
-                                key_buffer_stack.top()
-                            );
-                            key_buffer_stack.pop();
-                        }
+                            try
+                            {
+                                value_buffer = url_decode(
+                                    key_buffer_stack.top()
+                                );
+                                key_buffer_stack.pop();
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         else
                             value_buffer = "";
                         
                         while( !key_buffer_stack.empty() )
-                        {
-                            _query_args[
-                                url_decode( key_buffer_stack.top() )
-                            ].push_back( value_buffer );
-                            
-                            key_buffer_stack.pop();
-                        }
+                            try
+                            {
+                                _query_args[
+                                    url_decode( key_buffer_stack.top() )
+                                ].push_back( value_buffer );
+                                key_buffer_stack.pop();
+                            }
+                            catch( const url_decode_error& ude )
+                            {
+                                throw request_parse_error( ude.what() );
+                            }
                         
                         if( current_char == '\n' )
                             parse_state = READING_HEADER_NAME;
@@ -1378,7 +1396,7 @@ namespace show
     inline std::string url_encode(
         const std::string& o,
         bool use_plus_space
-    ) noexcept
+    )
     {
         std::stringstream encoded;
         
