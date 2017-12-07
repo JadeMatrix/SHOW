@@ -36,4 +36,4 @@ Connection
         
         .. seealso::
             
-            :cpp:func:`show::server::timeout()`
+            * :cpp:func:`show::server::timeout()`

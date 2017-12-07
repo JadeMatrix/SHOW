@@ -22,7 +22,7 @@ Server
         
         .. seealso::
             
-            :cpp:type:`show::connection`
+            * :cpp:type:`show::connection`
     
     .. cpp:function:: const std::string& show::server::address() const
         

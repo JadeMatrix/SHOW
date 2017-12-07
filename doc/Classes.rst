@@ -61,9 +61,9 @@ Types
     
     .. seealso::
         
-        :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
+        * :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
         
-        :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
+        * :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
 .. cpp:class:: show::headers_t
     
@@ -83,9 +83,9 @@ Types
     
     .. seealso::
         
-        :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
+        * :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
         
-        :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
+        * :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
 Throwables
 ==========
@@ -117,7 +117,7 @@ Exceptions
     
     .. seealso::
         
-        :cpp:type:`std::exception` on `cppreference.com <http://en.cppreference.com/w/cpp/error/exception>`_
+        * :cpp:type:`std::exception` on `cppreference.com <http://en.cppreference.com/w/cpp/error/exception>`_
 
 .. cpp:class:: show::socket_error : show::exception
     
