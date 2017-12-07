@@ -18,7 +18,9 @@ The public interfaces to the main SHOW classes are documented on the following p
 Types
 =====
 
-.. cpp:enum:: show::http_protocol
+.. cpp:namespace-push:: show
+
+.. cpp:enum:: http_protocol
     
     Symbolizes the possibly HTTP protocols understood by SHOW.  The enum members are:
     
@@ -34,7 +36,7 @@ Types
     
     There is no ``HTTP_2`` as SHOW is not intended to handle HTTP/2 requests.  These are much better handled by a reverse proxy such as `NGINX <https://wiki.nginx.org/>`_, which will convert them into HTTP/1.0 or HTTP/1.1 requests for SHOW.
 
-.. cpp:class:: show::response_code
+.. cpp:class:: response_code
     
     A simple utility ``struct`` that encapsulates the numerical code and description for an HTTP status code.  An object of this type can easily be statically initialized like so::
         
@@ -48,7 +50,7 @@ Types
     
     .. cpp:member:: std::string description
 
-.. cpp:class:: show::query_args_t
+.. cpp:class:: query_args_t
     
     An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string > >`, and can be statically initialized like one::
         
@@ -65,7 +67,7 @@ Types
         
         * :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
-.. cpp:class:: show::headers_t
+.. cpp:class:: headers_t
     
     An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string >, show::_less_ignore_case_ASCII >`, where :cpp:class:`show::_less_ignore_case_ASCII` is a case-insensitive `compare <http://en.cppreference.com/w/cpp/container/map>`_ for :cpp:class:`std::map`.
     
@@ -95,7 +97,7 @@ Not all of these strictly represent an error state when throw; some signal commo
 Connection interruptions
 ------------------------
 
-.. cpp:class:: show::connection_timeout
+.. cpp:class:: connection_timeout
     
     An object of this type will be thrown in two general situations:
     
@@ -104,14 +106,14 @@ Connection interruptions
     
     In the first situation, generally the application will simply loop and start waiting again.  In the second case, the application may want to close the connection or continue waiting with either the same timoute or some kind of falloff.  Either way the action will be application-specific.
 
-.. cpp:class:: show::client_disconnected
+.. cpp:class:: client_disconnected
     
     This is thrown when SHOW detects that a client has broken connection with the server and no further communication can occur.
 
 Exceptions
 ----------
 
-.. cpp:class:: show::exception : std::exception
+.. cpp:class:: exception : std::exception
     
     A common base class for all of SHOW's exceptions
     
@@ -119,29 +121,29 @@ Exceptions
         
         * :cpp:type:`std::exception` on `cppreference.com <http://en.cppreference.com/w/cpp/error/exception>`_
 
-.. cpp:class:: show::socket_error : show::exception
+.. cpp:class:: socket_error : exception
     
     An unrecoverable, low-level error occurred inside SHOW.  If thrown while handling a connection, the connection will no longer be valid but the server should be fine.  If thrown while creating or working with a server, the server object itself is in an unrecoverable state and can no longer serve.
     
     The nature of this error when thrown by a server typically implies trying again will not work.  If the application is designed to serve on a single IP/port, you will most likely want to exit the program with an error.
 
-.. cpp:class:: show::request_parse_error : show::exception
+.. cpp:class:: request_parse_error : exception
     
-    Thrown when creating a request object from a connection and SHOW encounters something it can't manage to interpret into a :cpp:class:`show::request`.
+    Thrown when creating a request object from a connection and SHOW encounters something it can't manage to interpret into a :cpp:class:`request`.
     
     As parsing the offending request almost certainly failed midway, garbage data will likely in the connection's buffer.  Currently, the only safe way to handle this exception is to close the connection.
 
-.. cpp:class:: show::url_decode_error : show::exception
+.. cpp:class:: url_decode_error : exception
     
-    Thrown by :cpp:func:`show::url_decode` when the input is not a valid `URL- or percent-encoded <https://en.wikipedia.org/wiki/Percent-encoding>`_ string.
+    Thrown by :cpp:func:`url_decode()` when the input is not a valid `URL- or percent-encoded <https://en.wikipedia.org/wiki/Percent-encoding>`_ string.
     
     .. note::
-        :cpp:func:`show::url_encode` shouldn't throw an exception, as any string can be converted to percent-encoding.
+        :cpp:func:`url_encode()` shouldn't throw an exception, as any string can be converted to percent-encoding.
 
-.. cpp:class:: show::base64_decode_error : show::exception
+.. cpp:class:: base64_decode_error : exception
     
-    Thrown by :cpp:func:`show::base64_decode` when the input is not valid `base-64 <https://en.wikipedia.org/wiki/Base64>`_.
+    Thrown by :cpp:func:`base64_decode()` when the input is not valid `base-64 <https://en.wikipedia.org/wiki/Base64>`_.
     
     .. note::
-        :cpp:func:`show::base64_encode` shouldn't throw an exception, as any string can be converted to base-64.
+        :cpp:func:`base64_encode()` shouldn't throw an exception, as any string can be converted to base-64.
 

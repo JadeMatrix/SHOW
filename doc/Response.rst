@@ -2,7 +2,9 @@
 Response
 ========
 
-.. cpp:class:: show::response : public std::streambuf
+.. cpp:namespace-push:: show
+
+.. cpp:class:: response : public std::streambuf
     
     Represents a single response to a request.  Inherits from :cpp:class:`std::streambuf`, so it can be used as-is or with a :cpp:class:`std::ostream`.
     
@@ -14,21 +16,11 @@ Response
         
         * :cpp:type:`std::ostream` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_ostream>`_
     
-    .. cpp:function:: show::response::response( show::request&, show::http_protocol, const show::response_code&, const show::headers_t& )
+    .. cpp:function:: response( request&, http_protocol, const response_code&, const headers_t& )
         
         Constructs a new response in response to a request.  The protocols, response code, and headers are immediately buffered and cannot be changed after the response is created, so they have to be passed to the constructor.
-        
-        .. seealso::
-            
-            * :cpp:class:`show::request`
-            
-            * :cpp:type:`show::http_protocol`
-            
-            * :cpp:type:`show::response_code`
-            
-            * :cpp:type:`show::headers_t`
     
-    .. cpp:function:: show::response::~response()
+    .. cpp:function:: ~response()
         
         Destructor for a response object; ensures the response is flushed
     

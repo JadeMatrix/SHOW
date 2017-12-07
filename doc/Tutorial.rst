@@ -2,6 +2,8 @@
 Tutorial
 ========
 
+.. cpp:namespace-push:: show
+
 This shows the basic usage of SHOW; see the `examples <https://github.com/JadeMatrix/SHOW/tree/master/examples>`_ for a more thorough introduction.
 
 Including & Compiling
@@ -25,7 +27,7 @@ replacing ``"SHOW/src/"`` with wherever you've cloned or installed SHOW.  Switch
 Creating a Server
 =================
 
-To start serving requests, first create a server object::
+To start serving requests, first create a :cpp:class:`server` object::
     
     show::server my_server(
         "0.0.0.0",  // IP address on which to serve
@@ -37,7 +39,7 @@ That's it, you've made a server that sits there forever until it gets a connecti
 Handling a Connection
 =====================
 
-For each call of ``my_server.serve()`` a single :cpp:class:`show::connection` object will be returned or a :cpp:class`show::connection_timeout` thrown. You may want to use something like this::
+For each call of ``my_server.serve()`` a single :cpp:class:`connection` object will be returned or a :cpp:class`connection_timeout` thrown. You may want to use something like this::
     
     while( true )
         try
@@ -54,16 +56,16 @@ For each call of ``my_server.serve()`` a single :cpp:class:`show::connection` ob
             continue;
         }
 
-The server listen timeout can be a positive number, 0, or -1. If it is -1, the server will continue listening until interrupted by a signal; if 0, :cpp:member:`serve()` will throw a :cpp:class:`show::connection_timeout` immediately unless connections are available.
+The server listen timeout can be a positive number, 0, or -1. If it is -1, the server will continue listening until interrupted by a signal; if 0, :cpp:func:`server::serve()` will throw a :cpp:class:`connection_timeout` immediately unless connections are available.
 
-The connection is now independent from the server. You can adjust the connection's timeout independently using :cpp:func:`show::connection::timeout()`.  You can also pass it off to a worker thread for processing so your server can continue accepting other connections; this is usually how you'd implement a real web application.
+The connection is now independent from the server. You can adjust the connection's timeout independently using :cpp:func:`connection::timeout()`.  You can also pass it off to a worker thread for processing so your server can continue accepting other connections; this is usually how you'd implement a real web application.
 
 Reading Requests
 ================
 
-:cpp:class:`show::request` objects have a number of ``const`` fields containing the HTTP request's metadata; you can see descriptions of them all in the docs for the class.
+:cpp:class:`request` objects have a number of ``const`` fields containing the HTTP request's metadata; you can see descriptions of them all in the docs for the class.
 
-Note that these fields do not include the request content, if any. This is because HTTP allows the request content to be streamed to the server. In other words, the server can interpret the headers then wait for the client to send data over a period of time. For this purpose, :cpp:class`show::request` inherits from :cpp:class:`std::streambuf`, implementing the read/get functionality. You can use the raw :cpp:class:`std::streambuf` methods to read the incoming data, or create a :cpp:class:`std::istream` from the request object for :cpp:var:`std::cin`-like behavior.
+Note that these fields do not include the request content, if any. This is because HTTP allows the request content to be streamed to the server. In other words, the server can interpret the headers then wait for the client to send data over a period of time. For this purpose, :cpp:class`request` inherits from :cpp:class:`streambuf`, implementing the read/get functionality. You can use the raw :cpp:class:`std::streambuf` methods to read the incoming data, or create a :cpp:class:`std::istream` from the request object for :cpp:var:`std::cin`-like behavior.
 
 For example, if your server is expecting the client to *POST* a single integer, you can use::
     
@@ -136,7 +138,7 @@ Next, create a headers object to hold the content type and length headers (note 
         } }
     };
 
-Since it's a :cpp:class:`std::map`, you can also add headers to a :cpp:type:`show::headers_t` like this::
+Since it's a :cpp:class:`std::map`, you can also add headers to a :cpp:type:`headers_t` like this::
     
     headers[ "Content-Type" ].push_back( "text/plain" );
 
@@ -158,7 +160,7 @@ Create a response like this::
         headers
     );
 
-Finally, send the response content. Here, a :cpp:class:`std::ostream` is used, as :cpp:class:`show::response` inherits from and implements the write/put functionality of :cpp:class:`std::streambuf`::
+Finally, send the response content. Here, a :cpp:class:`std::ostream` is used, as :cpp:class:`response` inherits from and implements the write/put functionality of :cpp:class:`std::streambuf`::
     
     std::ostream response_stream( &response );
     response_stream << response_content;

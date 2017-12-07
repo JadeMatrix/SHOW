@@ -2,9 +2,11 @@
 Constants
 =========
 
-All constants are `const`.
+All constants are ``const``-qualified.
 
-.. cpp:class:: show::version
+.. cpp:namespace-push:: show
+
+.. cpp:class:: version
     
     An anonymous ``struct`` containing information about the current SHOW version.  Has the following members:
     
@@ -28,15 +30,15 @@ All constants are `const`.
         
         A string representing the major, minor, and revision version numbers
 
-.. cpp:var:: char* show::base64_chars_standard
+.. cpp:var:: char* base64_chars_standard
     
-    The standard set of `base-64 characters`_ for use with :cpp:func:`show::base64_encode`
+    The standard set of `base-64 characters`_ for use with :cpp:func:`base64_encode()` and :cpp:func:`base64_decode()`
     
     .. _base-64 characters: https://en.wikipedia.org/wiki/Base64
 
-.. cpp:var:: char* show::base64_chars_urlsafe
+.. cpp:var:: char* base64_chars_urlsafe
     
-    The URL_safe set of `base-64 characters`_ for use with :cpp:func:`show::base64_encode`, making the following replacements:
+    The URL_safe set of `base-64 characters`_ for use with :cpp:func:`base64_encode()` and :cpp:func:`base64_decode()`, making the following replacements:
     
     .. _base-64 characters: https://en.wikipedia.org/wiki/Base64
     
