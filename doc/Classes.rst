@@ -97,7 +97,11 @@ Not all of these strictly represent an error state when throw; some signal commo
 Connection interruptions
 ------------------------
 
-.. cpp:class:: connection_timeout
+.. cpp:class:: connection_interrupted
+    
+    A common base class for both types of connection interruptions
+
+.. cpp:class:: connection_timeout : public connection_interrupted
     
     An object of this type will be thrown in two general situations:
     
@@ -106,7 +110,7 @@ Connection interruptions
     
     In the first situation, generally the application will simply loop and start waiting again.  In the second case, the application may want to close the connection or continue waiting with either the same timoute or some kind of falloff.  Either way the action will be application-specific.
 
-.. cpp:class:: client_disconnected
+.. cpp:class:: client_disconnected : public connection_interrupted
     
     This is thrown when SHOW detects that a client has broken connection with the server and no further communication can occur.
 
