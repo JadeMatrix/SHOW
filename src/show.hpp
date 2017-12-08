@@ -283,7 +283,7 @@ namespace show
         const std::vector< std::string >& path                  () const { return _path;                   };
         const query_args_type           & query_args            () const { return _query_args;             };
         const headers_type              & headers               () const { return _headers;                };
-        content_length_flag             & unknown_content_length() const { return _unknown_content_length; };
+        content_length_flag               unknown_content_length() const { return _unknown_content_length; };
         unsigned long long                content_length        () const { return _content_length;         };
     };
     
