@@ -2,11 +2,10 @@
 
 [![stable version](https://img.shields.io/github/release/JadeMatrix/SHOW.svg?label=stable)](https://github.com/JadeMatrix/SHOW/releases/latest)
 [![latest version](https://img.shields.io/github/release/JadeMatrix/SHOW/all.svg?label=latest)](https://github.com/JadeMatrix/SHOW/releases)
-[![latest version](https://img.shields.io/badge/devel-v0.8.0-orange.svg)](https://github.com/JadeMatrix/SHOW/tree/v0.8.0)
 
-The goal of SHOW is to make an idiomatic library for standalone webserver applications written for modern C++.  SHOW is simple in the same way the standard library is simple — it doesn't make any design decisions for the programmer, instead giving them a set of primitives for building an HTTP web application.
+SHOW is designed to be an idiomatic library for standalone webserver applications written for modern C++.  SHOW is simple in the same way the standard library is simple — it doesn't make any design decisions for the programmer, instead giving them a set of primitives for building an HTTP web application.
 
-Both HTTP/1.0 and HTTP/1.1 are supported.  SHOW assumes a modern approach to application hosting, and is intended to be run behind a full reverse proxy such as [nginx](https://nginx.org/).  As such, SHOW will not support HTTP/2 or TLS (HTTPS).  Instead, you should write your applications to serve local HTTP/1.x requests.
+Both HTTP/1.0 and HTTP/1.1 are supported.  SHOW assumes a modern approach to application hosting, and is intended to be run behind a full reverse proxy such as [NGINX](https://nginx.org/).  As such, SHOW will not support HTTP/2 or TLS (HTTPS).  Instead, you should write your applications to serve local HTTP/1.0 and HTTP/1.1 requests.
 
 SHOW uses the [`zlib` license](LICENSE).  C++11 support and a POSIX operating system are required.
 
