@@ -336,22 +336,12 @@ namespace show
         int timeout( int );
     };
     
-    // TODO: use `std::runtime_error` etc.
-    class exception : public std::exception
-    {
-    protected:
-        std::string message;
-    public:
-        exception( const std::string& m ) noexcept : message( m ) {}
-        virtual const char* what() const noexcept { return message.c_str(); };
-    };
+    class        socket_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class request_parse_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class    url_decode_error : public std::runtime_error { using runtime_error::runtime_error; };
     
-    class        socket_error : public exception { using exception::exception; };
-    class request_parse_error : public exception { using exception::exception; };
-    class    url_decode_error : public exception { using exception::exception; };
-    
-    // Do not inherit from std::exception as these aren't meant to signal strict
-    // error states
+    // Does not inherit from std::exception as these aren't meant to signal
+    // strict error states
     class connection_interrupted
     {
         // TODO: information about which connection/client, etc.
@@ -1289,7 +1279,7 @@ namespace show
                 socket_address.sin6_addr.s6_addr
             )
         )
-            throw exception( address + " is not a valid IP address" );
+            throw socket_error( address + " is not a valid IP address" );
         
         if( bind(
             listen_socket -> descriptor,

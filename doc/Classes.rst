@@ -117,27 +117,23 @@ Connection interruptions
 Exceptions
 ----------
 
-.. cpp:class:: exception : std::exception
+.. seealso::
     
-    A common base class for all of SHOW's exceptions
-    
-    .. seealso::
-        
-        * :cpp:type:`std::exception` on `cppreference.com <http://en.cppreference.com/w/cpp/error/exception>`_
+    * :cpp:type:`std::runtime_error` on `cppreference.com <http://en.cppreference.com/w/cpp/error/runtime_error/runtime_error>`_
 
-.. cpp:class:: socket_error : exception
+.. cpp:class:: socket_error : std::runtime_error
     
     An unrecoverable, low-level error occurred inside SHOW.  If thrown while handling a connection, the connection will no longer be valid but the server should be fine.  If thrown while creating or working with a server, the server object itself is in an unrecoverable state and can no longer serve.
     
     The nature of this error when thrown by a server typically implies trying again will not work.  If the application is designed to serve on a single IP/port, you will most likely want to exit the program with an error.
 
-.. cpp:class:: request_parse_error : exception
+.. cpp:class:: request_parse_error : std::runtime_error
     
     Thrown when creating a request object from a connection and SHOW encounters something it can't manage to interpret into a :cpp:class:`request`.
     
     As parsing the offending request almost certainly failed midway, garbage data will likely in the connection's buffer.  Currently, the only safe way to handle this exception is to close the connection.
 
-.. cpp:class:: url_decode_error : exception
+.. cpp:class:: url_decode_error : std::runtime_error
     
     Thrown by :cpp:func:`url_decode()` when the input is not a valid `URL- or percent-encoded <https://en.wikipedia.org/wiki/Percent-encoding>`_ string.
     
