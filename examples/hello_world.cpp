@@ -37,9 +37,9 @@ int main( int argc, char* argv[] )
                     show::headers_type headers = {
                         // Set the Server header to display the SHOW version
                         { "Server", {
-                            show::version.name
+                            show::version::name
                             + " v"
-                            + show::version.string
+                            + show::version::string
                         } },
                         // The message is simple plain text
                         { "Content-Type", { "text/plain" } },

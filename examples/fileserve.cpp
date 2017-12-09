@@ -12,9 +12,9 @@
 const show::headers_type::value_type server_header = {
     "Server",
     {
-        show::version.name
+        show::version::name
         + " v"
-        + show::version.string
+        + show::version::string
     }
 };
 

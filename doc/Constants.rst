@@ -2,30 +2,33 @@
 Constants
 =========
 
-All constants are ``const``-qualified.
-
 .. cpp:namespace-push:: show
 
-.. cpp:class:: version
+All constants are ``const``-qualified.
+
+Version
+=======
+
+The ``version`` sub-namespace contains information about the current SHOW version.  It has the following members:
+
+.. cpp:namespace-push:: version
+
+.. cpp:var:: std::string name
     
-    An anonymous ``struct`` containing information about the current SHOW version.  Has the following members:
+    The proper name of SHOW as it should appear referenced in headers, log messages, etc.
+
+.. cpp:var:: int major
     
-    .. cpp:member:: std::string name
-        
-        The proper name of SHOW as it should appear referenced in headers, log messages, etc.
+    The major SHOW version (``X.0.0``)
+
+.. cpp:var:: int minor
     
-    .. cpp:member:: int major
-        
-        The major SHOW version (``X.0.0``)
+    The minor SHOW version (``0.X.0``)
+
+.. cpp:var:: int revision
     
-    .. cpp:member:: int minor
-        
-        The minor SHOW version (``0.X.0``)
+    The SHOW version revision (``0.0.X``)
+
+.. cpp:var:: std::string string
     
-    .. cpp:member:: int revision
-        
-        The SHOW version revision (``0.0.X``)
-    
-    .. cpp:member:: std::string string
-        
-        A string representing the major, minor, and revision version numbers
+    A string representing the major, minor, and revision version numbers
