@@ -95,7 +95,7 @@ int main( int argc, char* argv[] )
                         };
                         
                         show::response response(
-                            request,
+                            request.connection(),
                             is_1p1 ? show::HTTP_1_1 : show::HTTP_1_0,
                             code,
                             headers

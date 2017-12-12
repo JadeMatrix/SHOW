@@ -151,7 +151,7 @@ Creating a response object requires the headers and response code to have been d
 Create a response like this::
     
     show::response response(
-        request,
+        connection,
         show::http_protocol::HTTP_1_0,
         code,
         headers

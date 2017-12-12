@@ -241,18 +241,26 @@ namespace show
             MAYBE
         };
         
-        const std::string& client_address() const { return _connection.client_address(); };
-        const unsigned int client_port   () const { return _connection.client_port   (); };
-        
-        bool eof() const;
-        
-        request( connection& );
+        request( class connection& );
         request( request&& );   // See note in implementation
         
+        connection                      & connection            () const { return _connection;                  }
+        const std::string               & client_address        () const { return _connection.client_address(); }
+        const unsigned int                client_port           () const { return _connection.client_port   (); }
+        http_protocol                     protocol              () const { return _protocol;                    }
+        const std::string               & protocol_string       () const { return _protocol_string;             }
+        const std::string               & method                () const { return _method;                      }
+        const std::vector< std::string >& path                  () const { return _path;                        }
+        const query_args_type           & query_args            () const { return _query_args;                  }
+        const headers_type              & headers               () const { return _headers;                     }
+        content_length_flag               unknown_content_length() const { return _unknown_content_length;      }
+        unsigned long long                content_length        () const { return _content_length;              }
+        
+        bool eof() const;
         void flush();
         
     protected:
-        connection& _connection;
+        class connection& _connection;
         
         http_protocol              _protocol;
         std::string                _protocol_string;
@@ -275,23 +283,13 @@ namespace show
         virtual int_type        pbackfail(
             int_type c = std::char_traits< char >::eof()
         );
-        
-    public:
-        http_protocol                     protocol              () const { return _protocol;               };
-        const std::string               & protocol_string       () const { return _protocol_string;        };
-        const std::string               & method                () const { return _method;                 };
-        const std::vector< std::string >& path                  () const { return _path;                   };
-        const query_args_type           & query_args            () const { return _query_args;             };
-        const headers_type              & headers               () const { return _headers;                };
-        content_length_flag               unknown_content_length() const { return _unknown_content_length; };
-        unsigned long long                content_length        () const { return _content_length;         };
     };
     
     class response : public std::streambuf
     {
     public:
         response(
-            request            & r,
+            connection         & c,
             http_protocol        protocol,
             const response_code& code,
             const headers_type & headers
@@ -759,11 +757,6 @@ namespace show
     
     // request -----------------------------------------------------------------
     
-    inline bool request::eof() const
-    {
-        return !_unknown_content_length && read_content >= _content_length;
-    }
-    
     inline request::request( request&& o ) :
         _connection(                        o._connection                ),
         read_content(            std::move( o.read_content             ) ),
@@ -782,12 +775,7 @@ namespace show
         // of the major compilers.
     }
     
-    inline void request::flush()
-    {
-        while( !eof() ) sbumpc();
-    }
-    
-    inline request::request( connection& c ) :
+    inline request::request( class connection& c ) :
         _connection(  c ),
         read_content( 0 )
     {
@@ -1068,6 +1056,16 @@ namespace show
             _unknown_content_length = YES;
     }
     
+    inline bool request::eof() const
+    {
+        return !_unknown_content_length && read_content >= _content_length;
+    }
+    
+    inline void request::flush()
+    {
+        while( !eof() ) sbumpc();
+    }
+    
     inline std::streamsize request::showmanyc()
     {
         if( eof() )
@@ -1146,11 +1144,11 @@ namespace show
     // response ----------------------------------------------------------------
     
     inline response::response(
-        request            & r,
+        connection         & c,
         http_protocol        protocol,
         const response_code& code,
         const headers_type & headers
-    ) : _connection( r._connection )
+    ) : _connection( c )
     {
         std::stringstream headers_stream;
         

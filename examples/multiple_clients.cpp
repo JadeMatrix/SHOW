@@ -29,7 +29,7 @@ void handle_connection( show::connection* connection )
             request.flush();
         
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             { 501, "Not Implemented" },
             { server_header }

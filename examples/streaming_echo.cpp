@@ -24,7 +24,7 @@ void handle_POST_request( show::request& request )
     // Always require a Content-Length header for this application
     if( request.unknown_content_length() )
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             { 400, "Bad Request" },
             { server_header }
@@ -54,7 +54,7 @@ void handle_POST_request( show::request& request )
         
         // Start a response before we read any data
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             { 200, "OK" },
             headers
@@ -138,7 +138,7 @@ int main( int argc, char* argv[] )
                     if( request.method() != "POST" )
                     {
                         show::response response(
-                            request,
+                            request.connection(),
                             show::http_protocol::HTTP_1_0,
                             { 501, "Not Implemented" },
                             { server_header }

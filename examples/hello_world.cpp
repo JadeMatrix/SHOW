@@ -50,7 +50,7 @@ int main( int argc, char* argv[] )
                     };
                     
                     show::response response(
-                        request,
+                        request.connection(),
                         show::http_protocol::HTTP_1_0,
                         code,
                         headers

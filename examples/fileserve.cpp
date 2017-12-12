@@ -247,7 +247,7 @@ void handle_GET_request(
             content << "</body></html>";
             
             show::response response(
-                request,
+                request.connection(),
                 show::http_protocol::HTTP_1_0,
                 { 200, "OK" },
                 {
@@ -285,7 +285,7 @@ void handle_GET_request(
                 file.seekg( 0, std::ios::beg );
             
                 show::response response(
-                    request,
+                    request.connection(),
                     show::http_protocol::HTTP_1_0,
                     { 200, "OK" },
                     {
@@ -310,7 +310,7 @@ void handle_GET_request(
     {
         // Return a 404 for any file- or path-related errors
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             { 404, "Not Found" },
             {
@@ -360,7 +360,7 @@ int main( int argc, char* argv[] )
                     if( request.method() != "GET" )
                     {
                         show::response response(
-                            request,
+                            request.connection(),
                             show::http_protocol::HTTP_1_0,
                             { 501, "Not Implemented" },
                             { server_header }

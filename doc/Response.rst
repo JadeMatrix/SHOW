@@ -16,9 +16,9 @@ Response
         
         * :cpp:type:`std::ostream` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_ostream>`_
     
-    .. cpp:function:: response( request&, http_protocol, const response_code&, const headers_t& )
+    .. cpp:function:: response( connection&, http_protocol, const response_code&, const headers_t& )
         
-        Constructs a new response in response to a request.  The protocols, response code, and headers are immediately buffered and cannot be changed after the response is created, so they have to be passed to the constructor.
+        Constructs a new response to the client who made a connection.  The protocols, response code, and headers are immediately buffered and cannot be changed after the response is created, so they have to be passed to the constructor.
     
     .. cpp:function:: ~response()
         

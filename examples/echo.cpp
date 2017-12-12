@@ -24,7 +24,7 @@ void handle_POST_request( show::request& request )
     {
         // Always require a Content-Length header for this application
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             {
                 400,
@@ -62,7 +62,7 @@ void handle_POST_request( show::request& request )
         );
         
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             {
                 200,
@@ -105,7 +105,7 @@ int main( int argc, char* argv[] )
                     else
                     {
                         show::response response(
-                            request,
+                            request.connection(),
                             show::http_protocol::HTTP_1_0,
                             {
                                 405,
