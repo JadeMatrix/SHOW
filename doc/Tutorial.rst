@@ -47,7 +47,7 @@ For each call of ``my_server.serve()`` a single :cpp:class:`connection` object w
             show::connection connection( my_server.serve() );
             // handle request(s) here
         }
-        catch( show::connection_timeout& ct )
+        catch( const show::connection_timeout& ct )
         {
             std::cout
                 << "timed out waiting for a connection, looping..."

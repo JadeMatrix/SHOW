@@ -714,7 +714,7 @@ namespace show
         {
             flush();
         }
-        catch( socket_error& e )
+        catch( const socket_error& e )
         {
             return traits_type::eof();
         }
@@ -1047,7 +1047,7 @@ namespace show
                     );
                     _unknown_content_length = NO;
                 }
-                catch( std::invalid_argument& e )
+                catch( const std::invalid_argument& e )
                 {
                     _unknown_content_length = MAYBE;
                 }
@@ -1447,7 +1447,7 @@ namespace show
                         
                         i += 2;
                     }
-                    catch( std::invalid_argument& e )
+                    catch( const std::invalid_argument& e )
                     {
                         throw url_decode_error(
                             "invalid URL-encoded sequence"
