@@ -6,12 +6,12 @@
 
 
 // Set a Server header to display the SHOW version
-const show::headers_t::value_type server_header = {
+const show::headers_type::value_type server_header = {
     "Server",
     {
-        show::version.name
+        show::version::name
         + " v"
-        + show::version.string
+        + show::version::string
     }
 };
 
@@ -25,11 +25,11 @@ void handle_connection( show::connection* connection )
         show::request request( *connection );
         
         // See the HTTP/1.1 example for an explanation
-        if( !request.unknown_content_length )
-            while( !request.eof() ) request.sbumpc();
+        if( !request.unknown_content_length() )
+            request.flush();
         
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             { 501, "Not Implemented" },
             { server_header }
@@ -39,29 +39,36 @@ void handle_connection( show::connection* connection )
         response.flush();
         delete connection;
     }
-    catch( show::client_disconnected& cd )
+    catch( const show::client_disconnected& cd )
     {
         std::cout
             << "client "
-            << connection -> client_address
+            << connection -> client_address()
             << " disconnected, closing connection"
             << std::endl
         ;
     }
-    catch( show::connection_timeout& ct )
+    catch( const show::connection_timeout& ct )
     {
         std::cout
             << "timed out waiting on client "
-            << connection -> client_address
+            << connection -> client_address()
             << ", closing connection"
             << std::endl
         ;
     }
-    catch( std::exception& e )
+    catch( const std::exception& e )
     {
         std::cerr
-            << "uncaught exception in handle_connection(): "
+            << "uncaught std::exception in handle_connection(): "
             << e.what()
+            << std::endl
+        ;
+    }
+    catch( ... )
+    {
+        std::cerr
+            << "uncaught non-std::exception in handle_connection()"
             << std::endl
         ;
     }
@@ -93,7 +100,7 @@ int main( int argc, char* argv[] )
                 );
                 worker.detach();
             }
-            catch( show::connection_timeout& ct )
+            catch( const show::connection_timeout& ct )
             {
                 std::cout
                     << "timed out waiting for connection, looping..."
@@ -104,10 +111,10 @@ int main( int argc, char* argv[] )
         
         return 0;
     }
-    catch( std::exception& e )
+    catch( const std::exception& e )
     {
         std::cerr
-            << "uncaught exception in main(): "
+            << "uncaught std::exception in main(): "
             << e.what()
             << std::endl
         ;

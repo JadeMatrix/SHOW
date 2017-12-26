@@ -47,7 +47,7 @@ For each call of ``my_server.serve()`` a single :cpp:class:`connection` object w
             show::connection connection( my_server.serve() );
             // handle request(s) here
         }
-        catch( show::connection_timeout& ct )
+        catch( const show::connection_timeout& ct )
         {
             std::cout
                 << "timed out waiting for a connection, looping..."
@@ -109,6 +109,8 @@ Also note that individual request operations may timeout, so the entire serve co
 
 If this feels complicated, it is.  Network programming like this reveals the worst parts of distributed programming, as there's a lot that can go wrong between the client and the server.
 
+Another thing to keep in mind is that HTTP/1.1 — and HTTP/1.0 with an extension — allow multiple requests to be pipelined on the same TCP connection.  SHOW can't know with certainty where on the connection one request ends and another starts — it's just the nature of pipelined HTTP.  Sure, the *Content-Length* header could be used, and `chunked transfer encoding <https://en.wikipedia.org/wiki/Chunked_transfer_encoding>`_ has well-established semantics, but if the client uses neither it is up to your application to figure out the end of the request's content.  In general, you should reject requests whose length you can't readily figure out, but SHOW leaves that decision up to the programmer.  But you should never try to create a :cpp:class:`request` from a :cpp:class:`connection` before you've finished reading the content from a previous request.
+
 .. seealso::
     
     * :cpp:class:`std::streambuf` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_streambuf>`_
@@ -151,7 +153,7 @@ Creating a response object requires the headers and response code to have been d
 Create a response like this::
     
     show::response response(
-        request,
+        connection,
         show::http_protocol::HTTP_1_0,
         code,
         headers

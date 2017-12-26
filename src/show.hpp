@@ -27,19 +27,14 @@ namespace show
     // Constants ///////////////////////////////////////////////////////////////
     
     
-    const struct
+    namespace version
     {
-        std::string name;
-        int major;
-        int minor;
-        int revision;
-        std::string string;
-    } version = { "SHOW", 0, 7, 3, "0.7.3" };
-    
-    static const char* base64_chars_standard =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    static const char* base64_chars_urlsafe  =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        static const std::string name     = "SHOW";
+        static const int         major    = 0;
+        static const int         minor    = 8;
+        static const int         revision = 0;
+        static const std::string string   = "0.8.0";
+    }
     
     
     // Forward declarations ////////////////////////////////////////////////////
@@ -57,7 +52,7 @@ namespace show
     
     using socket_fd = int;
     // `int` instead of `size_t` because this is a buffer for POSIX `read()`
-    using buffer_size_t = int;
+    using buffer_size_type = int;
     
     enum http_protocol
     {
@@ -73,7 +68,7 @@ namespace show
         std::string description;
     };
     
-    using query_args_t = std::map<
+    using query_args_type = std::map<
         std::string,
         std::vector< std::string >
     >;
@@ -127,7 +122,7 @@ namespace show
         }
     };
     
-    using headers_t = std::map<
+    using headers_type = std::map<
         std::string,
         std::vector< std::string >,
         _less_ignore_case_ASCII
@@ -160,7 +155,7 @@ namespace show
         const std::string  address;
         const unsigned int port;
         
-        enum wait_for_t
+        enum wait_for_type
         {
             READ       = 1,
             WRITE      = 2,
@@ -171,8 +166,8 @@ namespace show
         
         ~_socket();
         
-        wait_for_t wait_for(
-            wait_for_t         wf,
+        wait_for_type wait_for(
+            wait_for_type      wf,
             int                timeout,
             const std::string& purpose
         );
@@ -185,8 +180,8 @@ namespace show
         friend class response;
         
     protected:
-        static const buffer_size_t BUFFER_SIZE =   1024;
-        static const char          ASCII_ACK   = '\x06';
+        static const buffer_size_type BUFFER_SIZE =   1024;
+        static const char             ASCII_ACK   = '\x06';
         
         _socket      _serve_socket;
         char*        get_buffer = nullptr;
@@ -223,8 +218,8 @@ namespace show
         );
         
     public:
-        const std::string & client_address;
-        const unsigned int& client_port;
+        const std::string& client_address() const { return _serve_socket.address; };
+        const unsigned int client_port   () const { return _serve_socket.port;    };
         
         connection( connection&& );
         ~connection();
@@ -239,31 +234,41 @@ namespace show
         friend class connection;
         
     public:
-        enum content_length_flag_type
+        enum content_length_flag
         {
             NO = 0,
             YES,
             MAYBE
         };
         
-        const std::string & client_address;
-        const unsigned int& client_port;
-        
-        bool eof() const;
-        
-        request( connection& );
+        request( class connection& );
         request( request&& );   // See note in implementation
         
+        connection                      & connection            () const { return _connection;                  }
+        const std::string               & client_address        () const { return _connection.client_address(); }
+        const unsigned int                client_port           () const { return _connection.client_port   (); }
+        http_protocol                     protocol              () const { return _protocol;                    }
+        const std::string               & protocol_string       () const { return _protocol_string;             }
+        const std::string               & method                () const { return _method;                      }
+        const std::vector< std::string >& path                  () const { return _path;                        }
+        const query_args_type           & query_args            () const { return _query_args;                  }
+        const headers_type              & headers               () const { return _headers;                     }
+        content_length_flag               unknown_content_length() const { return _unknown_content_length;      }
+        unsigned long long                content_length        () const { return _content_length;              }
+        
+        bool eof() const;
+        void flush();
+        
     protected:
-        connection& _connection;
+        class connection& _connection;
         
         http_protocol              _protocol;
         std::string                _protocol_string;
         std::string                _method;
         std::vector< std::string > _path;
-        query_args_t               _query_args;
-        headers_t                  _headers;
-        content_length_flag_type   _unknown_content_length;
+        query_args_type            _query_args;
+        headers_type               _headers;
+        content_length_flag        _unknown_content_length;
         unsigned long long         _content_length;
         
         unsigned long long read_content;
@@ -278,26 +283,16 @@ namespace show
         virtual int_type        pbackfail(
             int_type c = std::char_traits< char >::eof()
         );
-        
-    public:
-        const http_protocol             & protocol               = _protocol;
-        const std::string               & protocol_string        = _protocol_string;
-        const std::string               & method                 = _method;
-        const std::vector< std::string >& path                   = _path;
-        const query_args_t              & query_args             = _query_args;
-        const headers_t                 & headers                = _headers;
-        const content_length_flag_type  & unknown_content_length = _unknown_content_length;
-        const unsigned long long        & content_length         = _content_length;
     };
     
     class response : public std::streambuf
     {
     public:
         response(
-            request            & r,
+            connection         & c,
             http_protocol        protocol,
             const response_code& code,
-            const headers_t    & headers
+            const headers_type & headers
         );
         ~response();
         
@@ -339,31 +334,18 @@ namespace show
         int timeout( int );
     };
     
-    // TODO: use `std::runtime_error` etc.
-    class exception : public std::exception
-    {
-    protected:
-        std::string message;
-    public:
-        exception( const std::string& m ) noexcept : message( m ) {}
-        virtual const char* what() const noexcept { return message.c_str(); };
-    };
+    class        socket_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class request_parse_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class    url_decode_error : public std::runtime_error { using runtime_error::runtime_error; };
     
-    class        socket_error : public exception { using exception::exception; };
-    class request_parse_error : public exception { using exception::exception; };
-    class    url_decode_error : public exception { using exception::exception; };
-    class base64_decode_error : public exception { using exception::exception; };
-    
-    // Do not inherit from std::exception as these aren't meant to signal strict
-    // error states
-    class connection_timeout
+    // Does not inherit from std::exception as these aren't meant to signal
+    // strict error states
+    class connection_interrupted
     {
-        // TODO: information about which connection, etc.
+        // TODO: information about which connection/client, etc.
     };
-    class client_disconnected
-    {
-        // TODO: information about which client, etc.
-    };
+    class connection_timeout  : public connection_interrupted {};
+    class client_disconnected : public connection_interrupted {};
     
     
     // Functions ///////////////////////////////////////////////////////////////
@@ -374,15 +356,6 @@ namespace show
         bool use_plus_space = true
     );
     std::string url_decode( const std::string& );
-    
-    std::string base64_encode(
-        const std::string& o,
-        const char* chars = base64_chars_standard
-    );
-    std::string base64_decode(
-        const std::string& o,
-        const char* chars = base64_chars_standard
-    );
     
     
     // Implementations /////////////////////////////////////////////////////////
@@ -435,8 +408,8 @@ namespace show
         close( descriptor );
     }
     
-    inline _socket::wait_for_t _socket::wait_for(
-        wait_for_t         wf,
+    inline _socket::wait_for_type _socket::wait_for(
+        wait_for_type      wf,
         int                timeout,
         const std::string& purpose
     )
@@ -451,8 +424,8 @@ namespace show
         fd_set read_descriptors, write_descriptors;
         timespec timeout_spec = { timeout, 0 };
         
-        bool r = wf & wait_for_t::READ;
-        bool w = wf & wait_for_t::WRITE;
+        bool r = wf & wait_for_type::READ;
+        bool w = wf & wait_for_type::WRITE;
         
         if( r )
         {
@@ -506,10 +479,9 @@ namespace show
         unsigned int       port,
         int                timeout
     ) :
-        _serve_socket(  fd, address, port     ),
-        client_address( _serve_socket.address ),
-        client_port(    _serve_socket.port    )
+        _serve_socket( fd, address, port )
     {
+        // TODO: Only allocate once needed
         get_buffer = new char[ BUFFER_SIZE ];
         put_buffer = new char[ BUFFER_SIZE ];
         this -> timeout( timeout );
@@ -526,7 +498,7 @@ namespace show
     
     inline void connection::flush()
     {
-        buffer_size_t send_offset = 0;
+        buffer_size_type send_offset = 0;
         
         while( pptr() - ( pbase() + send_offset ) > 0 )
         {
@@ -537,7 +509,7 @@ namespace show
                     "response send"
                 );
             
-            buffer_size_t bytes_sent = send(
+            buffer_size_type bytes_sent = send(
                 _serve_socket.descriptor,
                 pbase() + send_offset,
                 pptr() - ( pbase() + send_offset ),
@@ -579,7 +551,7 @@ namespace show
     {
         if( showmanyc() <= 0 )
         {
-            buffer_size_t bytes_read = 0;
+            buffer_size_type bytes_read = 0;
             
             while( bytes_read < 1 )
             {
@@ -742,7 +714,7 @@ namespace show
         {
             flush();
         }
-        catch( socket_error& e )
+        catch( const socket_error& e )
         {
             return traits_type::eof();
         }
@@ -758,12 +730,10 @@ namespace show
     }
     
     inline connection::connection( connection&& o ) :
-        _serve_socket(  std::move( o._serve_socket  ) ),
-        get_buffer(     std::move( o.get_buffer     ) ),
-        put_buffer(     std::move( o.put_buffer     ) ),
-        client_address(            o.client_address   ),
-        client_port(               o.client_port      ),
-        _timeout(       std::move( o._timeout       ) )
+        _serve_socket( std::move( o._serve_socket ) ),
+        get_buffer(    std::move( o.get_buffer    ) ),
+        put_buffer(    std::move( o.put_buffer    ) ),
+        _timeout(      std::move( o._timeout      ) )
     {
         // See comment in `request::request(&&)` implementation
     }
@@ -787,14 +757,7 @@ namespace show
     
     // request -----------------------------------------------------------------
     
-    inline bool request::eof() const
-    {
-        return !unknown_content_length && read_content >= _content_length;
-    }
-    
     inline request::request( request&& o ) :
-        client_address(                     o._connection.client_address ),
-        client_port(                        o._connection.client_port    ),
         _connection(                        o._connection                ),
         read_content(            std::move( o.read_content             ) ),
         _protocol(               std::move( o._protocol                ) ),
@@ -812,11 +775,9 @@ namespace show
         // of the major compilers.
     }
     
-    inline request::request( connection& c ) :
-        _connection(    c                ),
-        client_address( c.client_address ),
-        client_port(    c.client_port    ),
-        read_content(   0                )
+    inline request::request( class connection& c ) :
+        _connection(  c ),
+        read_content( 0 )
     {
         bool reading = true;
         int bytes_read;
@@ -1086,13 +1047,23 @@ namespace show
                     );
                     _unknown_content_length = NO;
                 }
-                catch( std::invalid_argument& e )
+                catch( const std::invalid_argument& e )
                 {
                     _unknown_content_length = MAYBE;
                 }
         }
         else
             _unknown_content_length = YES;
+    }
+    
+    inline bool request::eof() const
+    {
+        return !_unknown_content_length && read_content >= _content_length;
+    }
+    
+    inline void request::flush()
+    {
+        while( !eof() ) sbumpc();
     }
     
     inline std::streamsize request::showmanyc()
@@ -1140,7 +1111,7 @@ namespace show
     {
         std::streamsize read;
         
-        if( unknown_content_length )
+        if( _unknown_content_length )
             read = _connection.sgetn( s, count );
         else if( !eof() )
         {
@@ -1173,11 +1144,11 @@ namespace show
     // response ----------------------------------------------------------------
     
     inline response::response(
-        request            & r,
+        connection         & c,
         http_protocol        protocol,
         const response_code& code,
-        const headers_t    & headers
-    ) : _connection( r._connection )
+        const headers_type & headers
+    ) : _connection( c )
     {
         std::stringstream headers_stream;
         
@@ -1306,7 +1277,7 @@ namespace show
                 socket_address.sin6_addr.s6_addr
             )
         )
-            throw exception( address + " is not a valid IP address" );
+            throw socket_error( address + " is not a valid IP address" );
         
         if( bind(
             listen_socket -> descriptor,
@@ -1334,7 +1305,7 @@ namespace show
     {
         if( _timeout != 0 )
             listen_socket -> wait_for(
-                _socket::wait_for_t::READ,
+                _socket::wait_for_type::READ,
                 _timeout,
                 "listen"
             );
@@ -1476,7 +1447,7 @@ namespace show
                         
                         i += 2;
                     }
-                    catch( std::invalid_argument& e )
+                    catch( const std::invalid_argument& e )
                     {
                         throw url_decode_error(
                             "invalid URL-encoded sequence"
@@ -1488,183 +1459,6 @@ namespace show
                 decoded += ' ';
             else
                 decoded += o[ i ];
-        }
-        
-        return decoded;
-    }
-    
-    inline std::string base64_encode(
-        const std::string& o,
-        const char* chars
-    )
-    {
-        unsigned char current_sextet;
-        std::string encoded;
-        
-        std::string::size_type b64_size = ( ( o.size() + 2 ) / 3 ) * 4;
-        
-        for(
-            std::string::size_type i = 0, j = 0;
-            i < b64_size;
-            ++i
-        )
-        {
-            switch( i % 4 )
-            {
-            case 0:
-                // j
-                // ******** ******** ********
-                // ^^^^^^
-                // i
-                current_sextet = ( o[ j ] >> 2 ) & 0x3F /* 00111111 */;
-                encoded += chars[ current_sextet ];
-                break;
-            case 1:
-                // j        j++
-                // ******** ******** ********
-                //       ^^ ^^^^
-                //       i
-                current_sextet = ( o[ j ] << 4 ) & 0x30 /* 00110000 */;
-                ++j;
-                if( j < o.size() )
-                    current_sextet |= ( o[ j ] >> 4 ) & 0x0F /* 00001111 */;
-                encoded += chars[ current_sextet ];
-                break;
-            case 2:
-                //          j        j++
-                // ******** ******** ********
-                //              ^^^^ ^^
-                //              i
-                if( j < o.size() )
-                {
-                    current_sextet = ( o[ j ] << 2 ) & 0x3C /* 00111100 */;
-                    ++j;
-                    if( j < o.size() )
-                        current_sextet |= ( o[ j ] >> 6 ) & 0x03 /* 00000011 */;
-                    encoded += chars[ current_sextet ];
-                }
-                else
-                    encoded += '=';
-                break;
-            case 3:
-                //                   j
-                // ******** ******** ********
-                //                     ^^^^^^
-                //                     i
-                if( j < o.size() )
-                {
-                    current_sextet = o[ j ] & 0x3F /* 00111111 */;
-                    ++j;
-                    encoded += chars[ current_sextet ];
-                }
-                else
-                    encoded += '=';
-                break;
-            }
-        }
-        
-        return encoded;
-    }
-    
-    inline std::string base64_decode( const std::string& o, const char* chars )
-    {
-        /*unsigned*/ char current_octet;
-        std::string decoded;
-        
-        std::string::size_type unpadded_len = o.size();
-        
-        for(
-            std::string::const_reverse_iterator r_iter = o.rbegin();
-            r_iter != o.rend();
-            ++r_iter
-        )
-        {
-            if( *r_iter == '=' )
-                --unpadded_len;
-            else
-                break;
-        }
-        
-        std::string::size_type b64_size = unpadded_len;
-        
-        if( b64_size % 4 )
-            b64_size += 4 - ( b64_size % 4 );
-        
-        if( b64_size > o.size() )
-            // Missing required padding
-            // TODO: add flag to explicitly ignore?
-            throw base64_decode_error( "missing required padding" );
-        
-        std::map< char, /*unsigned*/ char > reverse_lookup;
-        for( /*unsigned*/ char i = 0; i < 64; ++i )
-            reverse_lookup[ chars[ i ] ] = i;
-        reverse_lookup[ '=' ] = 0;
-        
-        for( std::string::size_type i = 0; i < b64_size; ++i )
-        {
-            if( o[ i ] == '=' )
-            {
-                if(
-                    i < unpadded_len
-                    && i >= unpadded_len - 2
-                )
-                    break;
-                else
-                    throw base64_decode_error( "premature padding" );
-            }
-            
-            std::map< char, /*unsigned*/ char >::iterator first, second;
-            
-            first = reverse_lookup.find( o[ i ] );
-            if( first == reverse_lookup.end() )
-                throw base64_decode_error( "invalid base64 character" );
-            
-            if( i + 1 < o.size() )
-            {
-                second = reverse_lookup.find( o[ i + 1 ] );
-                if( second == reverse_lookup.end() )
-                    throw base64_decode_error( "invalid base64 character" );
-            }
-            
-            switch( i % 4 )
-            {
-            case 0:
-                // i
-                // ****** ****** ****** ******
-                // ^^^^^^ ^^
-                current_octet = first -> second << 2;
-                if( i + 1 < o.size() )
-                    current_octet |= (
-                        second -> second >> 4
-                    ) & 0x03 /* 00000011 */;
-                decoded += current_octet;
-                break;
-            case 1:
-                //        i
-                // ****** ****** ****** ******
-                //          ^^^^ ^^^^
-                current_octet = first -> second << 4;
-                if( i + 1 < o.size() )
-                    current_octet |= (
-                        second -> second >> 2
-                    ) & 0x0F /* 00001111 */;
-                decoded += current_octet;
-                break;
-            case 2:
-                //               i
-                // ****** ****** ****** ******
-                //                   ^^ ^^^^^^
-                current_octet = ( first -> second << 6 ) & 0xC0 /* 11000000 */;
-                if( i + 1 < o.size() )
-                    current_octet |= second -> second & 0x3F /* 00111111 */;
-                decoded += current_octet;
-                break;
-            case 3:
-                //                      i
-                // ****** ****** ****** ******
-                // -
-                break;
-            }
         }
         
         return decoded;

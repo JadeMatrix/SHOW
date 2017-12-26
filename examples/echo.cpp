@@ -6,25 +6,25 @@
 
 
 // Set a Server header to display the SHOW version
-const show::headers_t::value_type server_header = {
+const show::headers_type::value_type server_header = {
     "Server",
     {
-        show::version.name
+        show::version::name
         + " v"
-        + show::version.string
+        + show::version::string
     }
 };
 
 
 void handle_POST_request( show::request& request )
 {
-    show::headers_t headers = { server_header };
+    show::headers_type headers = { server_header };
     
-    if( request.unknown_content_length )
+    if( request.unknown_content_length() )
     {
         // Always require a Content-Length header for this application
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             {
                 400,
@@ -37,14 +37,14 @@ void handle_POST_request( show::request& request )
     {
         headers[ "Content-Length" ].push_back(
             // Header values must be strings
-            std::to_string( request.content_length )
+            std::to_string( request.content_length() )
         );
         
         // Replicate the Content-Type header of the request if it exists,
         // otherwise assume plain text
-        auto content_type_header = request.headers.find( "Content-Type" );
+        auto content_type_header = request.headers().find( "Content-Type" );
         if(
-            content_type_header != request.headers.end()
+            content_type_header != request.headers().end()
             && content_type_header -> second.size() == 1
         )
             headers[ "Content-Type" ].push_back(
@@ -62,7 +62,7 @@ void handle_POST_request( show::request& request )
         );
         
         show::response response(
-            request,
+            request.connection(),
             show::http_protocol::HTTP_1_0,
             {
                 200,
@@ -98,14 +98,14 @@ int main( int argc, char* argv[] )
                 {
                     show::request request( connection );
                     
-                    if( request.method == "POST" )
+                    if( request.method() == "POST" )
                     {
                         handle_POST_request( request );
                     }
                     else
                     {
                         show::response response(
-                            request,
+                            request.connection(),
                             show::http_protocol::HTTP_1_0,
                             {
                                 405,
@@ -115,7 +115,7 @@ int main( int argc, char* argv[] )
                         );
                     }
                 }
-                catch( show::connection_timeout& ct )
+                catch( const show::connection_timeout& ct )
                 {
                     std::cout
                         << "timed out waiting on client, closing connection"
@@ -124,7 +124,7 @@ int main( int argc, char* argv[] )
                     break;
                 }
             }
-            catch( show::connection_timeout& ct )
+            catch( const show::connection_timeout& ct )
             {
                 std::cout
                     << "timed out waiting for connection, looping..."
@@ -132,10 +132,10 @@ int main( int argc, char* argv[] )
                 ;
             }
     }
-    catch( show::exception& e )
+    catch( const std::exception& e )
     {
         std::cerr
-            << "uncaught exception in main(): "
+            << "uncaught std::exception in main(): "
             << e.what()
             << std::endl
         ;

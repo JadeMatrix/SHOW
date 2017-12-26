@@ -34,12 +34,12 @@ int main( int argc, char* argv[] )
                         200,
                         "OK"
                     };
-                    show::headers_t headers = {
+                    show::headers_type headers = {
                         // Set the Server header to display the SHOW version
                         { "Server", {
-                            show::version.name
+                            show::version::name
                             + " v"
-                            + show::version.string
+                            + show::version::string
                         } },
                         // The message is simple plain text
                         { "Content-Type", { "text/plain" } },
@@ -50,7 +50,7 @@ int main( int argc, char* argv[] )
                     };
                     
                     show::response response(
-                        request,
+                        request.connection(),
                         show::http_protocol::HTTP_1_0,
                         code,
                         headers
@@ -61,7 +61,7 @@ int main( int argc, char* argv[] )
                     // response as a buffer, and then the message sent using <<
                     // or write()
                 }
-                catch( show::connection_timeout& ct )
+                catch( const show::connection_timeout& ct )
                 {
                     std::cout
                         << "timed out waiting on client, closing connection"
@@ -70,7 +70,7 @@ int main( int argc, char* argv[] )
                     break;
                 }
             }
-            catch( show::connection_timeout& ct )
+            catch( const show::connection_timeout& ct )
             {
                 std::cout
                     << "timed out waiting for connection, looping..."
@@ -78,10 +78,10 @@ int main( int argc, char* argv[] )
                 ;
             }
     }
-    catch( show::exception& e )
+    catch( const std::exception& e )
     {
         std::cerr
-            << "uncaught exception in main(): "
+            << "uncaught std::exception in main(): "
             << e.what()
             << std::endl
         ;

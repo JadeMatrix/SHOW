@@ -14,9 +14,9 @@ Request
         
         * :cpp:type:`std::istream` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_istream>`_
     
-    .. cpp:enum:: content_length_flag_type
+    .. cpp:enum:: content_length_flag
         
-        A utility type for :cpp:member:`unknown_content_length()` with the values:
+        A utility type for :cpp:func:`unknown_content_length()` with the values:
         
         +-----------+--------------+
         | Value     | Evaluates to |
@@ -28,11 +28,11 @@ Request
         | ``MAYBE`` | ``true``     |
         +-----------+--------------+
     
-    .. cpp:member:: const std::string& client_address
+    .. cpp:function:: const std::string& client_address() const
         
         The IP address of the client that sent the request
     
-    .. cpp:member:: const unsigned int& client_port
+    .. cpp:function:: const unsigned int client_port() const
         
         The port of the client that sent the request
     
@@ -42,7 +42,7 @@ Request
         
         .. seealso::
             
-            * :cpp:member:`unknown_content_length`
+            * :cpp:func:`unknown_content_length`
     
     .. cpp:function:: request( connection& )
         
@@ -60,15 +60,19 @@ Request
         
         .. _move constructor: http://en.cppreference.com/w/cpp/language/move_constructor
     
-    .. cpp:member:: const http_protocol& protocol
+    .. cpp:function:: void flush()
         
-        The HTTP protocol used by the request.  If ``NONE``, it's usually safe to assume HTTP/1.0.  If ``UNKNOWN``, typically either a *400 Bad Request* should be returned, just assume HTTP/1.0 to be permissive, or try to interpret something from :cpp:member:`protocol_string`.
+        Flushes the request contents from the buffer, putting it in a state where the next request can be extracted.  It is only safe to call this function if :cpp:func:`unknown_content_length()` evaluates to ``false``.
     
-    .. cpp:member:: const std::string& protocol_string
+    .. cpp:function:: http_protocol protocol() const
         
-        The raw protocol string sent in the request, useful if :cpp:member:`protocol` is ``UNKNOWN``
+        The HTTP protocol used by the request.  If ``NONE``, it's usually safe to assume HTTP/1.0.  If ``UNKNOWN``, typically either a *400 Bad Request* should be returned, just assume HTTP/1.0 to be permissive, or try to interpret something from :cpp:func:`protocol_string`.
     
-    .. cpp:member:: const std::string& method
+    .. cpp:function:: const std::string& protocol_string() const
+        
+        The raw protocol string sent in the request, useful if :cpp:func:`protocol` is ``UNKNOWN``
+    
+    .. cpp:function:: const std::string& method() const
         
         The request method as a capitalized ASCII string.  While the HTTP protocol technically does not restrict the available methods, typically this will be one of the following:
         
@@ -96,7 +100,7 @@ Request
             
             * `List of common HTTP methods on Wikipedia <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol#Request_methods>`_ for descriptions of the methods
     
-    .. cpp:member:: const std::vector< std::string >& path
+    .. cpp:function:: const std::vector< std::string >& path() const
         
         The request path separated into its elements, each of which has been URL- or percent-decoded.  For example::
             
@@ -111,7 +115,7 @@ Request
                 "こんにちは"
             }
     
-    .. cpp:member:: const query_args_t& query_args
+    .. cpp:function:: const query_args_type& query_args() const
         
         The request query arguments.  SHOW is very permissive in how it parses query arguments:
         
@@ -127,7 +131,7 @@ Request
         | ``?foo&bar=1&bar=2`` | ``{ { "foo", { "" } }, { "bar", { "1", "2" } } }`` |
         +----------------------+----------------------------------------------------+
     
-    .. cpp:member:: const headers_t& headers
+    .. cpp:function:: const headers_type& headers() const
         
         The request headers
         
@@ -135,17 +139,17 @@ Request
             
             * `List of common HTTP headers on Wikipedia <https://en.wikipedia.org/wiki/List_of_HTTP_header_fields>`_
     
-    .. cpp:member:: const content_length_flag_type& unknown_content_length
+    .. cpp:function:: content_length_flag unknown_content_length() const
         
         Whether the content length of the request could be interpreted
         
-        This member may be a bit confusing because it is "*un*-known" rather than "know".  It's convenient for :cpp:type:`content_length_flag_type` to evaluate to a boolean value, but there are two possible reasons the content length would be unknown.  Either
+        This member may be a bit confusing because it is "*un*-known" rather than "know".  It's convenient for :cpp:type:`content_length_flag` to evaluate to a boolean value, but there are two possible reasons the content length would be unknown.  Either
         
         1. the request did not send a *Content-Length* header, or
         2. the value supplied is not an integer or multiple *Content-Length* headers were sent.
         
         In many languages (including C++), 0 is ``false`` and any other value is ``true``; so the boolean value needs to be ``false`` for a known content length and ``true`` for anything else.
     
-    .. cpp:member:: unsigned long long content_length
+    .. cpp:function:: unsigned long long content_length() const
         
-        The number of bytes in the request content; only holds a meaningful value if :cpp:member:`unknown_content_length` is ``YES``/``true``
+        The number of bytes in the request content; only holds a meaningful value if :cpp:func:`unknown_content_length` is ``YES``/``true``
