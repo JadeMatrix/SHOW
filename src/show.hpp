@@ -32,8 +32,8 @@ namespace show
         static const std::string name     = "SHOW";
         static const int         major    = 0;
         static const int         minor    = 8;
-        static const int         revision = 0;
-        static const std::string string   = "0.8.0";
+        static const int         revision = 1;
+        static const std::string string   = "0.8.1";
     }
     
     
@@ -187,11 +187,15 @@ namespace show
         char*        get_buffer = nullptr;
         char*        put_buffer = nullptr;
         int          _timeout;
+        std::string  _server_address;
+        unsigned int _server_port;
         
         connection(
             socket_fd          fd,
-            const std::string& address,
-            unsigned int       port,
+            const std::string& client_address,
+            unsigned int       client_port,
+            const std::string& server_address,
+            unsigned int       server_port,
             int                timeout
         );
         
@@ -220,6 +224,8 @@ namespace show
     public:
         const std::string& client_address() const { return _serve_socket.address; };
         const unsigned int client_port   () const { return _serve_socket.port;    };
+        const std::string& server_address() const { return _server_address;       };
+        const unsigned int server_port   () const { return _server_port;          };
         
         connection( connection&& );
         ~connection();
@@ -244,7 +250,7 @@ namespace show
         request( class connection& );
         request( request&& );   // See note in implementation
         
-        connection                      & connection            () const { return _connection;                  }
+        show::connection                & connection            () const { return _connection;                  }
         const std::string               & client_address        () const { return _connection.client_address(); }
         const unsigned int                client_port           () const { return _connection.client_port   (); }
         http_protocol                     protocol              () const { return _protocol;                    }
@@ -475,11 +481,15 @@ namespace show
     
     inline connection::connection(
         socket_fd          fd,
-        const std::string& address,
-        unsigned int       port,
+        const std::string& client_address,
+        unsigned int       client_port,
+        const std::string& server_address,
+        unsigned int       server_port,
         int                timeout
     ) :
-        _serve_socket( fd, address, port )
+        _serve_socket(   fd, client_address, client_port ),
+        _server_address( server_address                  ),
+        _server_port(    server_port                     )
     {
         // TODO: Only allocate once needed
         get_buffer = new char[ BUFFER_SIZE ];
@@ -611,10 +621,10 @@ namespace show
         {
             int_type gotc = sbumpc();
             
-            if( gotc == traits_type::eof() )
-                break;
-            else
+            if( gotc == traits_type::not_eof( gotc ) )
                 s[ i ] = traits_type::to_char_type( gotc );
+            else
+                break;
             
             ++i;
         }
@@ -730,10 +740,12 @@ namespace show
     }
     
     inline connection::connection( connection&& o ) :
-        _serve_socket( std::move( o._serve_socket ) ),
-        get_buffer(    std::move( o.get_buffer    ) ),
-        put_buffer(    std::move( o.put_buffer    ) ),
-        _timeout(      std::move( o._timeout      ) )
+        _serve_socket(   std::move( o._serve_socket   ) ),
+        get_buffer(      std::move( o.get_buffer      ) ),
+        put_buffer(      std::move( o.put_buffer      ) ),
+        _timeout(        std::move( o._timeout        ) ),
+        _server_address( std::move( o._server_address ) ),
+        _server_port(    std::move( o._server_port    ) )
     {
         // See comment in `request::request(&&)` implementation
     }
@@ -1086,8 +1098,8 @@ namespace show
             return traits_type::eof();
         else
         {
-            int_type c = _connection.uflow();
-            if( c == traits_type::eof() )
+            int_type c = _connection.underflow();
+            if( c != traits_type::not_eof( c ) )
                 throw client_disconnected();
             return c;
         }
@@ -1098,7 +1110,7 @@ namespace show
         if( eof() )
             return traits_type::eof();
         int_type c = _connection.uflow();
-        if( c == traits_type::eof() )
+        if( c != traits_type::not_eof( c ) )
             throw client_disconnected();
         ++read_content;
         return c;
@@ -1310,15 +1322,15 @@ namespace show
                 "listen"
             );
         
-        sockaddr_in6 client_address;
-        socklen_t client_address_len = sizeof( client_address );
+        sockaddr_in6 address_info;
+        socklen_t address_info_len = sizeof( address_info );
         
         char address_buffer[ 3 * 4 + 3 + 1 ];
         
         socket_fd serve_socket = accept(
             listen_socket -> descriptor,
-            ( sockaddr* )&client_address,
-            &client_address_len
+            ( sockaddr* )&address_info,
+            &address_info_len
         );
         
         if(
@@ -1326,15 +1338,15 @@ namespace show
             || (
                 inet_ntop(
                     AF_INET,
-                    &client_address.sin6_addr,
+                    &address_info.sin6_addr,
                     address_buffer,
-                    client_address_len
+                    address_info_len
                 ) ==  NULL
                 && inet_ntop(
                     AF_INET6,
-                    &client_address.sin6_addr,
+                    &address_info.sin6_addr,
                     address_buffer,
-                    client_address_len
+                    address_info_len
                 ) ==  NULL
             )
         )
@@ -1350,10 +1362,30 @@ namespace show
                 );
         }
         
+        std::string  client_address = std::string( address_buffer );
+        unsigned int client_port = ntohs( address_info.sin6_port );
+        
+        if(
+            getsockname(
+                serve_socket,
+                ( sockaddr* )&address_info,
+                &address_info_len
+            ) == -1
+        )
+        {
+            auto errno_copy = errno;
+            throw socket_error(
+                "could not get port information from socket: "
+                + std::string( std::strerror( errno_copy ) )
+            );
+        }
+        
         return connection(
             serve_socket,
-            std::string( address_buffer ),
-            client_address.sin6_port,
+            client_address,
+            client_port,
+            listen_socket -> address,
+            ntohs( address_info.sin6_port ),
             timeout()
         );
     }

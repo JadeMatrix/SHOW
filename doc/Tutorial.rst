@@ -122,9 +122,7 @@ Another thing to keep in mind is that HTTP/1.1 — and HTTP/1.0 with an extensio
 Sending Responses
 =================
 
-Sending responses is slightly more complex than reading basic requests, aside from the error handling which should wrap both.
-
-Say you want to send a "Hello World" message for any incoming request. First, start with a string containing the response message::
+Sending responses is slightly more involved than reading basic requests.  Say you want to send a "Hello World" message for any incoming request. First, start with a string containing the response message::
     
     std::string response_content = "Hello World";
 

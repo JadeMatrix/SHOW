@@ -21,7 +21,7 @@ const std::streamsize buffer_size = 256;
 
 void handle_POST_request( show::request& request )
 {
-    // Always require a Content-Length header for this application
+    // Always require a Content-Length header for this example
     if( request.unknown_content_length() )
         show::response response(
             request.connection(),
@@ -40,7 +40,9 @@ void handle_POST_request( show::request& request )
         };
         
         // Replicate the Content-Type header of the request if it exists,
-        // otherwise assume plain text
+        // otherwise use the default MIME type recommended in the HTTP
+        // specification, RFC 2616 §7.2.1:
+        // https://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.2.1
         auto content_type_header = request.headers().find( "Content-Type" );
         if(
             content_type_header != request.headers().end()
@@ -50,7 +52,7 @@ void handle_POST_request( show::request& request )
                 content_type_header -> second[ 0 ]
             );
         else
-            headers[ "Content-Type" ].push_back( "text/plain" );
+            headers[ "Content-Type" ].push_back( "application/octet-stream" );
         
         // Start a response before we read any data
         show::response response(
@@ -117,83 +119,52 @@ int main( int argc, char* argv[] )
     int          timeout = 10;      // Connection timeout in seconds
     std::string  message = "Hello World!";
     
-    try
-    {
-        show::server test_server(
-            host,
-            port,
-            timeout
-        );
-        
-        while( true )
+    show::server test_server(
+        host,
+        port,
+        timeout
+    );
+    
+    while( true )
+        try
+        {
+            show::connection connection( test_server.serve() );
+            
             try
             {
-                show::connection connection( test_server.serve() );
+                show::request request( connection );
                 
-                try
+                // Only accept POST requests
+                if( request.method() != "POST" )
                 {
-                    show::request request( connection );
-                    
-                    // Only accept POST requests
-                    if( request.method() != "POST" )
-                    {
-                        show::response response(
-                            request.connection(),
-                            show::http_protocol::HTTP_1_0,
-                            { 501, "Not Implemented" },
-                            { server_header }
-                        );
-                        continue;
-                    }
-                    
-                    handle_POST_request( request );
-                }
-                catch( const show::client_disconnected& cd )
-                {
-                    std::cout
-                        << "client "
-                        << connection.client_address()
-                        << " disconnected, closing connection"
-                        << std::endl
-                    ;
+                    show::response response(
+                        request.connection(),
+                        show::http_protocol::HTTP_1_0,
+                        { 501, "Not Implemented" },
+                        { server_header }
+                    );
                     continue;
                 }
-                catch( const show::connection_timeout& ct )
-                {
-                    std::cout
-                        << "timed out waiting on client "
-                        << connection.client_address()
-                        << ", closing connection"
-                        << std::endl
-                    ;
-                    continue;
-                }
+                
+                handle_POST_request( request );
             }
-            catch( const show::connection_timeout& ct )
+            catch( const show::connection_interrupted& ct )
             {
                 std::cout
-                    << "timed out waiting for connection, looping..."
+                    << "client "
+                    << connection.client_address()
+                    << " disconnected or timed out, closing connection"
                     << std::endl
                 ;
             }
-    }
-    catch( const std::exception& e )
-    {
-        std::cerr
-            << "uncaught std::exception in main(): "
-            << e.what()
-            << std::endl
-        ;
-        return -1;
-    }
-    catch( ... )
-    {
-        std::cerr
-            << "uncaught non-std::exception in main()"
-            << std::endl
-        ;
-        return -1;
-    }
+        }
+        catch( const show::connection_timeout& ct )
+        {
+            std::cout
+                << "timed out waiting for connection, looping..."
+                << std::endl
+            ;
+        }
     
     return 0;
 }

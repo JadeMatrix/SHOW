@@ -28,6 +28,14 @@ Connection
         
         The port of the connected client
     
+    .. cpp:function:: const std::string& server_address() const
+        
+        The address of the server handling the connection
+    
+    .. cpp:function:: unsigned int server_port() const
+        
+        The port of the server handling the connection
+    
     .. cpp:function:: int timeout() const
         
         Get the current timeout of this connection, initially inherited from the server the connection is created from
