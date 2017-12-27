@@ -611,10 +611,10 @@ namespace show
         {
             int_type gotc = sbumpc();
             
-            if( gotc == traits_type::eof() )
-                break;
-            else
+            if( gotc == traits_type::not_eof( gotc ) )
                 s[ i ] = traits_type::to_char_type( gotc );
+            else
+                break;
             
             ++i;
         }
@@ -1086,8 +1086,8 @@ namespace show
             return traits_type::eof();
         else
         {
-            if( c == traits_type::eof() )
             int_type c = _connection.underflow();
+            if( c != traits_type::not_eof( c ) )
                 throw client_disconnected();
             return c;
         }
@@ -1098,7 +1098,7 @@ namespace show
         if( eof() )
             return traits_type::eof();
         int_type c = _connection.uflow();
-        if( c == traits_type::eof() )
+        if( c != traits_type::not_eof( c ) )
             throw client_disconnected();
         ++read_content;
         return c;
