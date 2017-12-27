@@ -22,7 +22,8 @@ void handle_POST_request( show::request& request )
     
     if( request.unknown_content_length() )
     {
-        // Always require a Content-Length header for this application
+        // For this example, be safe and reject any request with no Content-
+        // Length header
         show::response response(
             request.connection(),
             show::http_protocol::HTTP_1_0,
@@ -35,13 +36,17 @@ void handle_POST_request( show::request& request )
     }
     else
     {
+        // Since we're echoing the request content, just replicate the Content-
+        // Length header
         headers[ "Content-Length" ].push_back(
             // Header values must be strings
             std::to_string( request.content_length() )
         );
         
         // Replicate the Content-Type header of the request if it exists,
-        // otherwise assume plain text
+        // otherwise use the default MIME type recommended in the HTTP
+        // specification, RFC 2616 §7.2.1:
+        // https://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.2.1
         auto content_type_header = request.headers().find( "Content-Type" );
         if(
             content_type_header != request.headers().end()
@@ -51,18 +56,20 @@ void handle_POST_request( show::request& request )
                 content_type_header -> second[ 0 ]
             );
         else
-            headers[ "Content-Type" ].push_back( "text/plain" );
+            headers[ "Content-Type" ].push_back( "application/octet-stream" );
         
-        // This is not the most computationally-efficient way to accomplish
-        // this, see
+        // This is just the simplest way to read a whole streambuf into a
+        // string, not the most the fastest; see
         // https://stackoverflow.com/questions/3203452/how-to-read-entire-stream-into-a-stdstring
         std::string message = std::string(
-            std::istreambuf_iterator< char >( ( std::streambuf* )&request ),
+            std::istreambuf_iterator< char >( &request ),
             {}
         );
         
         show::response response(
             request.connection(),
+            // Just handling one request per connection in this example, so
+            // respond with HTTP/1.0
             show::http_protocol::HTTP_1_0,
             {
                 200,
@@ -75,80 +82,62 @@ void handle_POST_request( show::request& request )
     }
 }
 
+
 int main( int argc, char* argv[] )
 {
     std::string  host    = "::";    // IPv6 loopback (0.0.0.0 in IPv4)
     unsigned int port    = 9090;    // Some random higher port
     int          timeout = 10;      // Connection timeout in seconds
     
-    try
-    {
-        show::server test_server(
-            host,
-            port,
-            timeout
-        );
-        
-        while( true )
+    show::server test_server(
+        host,
+        port,
+        timeout
+    );
+    
+    while( true )
+        try
+        {
+            show::connection connection( test_server.serve() );
+            
             try
             {
-                show::connection connection( test_server.serve() );
+                show::request request( connection );
                 
-                try
+                if( request.method() == "POST" )
                 {
-                    show::request request( connection );
-                    
-                    if( request.method() == "POST" )
-                    {
-                        handle_POST_request( request );
-                    }
-                    else
-                    {
-                        show::response response(
-                            request.connection(),
-                            show::http_protocol::HTTP_1_0,
-                            {
-                                405,
-                                "Method Not Allowed"
-                            },
-                            { server_header }
-                        );
-                    }
+                    handle_POST_request( request );
                 }
-                catch( const show::connection_timeout& ct )
+                else
                 {
-                    std::cout
-                        << "timed out waiting on client, closing connection"
-                        << std::endl
-                    ;
-                    break;
+                    show::response response(
+                        request.connection(),
+                        show::http_protocol::HTTP_1_0,
+                        {
+                            405,
+                            "Method Not Allowed"
+                        },
+                        { server_header }
+                    );
                 }
             }
-            catch( const show::connection_timeout& ct )
+            catch( const show::connection_interrupted& ct )
             {
                 std::cout
-                    << "timed out waiting for connection, looping..."
+                    << "client "
+                    << connection.client_address()
+                    << " disconnected or timed out, closing connection"
                     << std::endl
                 ;
             }
-    }
-    catch( const std::exception& e )
-    {
-        std::cerr
-            << "uncaught std::exception in main(): "
-            << e.what()
-            << std::endl
-        ;
-        return -1;
-    }
-    catch( ... )
-    {
-        std::cerr
-            << "uncaught non-std::exception in main()"
-            << std::endl
-        ;
-        return -1;
-    }
+        }
+        catch( const show::connection_timeout& ct )
+        {
+            std::cout
+                << "timed out waiting for connection, looping..."
+                << std::endl
+            ;
+        }
     
     return 0;
 }

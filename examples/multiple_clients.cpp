@@ -3,6 +3,7 @@
 #include <iostream> // std::cout, std::cerr
 #include <thread>   // std::thread
 #include <list>     // std::list
+#include <memory>   // std::unique_ptr
 
 
 // Set a Server header to display the SHOW version
@@ -16,7 +17,7 @@ const show::headers_type::value_type server_header = {
 };
 
 
-void handle_connection( show::connection* connection )
+void handle_connection( std::shared_ptr< show::connection > connection )
 {
     try
     {
@@ -28,6 +29,12 @@ void handle_connection( show::connection* connection )
         if( !request.unknown_content_length() )
             request.flush();
         
+        // This is just an example to show how multi-threaded connection
+        // handling could be implemented, and doesn't actually implement any
+        // server functionality.  You may also want to introduce a time delay
+        // here using `std::this_thread::sleep_for()` to make it clearer that
+        // multiple connections can be handled at the same time; see
+        // http://en.cppreference.com/w/cpp/thread/sleep_for
         show::response response(
             request.connection(),
             show::http_protocol::HTTP_1_0,
@@ -37,26 +44,18 @@ void handle_connection( show::connection* connection )
         
         // Make sure the response is entirely sent before closing the connection
         response.flush();
-        delete connection;
     }
-    catch( const show::client_disconnected& cd )
+    catch( const show::connection_interrupted& cd )
     {
         std::cout
             << "client "
             << connection -> client_address()
-            << " disconnected, closing connection"
+            << " disconnected or timed out, closing connection"
             << std::endl
         ;
     }
-    catch( const show::connection_timeout& ct )
-    {
-        std::cout
-            << "timed out waiting on client "
-            << connection -> client_address()
-            << ", closing connection"
-            << std::endl
-        ;
-    }
+    // Handle `std::exception`s and other throws here as we don't want to crash
+    // the entire program if something goes wrong handling one connection.
     catch( const std::exception& e )
     {
         std::cerr
@@ -77,55 +76,35 @@ void handle_connection( show::connection* connection )
 
 int main( int argc, char* argv[] )
 {
-    try
-    {
-        std::string  host    = "::";    // IPv6 loopback (0.0.0.0 in IPv4)
-        unsigned int port    = 9090;    // Some random higher port
-        int          timeout = 10;      // Connection timeout in seconds
-        std::string  message = "Hello World!";
-        
-        show::server test_server(
-            host,
-            port,
-            timeout
-        );
-        
-        while( true )
+    std::string  host    = "::";    // IPv6 loopback (0.0.0.0 in IPv4)
+    unsigned int port    = 9090;    // Some random higher port
+    int          timeout = 10;      // Connection timeout in seconds
+    std::string  message = "Hello World!";
+    
+    show::server test_server(
+        host,
+        port,
+        timeout
+    );
+    
+    while( true )
+        try
         {
-            try
-            {
-                std::thread worker(
-                    handle_connection,
+            std::thread worker(
+                handle_connection,
+                std::shared_ptr< show::connection >(
                     new show::connection( test_server.serve() )
-                );
-                worker.detach();
-            }
-            catch( const show::connection_timeout& ct )
-            {
-                std::cout
-                    << "timed out waiting for connection, looping..."
-                    << std::endl
-                ;
-            }
+                )
+            );
+            worker.detach();
         }
-        
-        return 0;
-    }
-    catch( const std::exception& e )
-    {
-        std::cerr
-            << "uncaught std::exception in main(): "
-            << e.what()
-            << std::endl
-        ;
-        return -1;
-    }
-    catch( ... )
-    {
-        std::cerr
-            << "uncaught non-std::exception in main()"
-            << std::endl
-        ;
-        return -1;
-    }
+        catch( const show::connection_timeout& ct )
+        {
+            std::cout
+                << "timed out waiting for connection, looping..."
+                << std::endl
+            ;
+        }
+    
+    return 0;
 }

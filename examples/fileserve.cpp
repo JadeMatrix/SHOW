@@ -168,7 +168,9 @@ std::string guess_mime_type( const std::string& path )
     else if( extension == ".mp3" )
         return "audio/mpeg3";
     else
-        // Default MIME type for raw binary
+        // Default MIME type recommended in the HTTP specification, RFC 2616
+        // §7.2.1:
+        // https://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.2.1
         return "application/octet-stream";
 }
 
@@ -339,81 +341,61 @@ int main( int argc, char* argv[] )
     int          timeout = 10;      // Connection timeout in seconds
     std::string  message = "Hello World!";
     
-    try
-    {
-        show::server test_server(
-            host,
-            port,
-            timeout
-        );
-        
-        while( true )
+    show::server test_server(
+        host,
+        port,
+        timeout
+    );
+    
+    while( true )
+        try
+        {
+            show::connection connection( test_server.serve() );
+            
             try
             {
-                show::connection connection( test_server.serve() );
+                show::request request( connection );
                 
-                try
+                // Only accept GET requests
+                if( request.method() != "GET" )
                 {
-                    show::request request( connection );
-                    
-                    // Only accept GET requests
-                    if( request.method() != "GET" )
-                    {
-                        show::response response(
-                            request.connection(),
-                            show::http_protocol::HTTP_1_0,
-                            { 501, "Not Implemented" },
-                            { server_header }
-                        );
-                        continue;
-                    }
-                    
-                    handle_GET_request( request, argv[ 1 ] );
+                    show::response response(
+                        request.connection(),
+                        show::http_protocol::HTTP_1_0,
+                        { 501, "Not Implemented" },
+                        { server_header }
+                    );
+                    continue;
                 }
-                catch( const show::client_disconnected& cd )
-                {
-                    std::cout
-                        << "client "
-                        << connection.client_address()
-                        << " disconnected, closing connection"
-                        << std::endl
-                    ;
-                }
-                catch( const show::connection_timeout& ct )
-                {
-                    std::cout
-                        << "timed out waiting on client "
-                        << connection.client_address()
-                        << ", closing connection"
-                        << std::endl
-                    ;
-                }
+                
+                handle_GET_request( request, argv[ 1 ] );
+            }
+            catch( const show::client_disconnected& cd )
+            {
+                std::cout
+                    << "client "
+                    << connection.client_address()
+                    << " disconnected, closing connection"
+                    << std::endl
+                ;
             }
             catch( const show::connection_timeout& ct )
             {
                 std::cout
-                    << "timed out waiting for connection, looping..."
+                    << "timed out waiting on client "
+                    << connection.client_address()
+                    << ", closing connection"
                     << std::endl
                 ;
             }
-    }
-    catch( const std::exception& e )
-    {
-        std::cerr
-            << "uncaught std::exception in main(): "
-            << e.what()
-            << std::endl
-        ;
-        return -1;
-    }
-    catch( ... )
-    {
-        std::cerr
-            << "uncaught non-std::exception in main()"
-            << std::endl
-        ;
-        return -1;
-    }
+        }
+        catch( const show::connection_timeout& ct )
+        {
+            std::cout
+                << "timed out waiting for connection, looping..."
+                << std::endl
+            ;
+        }
     
     return 0;
 }

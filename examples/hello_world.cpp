@@ -11,90 +11,73 @@ int main( int argc, char* argv[] )
     int          timeout = 10;      // Connection timeout in seconds
     std::string  message = "Hello World!";
     
-    try
-    {
-        show::server test_server(
-            host,
-            port,
-            timeout
-        );
-        
-        while( true )
+    show::server test_server(
+        host,
+        port,
+        timeout
+    );
+    
+    while( true )
+        try
+        {
+            show::connection connection( test_server.serve() );
+            
             try
             {
-                show::connection connection( test_server.serve() );
+                // This simple program doesn't even bother reading requests, but
+                // a request object is still needed ensure we're actually
+                // handing an HTTP connection
+                show::request request( connection );
+                request.flush();
                 
-                try
-                {
-                    // This simple program doesn't even bother reading requests,
-                    // but a request object is still needed to create a response
-                    show::request request( connection );
-                    
-                    show::response_code code = {
-                        200,
-                        "OK"
-                    };
-                    show::headers_type headers = {
-                        // Set the Server header to display the SHOW version
-                        { "Server", {
-                            show::version::name
-                            + " v"
-                            + show::version::string
-                        } },
-                        // The message is simple plain text
-                        { "Content-Type", { "text/plain" } },
-                        { "Content-Length", {
-                            // Header values must be strings
-                            std::to_string( message.size() )
-                        } }
-                    };
-                    
-                    show::response response(
-                        request.connection(),
-                        show::http_protocol::HTTP_1_0,
-                        code,
-                        headers
-                    );
-                    
-                    response.sputn( message.c_str(), message.size() );
-                    // Alternatively a std::ostream could be created using the
-                    // response as a buffer, and then the message sent using <<
-                    // or write()
-                }
-                catch( const show::connection_timeout& ct )
-                {
-                    std::cout
-                        << "timed out waiting on client, closing connection"
-                        << std::endl
-                    ;
-                    break;
-                }
+                show::response_code code = {
+                    200,
+                    "OK"
+                };
+                show::headers_type headers = {
+                    // Set the Server header to display the SHOW version
+                    { "Server", {
+                        show::version::name
+                        + " v"
+                        + show::version::string
+                    } },
+                    // The message is simple plain text
+                    { "Content-Type", { "text/plain" } },
+                    { "Content-Length", {
+                        // Header values must be strings
+                        std::to_string( message.size() )
+                    } }
+                };
+                
+                show::response response(
+                    connection,
+                    show::http_protocol::HTTP_1_0,
+                    code,
+                    headers
+                );
+                
+                response.sputn( message.c_str(), message.size() );
+                // Alternatively a std::ostream could be created using the
+                // response as a buffer, and then the message sent using << or
+                // write()
             }
-            catch( const show::connection_timeout& ct )
+            catch( const show::connection_interrupted& cd )
             {
                 std::cout
-                    << "timed out waiting for connection, looping..."
+                    << "client "
+                    << connection.client_address()
+                    << " disconnected or timed out, closing connection"
                     << std::endl
                 ;
             }
-    }
-    catch( const std::exception& e )
-    {
-        std::cerr
-            << "uncaught std::exception in main(): "
-            << e.what()
-            << std::endl
-        ;
-        return -1;
-    }
-    catch( ... )
-    {
-        std::cerr
-            << "uncaught non-std::exception in main()"
-            << std::endl
-        ;
-        return -1;
-    }
+        }
+        catch( const show::connection_timeout& ct )
+        {
+            std::cout
+                << "timed out waiting for connection, looping..."
+                << std::endl
+            ;
+        }
     
     return 0;
 }
