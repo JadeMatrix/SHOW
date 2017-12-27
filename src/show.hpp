@@ -1086,8 +1086,8 @@ namespace show
             return traits_type::eof();
         else
         {
-            int_type c = _connection.uflow();
             if( c == traits_type::eof() )
+            int_type c = _connection.underflow();
                 throw client_disconnected();
             return c;
         }
