@@ -244,7 +244,7 @@ namespace show
         request( class connection& );
         request( request&& );   // See note in implementation
         
-        connection                      & connection            () const { return _connection;                  }
+        show::connection                & connection            () const { return _connection;                  }
         const std::string               & client_address        () const { return _connection.client_address(); }
         const unsigned int                client_port           () const { return _connection.client_port   (); }
         http_protocol                     protocol              () const { return _protocol;                    }
