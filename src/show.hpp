@@ -32,8 +32,8 @@ namespace show
         static const std::string name     = "SHOW";
         static const int         major    = 0;
         static const int         minor    = 8;
-        static const int         revision = 0;
-        static const std::string string   = "0.8.0";
+        static const int         revision = 1;
+        static const std::string string   = "0.8.1";
     }
     
     

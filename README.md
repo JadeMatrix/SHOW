@@ -2,7 +2,7 @@
 
 [![stable version](https://img.shields.io/github/release/JadeMatrix/SHOW.svg?label=stable)](https://github.com/JadeMatrix/SHOW/releases/latest)
 [![latest version](https://img.shields.io/github/release/JadeMatrix/SHOW/all.svg?label=latest)](https://github.com/JadeMatrix/SHOW/releases)
-[![Documentation Status](https://readthedocs.org/projects/show-cpp/badge/?version=v0.8.0)](http://show-cpp.readthedocs.io/en/v0.8.0/?badge=v0.8.0)
+[![Documentation Status](https://readthedocs.org/projects/show-cpp/badge/?version=v0.8.1)](http://show-cpp.readthedocs.io/en/v0.8.1/?badge=v0.8.1)
 
 SHOW is an idiomatic library for standalone webserver applications written for modern C++.  SHOW is simple in the same way the standard library is simple — it doesn't make any design decisions for the programmer, instead offering a set of primitives for building an HTTP web application.  Everything — when to serve, what requests to accept, even whether to send a response at all — is completely up to the programmer.
 
