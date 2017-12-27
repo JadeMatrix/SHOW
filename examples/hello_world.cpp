@@ -28,7 +28,10 @@ int main( int argc, char* argv[] )
                 // a request object is still needed ensure we're actually
                 // handing an HTTP connection
                 show::request request( connection );
-                request.flush();
+                
+                // See the HTTP/1.1 example for an explanation
+                if( !request.unknown_content_length() )
+                    request.flush();
                 
                 show::response_code code = {
                     200,
