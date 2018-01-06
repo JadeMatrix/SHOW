@@ -1,39 +1,39 @@
-cmake_minimum_required( VERSION 3.6 )
+CMAKE_MINIMUM_REQUIRED( VERSION 3.6 )
 
-set( CMAKE_CXX_STANDARD          11 )
-set( CMAKE_CXX_STANDARD_REQUIRED ON )
+SET( CMAKE_CXX_STANDARD          11 )
+SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
-project(
+PROJECT(
     "SHOW examples"
     CXX
 )
 
-include_directories(
+INCLUDE_DIRECTORIES(
     src
 )
 
 
-add_executable(
+ADD_EXECUTABLE(
     hello_world
     ../examples/hello_world.cpp
 )
-add_executable(
+ADD_EXECUTABLE(
     echo
     ../examples/echo.cpp
 )
-add_executable(
+ADD_EXECUTABLE(
     http_1_1
     ../examples/http_1_1.cpp
 )
-add_executable(
+ADD_EXECUTABLE(
     streaming_echo
     ../examples/streaming_echo.cpp
 )
-add_executable(
+ADD_EXECUTABLE(
     fileserve
     ../examples/fileserve.cpp
 )
-add_executable(
+ADD_EXECUTABLE(
     multiple_clients
     ../examples/multiple_clients.cpp
 )
