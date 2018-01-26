@@ -45,6 +45,7 @@ namespace show
     class server;
     class request;
     class response;
+    template< typename T > class chunked;   // See "show/chunked.hpp"
     
     
     // Basic types /////////////////////////////////////////////////////////////
@@ -238,6 +239,7 @@ namespace show
     {
         friend class response;
         friend class connection;
+        friend class chunked< request >;
         
     public:
         enum content_length_flag
@@ -264,61 +266,6 @@ namespace show
         
         bool eof() const;
         void flush();
-        
-        class chunk_iterator
-        {
-            friend class request;
-            
-        public:
-            using difference_type   = long long;
-            using value_type        = std::string;
-            using pointer           = std::string*;
-            using reference         = std::string&;
-            using iterator_category = std::input_iterator_tag;
-            
-        protected:
-            request*        _request;
-            value_type      _chunk;
-            difference_type _chunk_id = -1;
-            
-            chunk_iterator( request& r ) : _request( &r ) { _chunk_id = 0; ++( *this ); }
-            
-        public:
-            chunk_iterator() {}
-            chunk_iterator( const chunk_iterator& o ) = default;
-            
-            const value_type& operator* () const { return _chunk; }
-            chunk_iterator  & operator++()
-            {
-                // IMPLEMENT:
-                // if( _chunk_id >= _request -> chunks || _chunk_id < 0 )
-                //     _chunk_id = -1;
-                // else
-                //     _chunk = "chunk " + std::to_string( _chunk_id++ );
-                return *this;
-            }
-            bool              operator==( const chunk_iterator& o ) const
-            {
-                return (
-                    _chunk_id == -1 && o._chunk_id == -1
-                ) || (
-                    _request == o._request && _chunk_id == o._chunk_id
-                );
-            }
-            bool              operator!=( const chunk_iterator& o ) const
-            {
-                return !( *this == o );
-            }
-            chunk_iterator    operator++( int c )
-            {
-                chunk_iterator old( *this );
-                while( c-- ) ++( *this );
-                return old;
-            }
-        };
-        
-        chunk_iterator chunk_begin() { return chunk_iterator( *this ); }
-        chunk_iterator chunk_end  () { return chunk_iterator();        }
         
     protected:
         class connection& _connection;
@@ -348,6 +295,8 @@ namespace show
     
     class response : public std::streambuf
     {
+        friend class chunked< response >;
+        
     public:
         response(
             connection         & c,

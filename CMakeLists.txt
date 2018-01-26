@@ -37,3 +37,7 @@ ADD_EXECUTABLE(
     multiple_clients
     ../examples/multiple_clients.cpp
 )
+ADD_EXECUTABLE(
+    chunked_transfer_encoding
+    ../examples/chunked_transfer_encoding.cpp
+)
