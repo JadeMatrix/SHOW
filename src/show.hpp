@@ -283,8 +283,8 @@ namespace show
         virtual int_type        underflow();
         virtual int_type        uflow();
         virtual std::streamsize xsgetn(
-            char_type* s,
-            std::streamsize count
+            char_type*,
+            std::streamsize
         );
         virtual int_type        pbackfail(
             int_type c = std::char_traits< char >::eof()
@@ -295,10 +295,10 @@ namespace show
     {
     public:
         response(
-            connection         & c,
-            http_protocol        protocol,
-            const response_code& code,
-            const headers_type & headers
+            connection         &,
+            http_protocol       ,
+            const response_code&,
+            const headers_type &
         );
         ~response();
         
@@ -308,8 +308,8 @@ namespace show
         connection& _connection;
         
         virtual std::streamsize xsputn(
-            const char_type* s,
-            std::streamsize  count
+            const char_type*,
+            std::streamsize
         );
         virtual int_type overflow(
             int_type ch = std::char_traits< char >::eof()
