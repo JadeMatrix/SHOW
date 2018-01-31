@@ -24,8 +24,9 @@ namespace show
     );
     
     
-    class base64_decode_error : public exception {
-        using exception::exception;
+    class base64_decode_error : public std::runtime_error
+    {
+        using runtime_error::runtime_error;
     };
     
     

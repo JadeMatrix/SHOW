@@ -117,7 +117,7 @@ void handle_connection( show::connection& connection )
 
 int main( int argc, char* argv[] )
 {
-    std::string  host    = "::";    // IPv6 loopback (0.0.0.0 in IPv4)
+    std::string  host    = "::";    // IPv6 'any IP' (0.0.0.0 in IPv4)
     unsigned int port    = 9090;    // Some random higher port
     int          timeout = 10;      // Connection timeout in seconds
     std::string  message = "Hello World!";
