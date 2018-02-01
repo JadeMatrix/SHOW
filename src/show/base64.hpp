@@ -139,16 +139,8 @@ namespace show
         
         for( std::string::size_type i = 0; i < b64_size; ++i )
         {
-            if( o[ i ] == '=' )
-            {
-                if(
-                    i < unpadded_len
-                    && i >= unpadded_len - 2
-                )
-                    break;
-                else
-                    throw base64_decode_error( "premature padding" );
-            }
+            if( o[ i ] == '=' && i + 1 < b64_size && o[ i + 1 ] != '=' )
+                throw base64_decode_error( "premature padding" );
             
             std::map< char, /*unsigned*/ char >::iterator first, second;
             
@@ -174,7 +166,6 @@ namespace show
                     current_octet |= (
                         second -> second >> 4
                     ) & 0x03 /* 00000011 */;
-                decoded += current_octet;
                 break;
             case 1:
                 //        i
@@ -185,7 +176,6 @@ namespace show
                     current_octet |= (
                         second -> second >> 2
                     ) & 0x0F /* 00001111 */;
-                decoded += current_octet;
                 break;
             case 2:
                 //               i
@@ -194,14 +184,20 @@ namespace show
                 current_octet = ( first -> second << 6 ) & 0xC0 /* 11000000 */;
                 if( i + 1 < o.size() )
                     current_octet |= second -> second & 0x3F /* 00111111 */;
-                decoded += current_octet;
                 break;
             case 3:
                 //                      i
                 // ****** ****** ****** ******
                 // -
-                break;
+                continue;
             }
+            
+            // Skip null bytes added by padding (but continue to next iteration
+            // to check for premature padding)
+            if( current_octet == 0x00 && o[ i + 1 ] == '=' )
+                continue;
+            
+            decoded += current_octet;
         }
         
         return decoded;
