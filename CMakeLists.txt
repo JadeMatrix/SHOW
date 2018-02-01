@@ -19,15 +19,18 @@ INCLUDE_DIRECTORIES(
 # Tests ########################################################################
 
 if( UNITTEST_LIBRARY )
+    FIND_LIBRARY( CURL_LIBRARY curl )
     ADD_EXECUTABLE(
         tests
         ../tests/tests.cpp
         ../tests/type_tests.cpp
+        ../tests/server_tests.cpp
         ../tests/base64_tests.cpp
     )
     TARGET_LINK_LIBRARIES(
         tests
         ${UNITTEST_LIBRARY}
+        ${CURL_LIBRARY}
     )
 endif( UNITTEST_LIBRARY )
 
