@@ -111,7 +111,7 @@ namespace show
         std::string::size_type unpadded_len = o.size();
         
         for(
-            std::string::const_reverse_iterator r_iter = o.rbegin();
+            auto r_iter = o.rbegin();
             r_iter != o.rend();
             ++r_iter
         )
