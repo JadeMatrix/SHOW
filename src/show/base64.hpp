@@ -17,7 +17,7 @@ namespace show
     std::string base64_encode(
         const std::string& o,
         const char* chars = base64_chars_standard
-    ) noexcept;
+    );
     std::string base64_decode(
         const std::string& o,
         const char* chars = base64_chars_standard
@@ -33,7 +33,7 @@ namespace show
     inline std::string base64_encode(
         const std::string& o,
         const char* chars
-    ) noexcept
+    )
     {
         unsigned char current_sextet;
         std::string encoded;
