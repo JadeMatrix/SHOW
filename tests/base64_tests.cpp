@@ -263,7 +263,6 @@ SUITE( ShowBase64Tests )
         );
     }
     
-    // FAILING:
     TEST( DecodeHalfPadding )
     {
         std::string message_encoded = "MTIzNDU=";
@@ -276,7 +275,6 @@ SUITE( ShowBase64Tests )
         );
     }
     
-    // FAILING:
     TEST( DecodeFullPadding )
     {
         std::string message_encoded = "MTIzNA==";
@@ -425,7 +423,7 @@ SUITE( ShowBase64Tests )
     
     TEST( DecodeFailPrematurePadding )
     {
-        std::string message_encoded = "A=B";
+        std::string message_encoded = "A=B=";
         CHECK_THROW(
             show::base64_decode( message_encoded ),
             show::base64_decode_error
@@ -438,6 +436,42 @@ SUITE( ShowBase64Tests )
         CHECK_THROW(
             show::base64_decode( message_encoded ),
             show::base64_decode_error
+        );
+    }
+    
+    TEST( DecodeNullBytesString )
+    {
+        std::string message_encoded = "AAAA";
+        std::string message = show::base64_decode(
+            message_encoded
+        );
+        CHECK_EQUAL(
+            std::string( "\0\0\0", 3 ),
+            message
+        );
+    }
+    
+    TEST( DecodeNullBytesStringFullPadding )
+    {
+        std::string message_encoded = "AAA=";
+        std::string message = show::base64_decode(
+            message_encoded
+        );
+        CHECK_EQUAL(
+            std::string( "\0\0", 2 ),
+            message
+        );
+    }
+    
+    TEST( DecodeNullBytesStringHalfPadding )
+    {
+        std::string message_encoded = "AA==";
+        std::string message = show::base64_decode(
+            message_encoded
+        );
+        CHECK_EQUAL(
+            std::string( "\0", 1 ),
+            message
         );
     }
 }
