@@ -22,6 +22,7 @@ if( UNITTEST_LIBRARY )
     ADD_EXECUTABLE(
         tests
         ../tests/tests.cpp
+        ../tests/base64_tests.cpp
     )
     TARGET_LINK_LIBRARIES(
         tests
