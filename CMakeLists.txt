@@ -8,10 +8,29 @@ PROJECT(
     CXX
 )
 
+FIND_LIBRARY( UNITTEST_LIBRARY UnitTest++ )
+
 INCLUDE_DIRECTORIES(
     src
+    ${UTPP_INCLUDE_DIRS}
 )
 
+
+# Tests ########################################################################
+
+if( UNITTEST_LIBRARY )
+    ADD_EXECUTABLE(
+        tests
+        ../tests/tests.cpp
+    )
+    TARGET_LINK_LIBRARIES(
+        tests
+        ${UNITTEST_LIBRARY}
+    )
+endif( UNITTEST_LIBRARY )
+
+
+# Examples #####################################################################
 
 ADD_EXECUTABLE(
     hello_world
