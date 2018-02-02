@@ -135,6 +135,42 @@ SUITE( ShowBase64Tests )
         );
     }
     
+    TEST( EncodeNullBytesString )
+    {
+        std::string message = std::string( "\0\0\0", 3 );
+        std::string message_encoded = show::base64_decode(
+            message
+        );
+        CHECK_EQUAL(
+            "AAAA",
+            message_encoded
+        );
+    }
+    
+    TEST( EncodeNullBytesStringFullPadding )
+    {
+        std::string message = std::string( "\0\0", 2 );
+        std::string message_encoded = show::base64_decode(
+            message
+        );
+        CHECK_EQUAL(
+            "AAA=",
+            message_encoded
+        );
+    }
+    
+    TEST( EncodeNullBytesStringHalfPadding )
+    {
+        std::string message = std::string( "\0", 1 );
+        std::string message_encoded = show::base64_decode(
+            message
+        );
+        CHECK_EQUAL(
+            "AA==",
+            message_encoded
+        );
+    }
+    
     TEST( EncodeLongString )
     {
         std::string message_encoded = show::base64_encode(
@@ -328,28 +364,69 @@ SUITE( ShowBase64Tests )
     TEST( DecodeFailMissingPadding )
     {
         std::string message_encoded = "SGVsbG8gV29ybGQ";
-        CHECK_THROW(
-            show::base64_decode( message_encoded ),
-            show::base64_decode_error
-        );
+        try
+        {
+            show::base64_decode( message_encoded );
+            CHECK( false );
+        }
+        catch( const show::base64_decode_error& e )
+        {
+            CHECK_EQUAL(
+                "missing required padding",
+                e.what()
+            );
+        }
     }
     
     TEST( DecodeFailPrematurePadding )
     {
         std::string message_encoded = "A=B=";
-        CHECK_THROW(
-            show::base64_decode( message_encoded ),
-            show::base64_decode_error
-        );
+        try
+        {
+            show::base64_decode( message_encoded );
+            CHECK( false );
+        }
+        catch( const show::base64_decode_error& e )
+        {
+            CHECK_EQUAL(
+                "premature padding",
+                e.what()
+            );
+        }
     }
     
-    TEST( DecodeFailNotInDictionary )
+    TEST( DecodeFailStartNotInDictionary )
+    {
+        std::string message_encoded = "*GV$bG8g?29ybGQh";
+        try
+        {
+            show::base64_decode( message_encoded );
+            CHECK( false );
+        }
+        catch( const show::base64_decode_error& e )
+        {
+            CHECK_EQUAL(
+                "invalid base64 character",
+                e.what()
+            );
+        }
+    }
+    
+    TEST( DecodeFailMidNotInDictionary )
     {
         std::string message_encoded = "SGV$bG8g?29ybGQh";
-        CHECK_THROW(
-            show::base64_decode( message_encoded ),
-            show::base64_decode_error
-        );
+        try
+        {
+            show::base64_decode( message_encoded );
+            CHECK( false );
+        }
+        catch( const show::base64_decode_error& e )
+        {
+            CHECK_EQUAL(
+                "invalid base64 character",
+                e.what()
+            );
+        }
     }
     
     TEST( DecodeNullBytesString )

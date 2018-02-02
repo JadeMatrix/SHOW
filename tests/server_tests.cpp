@@ -178,6 +178,7 @@ SUITE( ShowServerTests )
         try
         {
             show::server test_server( "::", ntohs( socket_address.sin6_port ) );
+            CHECK( false );
         }
         catch( const show::socket_error& e )
         {
@@ -195,6 +196,7 @@ SUITE( ShowServerTests )
         try
         {
             show::server test_server( "*", 9090 );
+            CHECK( false );
         }
         catch( const show::socket_error& e )
         {
@@ -308,4 +310,5 @@ SUITE( ShowServerTests )
     }
     
     // TODO: TEST( UseRandomPort ) -- ensure updates server.port
+    // TODO: create & serve on non-main thread
 }
