@@ -10,6 +10,8 @@
 #include <string>
 #include <thread>
 
+#include "constants.hpp"
+
 
 namespace
 {
@@ -1098,22 +1100,118 @@ SUITE( ShowRequestTests )
     
     TEST( ReadContent )
     {
-        // read content
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: 27\r\n"
+                "\r\n"
+                "Lorem ipsum dolor\r\n"
+                "sit amet"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::NO,
+                    test_request.unknown_content_length()
+                );
+                if( !test_request.unknown_content_length() )
+                {
+                    std::string content = std::string(
+                        std::istreambuf_iterator< char >( &test_request ),
+                        {}
+                    );
+                    CHECK_EQUAL(
+                        "Lorem ipsum dolor\r\nsit amet",
+                        content
+                    );
+                }
+            }
+        );
     }
     
     TEST( ReadLongContent )
     {
-        // read long content
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: " + std::to_string( long_message.size() ) + "\r\n"
+                "\r\n"
+                + long_message
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::NO,
+                    test_request.unknown_content_length()
+                );
+                if( !test_request.unknown_content_length() )
+                {
+                    std::string content = std::string(
+                        std::istreambuf_iterator< char >( &test_request ),
+                        {}
+                    );
+                    CHECK_EQUAL(
+                        long_message,
+                        content
+                    );
+                }
+            }
+        );
     }
     
     TEST( ReadVeryLongContent )
     {
-        // read very long content
+        std::string very_long_content;
+        for( int i = 0; i < 256; ++i )
+            very_long_content += long_message;
+        
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: " + std::to_string( very_long_content.size() ) + "\r\n"
+                "\r\n"
+                + very_long_content
+            ),
+            [ very_long_content ]( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::NO,
+                    test_request.unknown_content_length()
+                );
+                if( !test_request.unknown_content_length() )
+                {
+                    std::string content = std::string(
+                        std::istreambuf_iterator< char >( &test_request ),
+                        {}
+                    );
+                    CHECK_EQUAL(
+                        very_long_content,
+                        content
+                    );
+                }
+            }
+        );
     }
     
     TEST( ClientDisconnect )
     {
-        // client_disconnected after one request
+        handle_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Length: 0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                show::request test_request_1( test_connection );
+                test_request_1.flush();
+                try
+                {
+                    show::request test_request_2( test_connection );
+                }
+                catch( const show::client_disconnected& e )
+                {}
+            }
+        );
     }
     
     // Failure tests ///////////////////////////////////////////////////////////
@@ -1121,21 +1219,165 @@ SUITE( ShowRequestTests )
     TEST( FailIncompleteClientHang )
     {
         // connection_timeout on incomplete request w/ client hanging
+        std::string address = "::";
+        int port = 9090;
+        show::server test_server( address, port, 1 );
+        
+        auto request_thread = send_request_async(
+            address,
+            port,
+            []( show::socket_fd request_socket ){
+                write_to_socket(
+                    request_socket,
+                    "GET / HTTP/1.0\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Content-Len"
+                );
+                std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+            }
+        );
+        
+        try
+        {
+            show::connection test_connection = test_server.serve();
+            CHECK_THROW(
+                ( show::request( test_connection ) ),
+                show::connection_timeout
+            );
+        }
+        catch( ... )
+        {
+            request_thread.join();
+            throw;
+        }
+        
+        request_thread.join();
     }
     
     TEST( FailIncompleteClientDisconnect )
     {
         // client_disconnected on incomplete request w/ client incomplete
+        std::string address = "::";
+        int port = 9090;
+        show::server test_server( address, port, 1 );
+        
+        auto request_thread = send_request_async(
+            address,
+            port,
+            []( show::socket_fd request_socket ){
+                write_to_socket(
+                    request_socket,
+                    "GET / HTTP/1.0\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Content-Len"
+                );
+            }
+        );
+        
+        try
+        {
+            show::connection test_connection = test_server.serve();
+            CHECK_THROW(
+                ( show::request( test_connection ) ),
+                show::client_disconnected
+            );
+        }
+        catch( ... )
+        {
+            request_thread.join();
+            throw;
+        }
+        
+        request_thread.join();
     }
     
     TEST( FailTruncatedContentClientHang )
     {
-        // connection_timeout on content length < Content-Length w/ client hanging
+        // connection_timeout on content length < Content-Length w/ client
+        // hanging
+        std::string address = "::";
+        int port = 9090;
+        show::server test_server( address, port, 1 );
+        
+        auto request_thread = send_request_async(
+            address,
+            port,
+            []( show::socket_fd request_socket ){
+                write_to_socket(
+                    request_socket,
+                    "GET / HTTP/1.0\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Content-Length: 200\r\n"
+                    "\r\n"
+                    "Lorem ipsum dolor sit amet,"
+                );
+                std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+            }
+        );
+        
+        try
+        {
+            show::connection test_connection = test_server.serve();
+            show::request test_request( test_connection );
+            CHECK_THROW(
+                ( std::string(
+                    std::istreambuf_iterator< char >( &test_request ),
+                    {}
+                ) ),
+                show::connection_timeout
+            );
+        }
+        catch( ... )
+        {
+            request_thread.join();
+            throw;
+        }
+        
+        request_thread.join();
     }
     
     TEST( FailTruncatedContentClientDisconnect )
     {
-        // client_disconnected on content length < Content-Length w/ client incomplete
+        // client_disconnected on content length < Content-Length w/ client
+        // incomplete
+        std::string address = "::";
+        int port = 9090;
+        show::server test_server( address, port, 1 );
+        
+        auto request_thread = send_request_async(
+            address,
+            port,
+            []( show::socket_fd request_socket ){
+                write_to_socket(
+                    request_socket,
+                    "GET / HTTP/1.0\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Content-Length: 200\r\n"
+                    "\r\n"
+                    "Lorem ipsum dolor sit amet,"
+                );
+            }
+        );
+        
+        try
+        {
+            show::connection test_connection = test_server.serve();
+            show::request test_request( test_connection );
+            CHECK_THROW(
+                ( std::string(
+                    std::istreambuf_iterator< char >( &test_request ),
+                    {}
+                ) ),
+                show::client_disconnected
+            );
+        }
+        catch( ... )
+        {
+            request_thread.join();
+            throw;
+        }
+        
+        request_thread.join();
     }
     
     TEST( FailMultipleCR )
