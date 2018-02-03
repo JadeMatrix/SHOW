@@ -80,9 +80,9 @@ namespace
         }
     }
     
-    void run_checks_against_request(
+    void handle_request(
         const std::string& request,
-        const std::function< void( show::request& ) >& checks_callback
+        const std::function< void( show::connection& ) >& handler_callback
     )
     {
         std::string address = "::";
@@ -103,8 +103,7 @@ namespace
         try
         {
             show::connection test_connection = test_server.serve();
-            show::request test_request( test_connection );
-            checks_callback( test_request );
+            handler_callback( test_connection );
         }
         catch( ... )
         {
@@ -113,6 +112,20 @@ namespace
         }
         
         request_thread.join();
+    }
+    
+    void run_checks_against_request(
+        const std::string& request,
+        const std::function< void( show::request& ) >& checks_callback
+    )
+    {
+        handle_request(
+            request,
+            [ checks_callback ]( show::connection& test_connection ){
+                show::request test_request( test_connection );
+                checks_callback( test_request );
+            }
+        );
     }
 }
 
@@ -1087,83 +1100,283 @@ SUITE( ShowRequestTests )
     
     TEST( FailMultipleCR )
     {
-        std::string address = "::";
-        int port = 9090;
-        show::server test_server( address, port, 2 );
-        
-        auto request_thread = send_request_async(
-            address,
-            port,
-            []( show::socket_fd request_socket ){
-                write_to_socket(
-                    request_socket,
-                    "GET / HTTP/1.0\r\r"
-                    "\r\r"
-                );
+        handle_request(
+            (
+                "GET / HTTP/1.0\r\r"
+                "\r\r"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "malformed HTTP line ending",
+                        e.what()
+                    );
+                }
             }
         );
-        
-        try
-        {
-            show::connection test_connection = test_server.serve();
-            try
-            {
-                show::request test_request( test_connection );
-            }
-            catch( const show::request_parse_error& e )
-            {
-                CHECK_EQUAL(
-                    "malformed HTTP line ending",
-                    e.what()
-                );
-            }
-        }
-        catch( ... )
-        {
-            request_thread.join();
-            throw;
-        }
-        
-        request_thread.join();
     }
     
     TEST( FailPathElementURLEncodedIncomplete )
     {
-        // bad URL encoding in path element => request_parse_error("incomplete URL-encoded sequence")
+        handle_request(
+            (
+                "GET /hello%2 HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "incomplete URL-encoded sequence",
+                        e.what()
+                    );
+                }
+            }
+        );
     }
     
     TEST( FailPathElementURLEncodedInvalid )
     {
-        // bad URL encoding in path element => request_parse_error("invalid URL-encoded sequence")
+        handle_request(
+            (
+                "GET /hello%2xworld HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "invalid URL-encoded sequence",
+                        e.what()
+                    );
+                }
+            }
+        );
     }
     
     TEST( FailQueryArgKeyURLEncodedIncomplete )
     {
-        // bad URL encoding in query args key => request_parse_error("incomplete URL-encoded sequence")
+        handle_request(
+            (
+                "GET /hello/world?fo%f=bar HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "incomplete URL-encoded sequence",
+                        e.what()
+                    );
+                }
+            }
+        );
     }
     
     TEST( FailQueryArgKeyURLEncodedInvalid )
     {
-        // bad URL encoding in query args key => request_parse_error("invalid URL-encoded sequence")
+        handle_request(
+            (
+                "GET /hello/world?fo%xx=bar HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "invalid URL-encoded sequence",
+                        e.what()
+                    );
+                }
+            }
+        );
     }
     
     TEST( FailQueryArgValueURLEncodedIncomplete )
     {
-        // bad URL encoding in query args value => request_parse_error("incomplete URL-encoded sequence")
+        handle_request(
+            (
+                "GET /hello/world?foo=bar%c HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "incomplete URL-encoded sequence",
+                        e.what()
+                    );
+                }
+            }
+        );
     }
     
     TEST( FailQueryArgValueURLEncodedInvalid )
     {
-        // bad URL encoding in query args value => request_parse_error("invalid URL-encoded sequence")
+        handle_request(
+            (
+                "GET /hello/world?foo=bar%^^ HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "invalid URL-encoded sequence",
+                        e.what()
+                    );
+                }
+            }
+        );
     }
     
     TEST( FailInvalidHeaderName )
     {
-        // invalid header name => request_parse_error("malformed header")
+        handle_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Bad Header: good value\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "malformed header",
+                        e.what()
+                    );
+                }
+            }
+        );
     }
     
-    TEST( FailMissingHeaderValue )
+    TEST( FailMissingHeaderValueMiddle )
     {
-        // missing header value => request_parse_error("malformed header") (possibly failing)
+        handle_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Bad-Header:\r\n"
+                "Good-Header: good value\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "malformed header",
+                        e.what()
+                    );
+                }
+            }
+        );
+    }
+    
+    TEST( FailMissingHeaderValueEnd )
+    {
+        handle_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Bad-Header:\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "malformed header",
+                        e.what()
+                    );
+                }
+            }
+        );
+    }
+    
+    TEST( FailMissingHeaderValueWithPadding )
+    {
+        handle_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Bad-Header: \r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "malformed header",
+                        e.what()
+                    );
+                }
+            }
+        );
+    }
+    
+    TEST( FailMissingHeaderPadding )
+    {
+        handle_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Bad-Header:value\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                try
+                {
+                    show::request test_request( test_connection );
+                }
+                catch( const show::request_parse_error& e )
+                {
+                    CHECK_EQUAL(
+                        "malformed header",
+                        e.what()
+                    );
+                }
+            }
+        );
     }
 }
