@@ -5,7 +5,7 @@ compiler:
 script:
   - mkdir make
   - cd make
-  - cmake .. && make tests
+  - cmake -DUTPP_INCLUDE_DIRS=/usr/local/include .. && make tests
   - ./tests
 install:
   - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install libunittest++-dev libcurl4-openssl-dev; else brew install unittest-cpp; fi
