@@ -8,7 +8,7 @@ script:
   - cmake .. && make tests
   - ./tests
 install:
-  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install libunittest++-dev; else brew install unittest-cpp; fi
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install libunittest++-dev libcurl-dev; else brew install unittest-cpp; fi
 matrix:
   include:
     - os: osx
