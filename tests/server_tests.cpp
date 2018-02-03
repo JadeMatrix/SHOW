@@ -237,9 +237,10 @@ SUITE( ShowServerTests )
         {
             test_server.serve();
         }
-        catch( const show::connection_timeout& e )
+        catch( ... )
         {
-            CHECK( false );
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();
@@ -270,9 +271,10 @@ SUITE( ShowServerTests )
         {
             test_server.serve();
         }
-        catch( const show::connection_timeout& e )
+        catch( ... )
         {
-            CHECK( false );
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();
@@ -301,9 +303,10 @@ SUITE( ShowServerTests )
         {
             test_server.serve();
         }
-        catch( const show::connection_timeout& e )
+        catch( ... )
         {
-            CHECK( false );
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();

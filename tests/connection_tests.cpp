@@ -49,7 +49,7 @@ SUITE( ShowConnectionTests )
             }
         } );
         
-        // Scope to destroy connection so cURL thread can exit
+        try
         {
             auto test_connection = test_server.serve();
             
@@ -61,6 +61,11 @@ SUITE( ShowConnectionTests )
                 test_server.port(),
                 test_connection.server_port()
             );
+        }
+        catch( ... )
+        {
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();
@@ -91,7 +96,7 @@ SUITE( ShowConnectionTests )
             }
         } );
         
-        // Scope to destroy connection so cURL thread can exit
+        try
         {
             auto test_connection = test_server.serve();
             CHECK_EQUAL(
@@ -102,6 +107,11 @@ SUITE( ShowConnectionTests )
                 client_port,
                 test_connection.client_port()
             );
+        }
+        catch( ... )
+        {
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();
@@ -152,9 +162,10 @@ SUITE( ShowConnectionTests )
                 test_connection.timeout()
             );
         }
-        catch( const show::connection_timeout& e )
+        catch( ... )
         {
-            CHECK( false );
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();
@@ -202,9 +213,10 @@ SUITE( ShowConnectionTests )
                 test_connection.timeout()
             );
         }
-        catch( const show::connection_timeout& e )
+        catch( ... )
         {
-            CHECK( false );
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();
@@ -252,9 +264,10 @@ SUITE( ShowConnectionTests )
                 test_connection.timeout()
             );
         }
-        catch( const show::connection_timeout& e )
+        catch( ... )
         {
-            CHECK( false );
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();
@@ -302,9 +315,10 @@ SUITE( ShowConnectionTests )
             
             test_connection_thread.join();
         }
-        catch( const show::connection_timeout& e )
+        catch( ... )
         {
-            CHECK( false );
+            test_thread.join();
+            throw;
         }
         
         test_thread.join();
