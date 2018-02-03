@@ -209,6 +209,19 @@ SUITE( ShowURLEncodeTests )
         );
     }
     
+    TEST( DecodeLowercase )
+    {
+        std::string message_encoded =
+            "%e4%b8%b9%e7%be%bd%e3%81%95%e3%82%93%e3%81%ae%e5%ba%ad%e3%81%ab%e3%81%af";
+        std::string message = show::url_decode(
+            message_encoded
+        );
+        CHECK_EQUAL(
+            "丹羽さんの庭には",
+            message
+        );
+    }
+    
     TEST( DecodeLongString )
     {
         std::string message_encoded = show::url_decode(
