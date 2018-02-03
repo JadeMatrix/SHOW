@@ -1,0 +1,14 @@
+language: cpp
+compiler:
+  - clang
+  - gcc
+script:
+  - mkdir make
+  - cd make
+  - cmake .. && make tests
+matrix:
+  include:
+    - os: osx
+      env:
+        - MATRIX_EVAL="brew install cmake"
+    - os: linux
