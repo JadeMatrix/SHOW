@@ -5,7 +5,8 @@ compiler:
 script:
   - mkdir make
   - cd make
-  - if [ $TRAVIS_OS_NAME = linux ]; then cmake -DUTPP_INCLUDE_DIRS=/usr/include ..; else cmake ..; fi
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo ln -s /usr/include/unittest++ /usr/include/UnitTest++; fi
+  - cmake ..
   - make tests
   - ./tests
 install:
