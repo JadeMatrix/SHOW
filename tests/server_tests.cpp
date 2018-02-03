@@ -1,11 +1,11 @@
 #include <UnitTest++/UnitTest++.h>
 #include <show.hpp>
 
+#include <curl/curl.h>
+
 #include <chrono>
 #include <string>
 #include <thread>
-
-#include <curl/curl.h>
 
 
 SUITE( ShowServerTests )
