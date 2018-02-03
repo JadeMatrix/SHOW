@@ -130,12 +130,6 @@ namespace
 }
 
 
-// std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-
-// // DEBUG:
-// std::cout << std::to_string( __LINE__ ) + "\n";
-
-
 SUITE( ShowRequestTests )
 {
     
