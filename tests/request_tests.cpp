@@ -887,7 +887,7 @@ SUITE( ShowRequestTests )
             []( show::request& test_request ){
                 CHECK_EQUAL(
                     show::headers_type( {
-                        { "Multi-Line-Header", { "part 1,\r\n\tpart 2" } },
+                        { "Multi-Line-Header", { "part 1, part 2" } },
                         { "Content-Length",    { "0" } }
                     } ),
                     test_request.headers()
@@ -909,7 +909,7 @@ SUITE( ShowRequestTests )
             []( show::request& test_request ){
                 CHECK_EQUAL(
                     show::headers_type( {
-                        { "Multi-Line-Header", { "part 1,\r\n\tpart 2" } },
+                        { "Multi-Line-Header", { "part 1, part 2" } },
                         { "Content-Length",    { "0" } }
                     } ),
                     test_request.headers()
@@ -925,14 +925,14 @@ SUITE( ShowRequestTests )
                 "GET / HTTP/1.0\r\n"
                 "Content-Length: 0\r\n"
                 "Multi-Line-Header:\r\n"
-                " part 1,\r\n"
+                "  part 1,\r\n"
                 "\tpart 2\r\n"
                 "\r\n"
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
                     show::headers_type( {
-                        { "Multi-Line-Header", { "\r\n part 1,\r\n\tpart 2" } },
+                        { "Multi-Line-Header", { "part 1, part 2" } },
                         { "Content-Length",    { "0" } }
                     } ),
                     test_request.headers()
@@ -948,14 +948,14 @@ SUITE( ShowRequestTests )
                 "GET / HTTP/1.0\r\n"
                 "Content-Length: 0\r\n"
                 "Multi-Line-Header:\t\r\n"
-                " part 1,\r\n"
+                "  part 1,\r\n"
                 "\tpart 2\r\n"
                 "\r\n"
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
                     show::headers_type( {
-                        { "Multi-Line-Header", { "\r\n part 1,\r\n\tpart 2" } },
+                        { "Multi-Line-Header", { "part 1, part 2" } },
                         { "Content-Length",    { "0" } }
                     } ),
                     test_request.headers()
