@@ -6,9 +6,14 @@ script:
   - mkdir make
   - cd make
   - cmake .. && make tests
+  - ./tests
 matrix:
   include:
     - os: osx
       env:
-        - MATRIX_EVAL="brew install cmake"
+        - MATRIX_EVAL="brew install cmake && brew install unittest-cpp"
     - os: linux
+      addons:
+        apt:
+          packages:
+            - libunittest++-dev
