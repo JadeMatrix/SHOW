@@ -28,6 +28,7 @@ if( UNITTEST_LIBRARY )
         ../tests/base64_tests.cpp
         ../tests/connection_tests.cpp
         ../tests/url_encode_tests.cpp
+        ../tests/request_tests.cpp
     )
     TARGET_LINK_LIBRARIES(
         tests
