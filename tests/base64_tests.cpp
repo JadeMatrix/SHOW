@@ -138,7 +138,7 @@ SUITE( ShowBase64Tests )
     TEST( EncodeNullBytesString )
     {
         std::string message = std::string( "\0\0\0", 3 );
-        std::string message_encoded = show::base64_decode(
+        std::string message_encoded = show::base64_encode(
             message
         );
         CHECK_EQUAL(
@@ -150,7 +150,7 @@ SUITE( ShowBase64Tests )
     TEST( EncodeNullBytesStringFullPadding )
     {
         std::string message = std::string( "\0\0", 2 );
-        std::string message_encoded = show::base64_decode(
+        std::string message_encoded = show::base64_encode(
             message
         );
         CHECK_EQUAL(
@@ -162,7 +162,7 @@ SUITE( ShowBase64Tests )
     TEST( EncodeNullBytesStringHalfPadding )
     {
         std::string message = std::string( "\0", 1 );
-        std::string message_encoded = show::base64_decode(
+        std::string message_encoded = show::base64_encode(
             message
         );
         CHECK_EQUAL(
