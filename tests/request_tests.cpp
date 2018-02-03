@@ -6,8 +6,9 @@
 #include <netdb.h>      // getprotobyname(), gethostbyname(), hostent
 #include <unistd.h>     // write()
 
-#include <thread>
+#include <chrono>
 #include <string>
+#include <thread>
 
 
 namespace
@@ -15,9 +16,7 @@ namespace
     std::thread send_request_async(
         std::string address,
         int port,
-        const std::function<
-            void( show::socket_fd )
-        >& request_feeder
+        const std::function< void( show::socket_fd ) >& request_feeder
     )
     {
         return std::thread( [
@@ -80,16 +79,1017 @@ namespace
             pos += written;
         }
     }
+    
+    void run_checks_against_request(
+        const std::string& request,
+        const std::function< void( show::request& ) >& checks_callback
+    )
+    {
+        std::string address = "::";
+        int port = 9090;
+        show::server test_server( address, port, 2 );
+        
+        auto request_thread = send_request_async(
+            address,
+            port,
+            [ request ]( show::socket_fd request_socket ){
+                write_to_socket(
+                    request_socket,
+                    request
+                );
+            }
+        );
+        
+        try
+        {
+            show::connection test_connection = test_server.serve();
+            show::request test_request( test_connection );
+            checks_callback( test_request );
+        }
+        catch( ... )
+        {
+            request_thread.join();
+            throw;
+        }
+        
+        request_thread.join();
+    }
 }
+
+
+// std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+
+// // DEBUG:
+// std::cout << std::to_string( __LINE__ ) + "\n";
 
 
 SUITE( ShowRequestTests )
 {
-    TEST( ParseSimpleRequest )
+    
+    TEST( SimpleRequest )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){}
+        );
+    }
+    
+    // Parse tests /////////////////////////////////////////////////////////////
+    
+    TEST( StandardMethod )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    "GET",
+                    test_request.method()
+                );
+            }
+        );
+    }
+    
+    TEST( CustomMethod )
+    {
+        run_checks_against_request(
+            (
+                "MYCUSTOMMETHOD / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    "MYCUSTOMMETHOD",
+                    test_request.method()
+                );
+            }
+        );
+    }
+    
+    TEST( MethodUppercasing )
+    {
+        run_checks_against_request(
+            (
+                "MyCustomMethod / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    "MYCUSTOMMETHOD",
+                    test_request.method()
+                );
+            }
+        );
+    }
+    
+    TEST( NewlinesLFOnly )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\n"
+                "\n"
+            ),
+            []( show::request& test_request ){}
+        );
+    }
+    
+    TEST( NewlinesMixed )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\n"
+                "Content-Length: 0\r\n"
+                "Host: example.com\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){}
+        );
+    }
+    
+    TEST( ProtocolAbsent )
+    {
+        run_checks_against_request(
+            (
+                "GET /\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::NONE,
+                    test_request.protocol()
+                );
+            }
+        );
+    }
+    
+    TEST( ProtocolUnknown )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/2\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::UNKNOWN,
+                    test_request.protocol()
+                );
+            }
+        );
+    }
+    
+    TEST( ProtocolHTTP_1_0 )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::HTTP_1_0,
+                    test_request.protocol()
+                );
+            }
+        );
+    }
+    
+    TEST( ProtocolHTTP_1_1 )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.1\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::HTTP_1_1,
+                    test_request.protocol()
+                );
+            }
+        );
+    }
+    
+    TEST( ProtocolLowercased )
+    {
+        run_checks_against_request(
+            (
+                "GET / http/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::HTTP_1_0,
+                    test_request.protocol()
+                );
+            }
+        );
+    }
+    
+    TEST( ProtocolString )
+    {
+        run_checks_against_request(
+            (
+                "GET / http/1\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::UNKNOWN,
+                    test_request.protocol()
+                );
+                CHECK_EQUAL(
+                    "http/1",
+                    test_request.protocol_string()
+                );
+            }
+        );
+    }
+    
+    TEST( PathEmpty )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathEmptyMultipleSlashes )
+    {
+        run_checks_against_request(
+            (
+                "GET // HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "", "" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathSingleElementSlashLeading )
+    {
+        run_checks_against_request(
+            (
+                "GET /foo HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "foo" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathSingleElementSlashTrailing )
+    {
+        run_checks_against_request(
+            (
+                "GET foo/ HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "foo", "" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathSingleElementSlashNone )
+    {
+        run_checks_against_request(
+            (
+                "GET foo HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "foo" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathSingleElementSlashBoth )
+    {
+        run_checks_against_request(
+            (
+                "GET /foo/ HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "foo", "" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathMultipleElements )
+    {
+        run_checks_against_request(
+            (
+                "GET /foo/bar/baz HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "foo", "bar", "baz" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathEmptyElement )
+    {
+        run_checks_against_request(
+            (
+                "GET /foo//bar HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "foo", "", "bar" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathURLEncoded )
+    {
+        run_checks_against_request(
+            (
+                "GET /hello%20world HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "hello world" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathURLEncodedPlus )
+    {
+        run_checks_against_request(
+            (
+                "GET /hello+world HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "hello world" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathURLEncodedContainsURL )
+    {
+        run_checks_against_request(
+            (
+                "GET /http%3A%2F%2Fexample.com%2F HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "http://example.com/" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( PathURLEncodedUnicode )
+    {
+        run_checks_against_request(
+            (
+                "GET /%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "こんにちは" } ),
+                    test_request.path()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashNoArgs )
+    {
+        run_checks_against_request(
+            (
+                "GET /? HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( {} ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsNoPathNoArgs )
+    {
+        run_checks_against_request(
+            (
+                "GET ? HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( {} ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsNoPathSingleArgNoValue )
+    {
+        run_checks_against_request(
+            (
+                "GET ?foo HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( { { "foo", { "" } } } ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashSingleArgNoValue )
+    {
+        run_checks_against_request(
+            (
+                "GET /?foo HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( { { "foo", { "" } } } ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashSingleArgEmptyValue )
+    {
+        run_checks_against_request(
+            (
+                "GET /?foo= HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( { { "foo", { "" } } } ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashNoQmark )
+    {
+        run_checks_against_request(
+            (
+                "GET /&foo=bar HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "&foo=bar" } ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( {} ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyNoSlashNoQmark )
+    {
+        run_checks_against_request(
+            (
+                "GET &foo=bar HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( { "&foo=bar" } ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( {} ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashSingleArg )
+    {
+        run_checks_against_request(
+            (
+                "GET /?foo=bar HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( { { "foo", { "bar" } } } ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashMultipleArgsSingleEmptyValue )
+    {
+        run_checks_against_request(
+            (
+                "GET /?foo=bar= HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( {
+                        { "foo", { "" } },
+                        { "bar", { "" } }
+                    } ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashMultipleArgsSingleValue )
+    {
+        run_checks_against_request(
+            (
+                "GET /?foo=bar=baz HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( {
+                        { "foo", { "baz" } },
+                        { "bar", { "baz" } }
+                    } ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashMultipleArgs )
+    {
+        run_checks_against_request(
+            (
+                "GET /?foo=1&bar=2 HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( {
+                        { "foo", { "1" } },
+                        { "bar", { "2" } }
+                    } ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( QueryArgsEmptyPathSlashEmptyArgValueArg )
+    {
+        run_checks_against_request(
+            (
+                "GET /?foo=&bar=baz HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    std::vector< std::string >( {} ),
+                    test_request.path()
+                );
+                CHECK_EQUAL(
+                    show::query_args_type( {
+                        { "foo", { ""    } },
+                        { "bar", { "baz" } }
+                    } ),
+                    test_request.query_args()
+                );
+            }
+        );
+    }
+    
+    TEST( NoHeaders )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::headers_type( {} ),
+                    test_request.headers()
+                );
+            }
+        );
+    }
+    
+    TEST( SingleHeader )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Test-Header: hello world\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::headers_type( {
+                        { "Test-Header", { "hello world" } }
+                    } ),
+                    test_request.headers()
+                );
+            }
+        );
+    }
+    
+    TEST( ExtraHeaderWhitespace )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Test-Header: \t   hello world\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::headers_type( {
+                        { "Test-Header",    { "hello world" } }
+                    } ),
+                    test_request.headers()
+                );
+            }
+        );
+    }
+    
+    TEST( MultipleHeaders )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Test-Header: hello world\r\n"
+                "Another-Header: !@#$()*+==\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: 0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::headers_type( {
+                        { "Test-Header",    { "hello world" } },
+                        { "Another-Header", { "!@#$()*+=="  } },
+                        { "Content-Type",   { "text/plain"  } },
+                        { "Content-Length", { "0"           } }
+                    } ),
+                    test_request.headers()
+                );
+            }
+        );
+    }
+    
+    TEST( DuplicateHeaders )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Duplicate-Header: value 1\r\n"
+                "Duplicate-Header: value 2\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: 0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                // Order in which duplicate headers appear is important to
+                // preserve, so make sure "value 1" comes before "value 2"
+                CHECK_EQUAL(
+                    show::headers_type( {
+                        { "Duplicate-Header", { "value 1", "value 2" } },
+                        { "Content-Type",     { "text/plain" } },
+                        { "Content-Length",   { "0"          } }
+                    } ),
+                    test_request.headers()
+                );
+                auto header_found = test_request.headers().find(
+                    "Duplicate-Header"
+                );
+                if( header_found != test_request.headers().end() )
+                    CHECK( header_found -> second != std::vector< std::string >(
+                        { "value 2", "value 1" }
+                    ) );
+            }
+        );
+    }
+    
+    TEST( MultiLineHeaderMiddle )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Multi-Line-Header: part 1,\r\n"
+                "\tpart 2\r\n"
+                "Content-Length: 0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::headers_type( {
+                        { "Duplicate-Header", { "part 1,\r\n\tpart 2" } },
+                        { "Content-Length",   { "0" } }
+                    } ),
+                    test_request.headers()
+                );
+            }
+        );
+    }
+    
+    TEST( MultiLineHeaderEnd )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Length: 0\r\n"
+                "Multi-Line-Header: part 1,\r\n"
+                "\tpart 2\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::headers_type( {
+                        { "Duplicate-Header", { "part 1,\r\n\tpart 2" } },
+                        { "Content-Length",   { "0" } }
+                    } ),
+                    test_request.headers()
+                );
+            }
+        );
+    }
+    
+    TEST( ContentLength )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: 11\r\n"
+                "\r\n"
+                "hello world"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::NO,
+                    test_request.unknown_content_length()
+                );
+                CHECK_EQUAL(
+                    false,
+                    ( bool )test_request.unknown_content_length()
+                );
+                CHECK_EQUAL(
+                    11,
+                    test_request.content_length()
+                );
+            }
+        );
+    }
+    
+    TEST( NoContentLength )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::YES,
+                    test_request.unknown_content_length()
+                );
+                CHECK_EQUAL(
+                    true,
+                    ( bool )test_request.unknown_content_length()
+                );
+            }
+        );
+    }
+    
+    TEST( UnrecognizedContentLength )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Length: asdf\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::MAYBE,
+                    test_request.unknown_content_length()
+                );
+                CHECK_EQUAL(
+                    true,
+                    ( bool )test_request.unknown_content_length()
+                );
+            }
+        );
+    }
+    
+    TEST( UnrecognizedHexContentLength )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Length: 8E\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::MAYBE,
+                    test_request.unknown_content_length()
+                );
+                CHECK_EQUAL(
+                    true,
+                    ( bool )test_request.unknown_content_length()
+                );
+            }
+        );
+    }
+    
+    TEST( UnrecognizedPrefixedHexContentLength )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Length: 0xC6\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::MAYBE,
+                    test_request.unknown_content_length()
+                );
+                CHECK_EQUAL(
+                    true,
+                    ( bool )test_request.unknown_content_length()
+                );
+            }
+        );
+    }
+    
+    TEST( MultipleContentLength )
+    {
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Length: 5\r\n"
+                "Content-Length: 223\r\n"
+                "\r\n"
+            ),
+            []( show::request& test_request ){
+                CHECK_EQUAL(
+                    show::request::MAYBE,
+                    test_request.unknown_content_length()
+                );
+                CHECK_EQUAL(
+                    true,
+                    ( bool )test_request.unknown_content_length()
+                );
+            }
+        );
+    }
+    
+    TEST( ReadContent )
+    {
+        // read content
+    }
+    
+    TEST( ReadLongContent )
+    {
+        // read long content
+    }
+    
+    TEST( ReadVeryLongContent )
+    {
+        // read very long content
+    }
+    
+    TEST( ClientDisconnect )
+    {
+        // client_disconnected after one request
+    }
+    
+    // Failure tests ///////////////////////////////////////////////////////////
+    
+    TEST( FailIncompleteClientHang )
+    {
+        // connection_timeout on incomplete request w/ client hanging
+    }
+    
+    TEST( FailIncompleteClientDisconnect )
+    {
+        // client_disconnected on incomplete request w/ client incomplete
+    }
+    
+    TEST( FailTruncatedContentClientHang )
+    {
+        // connection_timeout on content length < Content-Length w/ client hanging
+    }
+    
+    TEST( FailTruncatedContentClientDisconnect )
+    {
+        // client_disconnected on content length < Content-Length w/ client incomplete
+    }
+    
+    TEST( FailMultipleCR )
     {
         std::string address = "::";
         int port = 9090;
-        show::server test_server( address, port, -1 );
+        show::server test_server( address, port, 2 );
         
         auto request_thread = send_request_async(
             address,
@@ -97,313 +1097,73 @@ SUITE( ShowRequestTests )
             []( show::socket_fd request_socket ){
                 write_to_socket(
                     request_socket,
-                    "GET / HTTP/1.0\r\n"
-                    "\r\n"
+                    "GET / HTTP/1.0\r\r"
+                    "\r\r"
                 );
             }
         );
         
-        // Scope to destroy connection so request thread can exit
+        try
         {
             show::connection test_connection = test_server.serve();
-            show::request    test_request( test_connection );
+            try
+            {
+                show::request test_request( test_connection );
+            }
+            catch( const show::request_parse_error& e )
+            {
+                CHECK_EQUAL(
+                    "malformed HTTP line ending",
+                    e.what()
+                );
+            }
+        }
+        catch( ... )
+        {
+            request_thread.join();
+            throw;
         }
         
         request_thread.join();
     }
     
-    // Parse tests /////////////////////////////////////////////////////////////
-    
-    TEST(  )
+    TEST( FailPathElementURLEncodedIncomplete )
     {
-        // standard method
+        // bad URL encoding in path element => request_parse_error("incomplete URL-encoded sequence")
     }
     
-    TEST(  )
+    TEST( FailPathElementURLEncodedInvalid )
     {
-        // custom method
+        // bad URL encoding in path element => request_parse_error("invalid URL-encoded sequence")
     }
     
-    TEST(  )
-    {
-        // method uppercasing
-    }
-    
-    TEST(  )
-    {
-        // LF newlines only
-    }
-    
-    TEST(  )
-    {
-        // mixed newlines CRLF/LF
-    }
-    
-    TEST(  )
-    {
-        // detect http_protocol::NONE
-    }
-    
-    TEST(  )
-    {
-        // detect http_protocol::UNKNOWN
-    }
-    
-    TEST(  )
-    {
-        // detect http_protocol::HTTP_1_0
-    }
-    
-    TEST(  )
-    {
-        // detect http_protocol::HTTP_1_1
-    }
-    
-    TEST(  )
-    {
-        // protocol string
-    }
-    
-    TEST(  )
-    {
-        // path: / = {}
-    }
-    
-    TEST(  )
-    {
-        // path: /foo = {"foo"}
-    }
-    
-    TEST(  )
-    {
-        // path: foo/ = {"foo"}
-    }
-    
-    TEST(  )
-    {
-        // path: /foo/ = {"foo"}
-    }
-    
-    TEST(  )
-    {
-        // path: /foo/bar/baz = {"foo", "bar", "baz"}
-    }
-    
-    TEST(  )
-    {
-        // path: /hello+world = {"hello world"}
-    }
-    
-    TEST(  )
-    {
-        // path: /hello%20world = {"hello world"}
-    }
-    
-    TEST(  )
-    {
-        // path: /http%3A%2F%2Fexample.com%2F = {"http://example.com/"}
-    }
-    
-    TEST(  )
-    {
-        // path: /%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF = {"こんにちは"}
-    }
-    
-    TEST(  )
-    {
-        // path + query args: /? = {},{}
-    }
-    
-    TEST(  )
-    {
-        // path + query args: ? = {},{}
-    }
-    
-    TEST(  )
-    {
-        // path + query args: ?foo = {},{"foo":{""}}
-    }
-    
-    TEST(  )
-    {
-        // path + query args: /?foo = {},{"foo":{""}}
-    }
-    
-    TEST(  )
-    {
-        // path + query args: /?foo= = {},{"foo":{""}}
-    }
-    
-    TEST(  )
-    {
-        // path + query args: /&foo=bar = {"foo=bar"},{}
-    }
-    
-    TEST(  )
-    {
-        // query args: /?foo=bar = {"foo":{"bar"}}
-    }
-    
-    TEST(  )
-    {
-        // query args: /?foo=bar = {"foo":{"bar"}}
-    }
-    
-    TEST(  )
-    {
-        // query args: /?foo=bar=baz = {"foo":{"baz"},"bar":{"baz"}}
-    }
-    
-    TEST(  )
-    {
-        // query args: /?foo=1&bar=2 = {"foo":{"1"},"bar":{"2"}}
-    }
-    
-    TEST(  )
-    {
-        // query args: /?foo=&bar=baz = {"foo":{""},"bar":{"baz"}}
-    }
-    
-    TEST(  )
-    {
-        // no headers
-    }
-    
-    TEST(  )
-    {
-        // one header
-    }
-    
-    TEST(  )
-    {
-        // multiple headers
-    }
-    
-    TEST(  )
-    {
-        // duplicate headers
-    }
-    
-    TEST(  )
-    {
-        // multi-line header in middle (possibly failing)
-    }
-    
-    TEST(  )
-    {
-        // multi-line header at end (possibly failing)
-    }
-    
-    TEST(  )
-    {
-        // content length
-    }
-    
-    TEST(  )
-    {
-        // no content length
-    }
-    
-    TEST(  )
-    {
-        // unrecognized content length
-    }
-    
-    TEST(  )
-    {
-        // read content
-    }
-    
-    TEST(  )
-    {
-        // read long content
-    }
-    
-    TEST(  )
-    {
-        // read very long content
-    }
-    
-    TEST(  )
-    {
-        // client_disconnected after one request
-    }
-    
-    // Failure tests ///////////////////////////////////////////////////////////
-    
-    TEST(  )
-    {
-        // connection_timeout on incomplete request w/ client hanging
-    }
-    
-    TEST(  )
-    {
-        // client_disconnected on incomplete request w/ client incomplete
-    }
-    
-    TEST(  )
-    {
-        // connection_timeout on content length < Content-Length w/ client hanging
-    }
-    
-    TEST(  )
-    {
-        // client_disconnected on content length < Content-Length w/ client incomplete
-    }
-    
-    TEST(  )
-    {
-        // \r\r => request_parse_error("malformed HTTP line ending")
-    }
-    
-    TEST(  )
-    {
-        // bad URL encoding in path middle element => request_parse_error("incomplete URL-encoded sequence")
-    }
-    
-    TEST(  )
-    {
-        // bad URL encoding in path end element => request_parse_error("incomplete URL-encoded sequence")
-    }
-    
-    TEST(  )
-    {
-        // bad URL encoding in path middle element => request_parse_error("invalid URL-encoded sequence")
-    }
-    
-    TEST(  )
-    {
-        // bad URL encoding in path end element => request_parse_error("invalid URL-encoded sequence")
-    }
-    
-    TEST(  )
+    TEST( FailQueryArgKeyURLEncodedIncomplete )
     {
         // bad URL encoding in query args key => request_parse_error("incomplete URL-encoded sequence")
     }
     
-    TEST(  )
-    {
-        // bad URL encoding in query args value => request_parse_error("incomplete URL-encoded sequence")
-    }
-    
-    TEST(  )
+    TEST( FailQueryArgKeyURLEncodedInvalid )
     {
         // bad URL encoding in query args key => request_parse_error("invalid URL-encoded sequence")
     }
     
-    TEST(  )
+    TEST( FailQueryArgValueURLEncodedIncomplete )
+    {
+        // bad URL encoding in query args value => request_parse_error("incomplete URL-encoded sequence")
+    }
+    
+    TEST( FailQueryArgValueURLEncodedInvalid )
     {
         // bad URL encoding in query args value => request_parse_error("invalid URL-encoded sequence")
     }
     
-    TEST(  )
+    TEST( FailInvalidHeaderName )
     {
         // invalid header name => request_parse_error("malformed header")
     }
     
-    TEST(  )
+    TEST( FailMissingHeaderValue )
     {
         // missing header value => request_parse_error("malformed header") (possibly failing)
     }
-
 }
