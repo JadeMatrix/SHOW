@@ -112,63 +112,298 @@ SUITE( ShowRequestTests )
         request_thread.join();
     }
     
-    // standard method
-    // custom method
-    // method uppercasing
-    // LF newlines only
-    // mixed newlines CRLF/LF
-    // detect http_protocol::NONE
-    // detect http_protocol::UNKNOWN
-    // detect http_protocol::HTTP_1_0
-    // detect http_protocol::HTTP_1_1
-    // protocol string
-    // path: / = {}
-    // path: /foo = {"foo"}
-    // path: foo/ = {"foo"}
-    // path: /foo/ = {"foo"}
-    // path: /foo/bar/baz = {"foo", "bar", "baz"}
-    // path: /hello+world = {"hello world"}
-    // path: /hello%20world = {"hello world"}
-    // path: /http%3A%2F%2Fexample.com%2F = {"http://example.com/"}
-    // path: /%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF = {"こんにちは"}
-    // path + query args: /? = {},{}
-    // path + query args: ? = {},{}
-    // path + query args: ?foo = {},{"foo":{""}}
-    // path + query args: /?foo = {},{"foo":{""}}
-    // path + query args: /?foo= = {},{"foo":{""}}
-    // path + query args: /&foo=bar = {"foo=bar"},{}
-    // query args: /?foo=bar = {"foo":{"bar"}}
-    // query args: /?foo=bar = {"foo":{"bar"}}
-    // query args: /?foo=bar=baz = {"foo":{"baz"},"bar":{"baz"}}
-    // query args: /?foo=1&bar=2 = {"foo":{"1"},"bar":{"2"}}
-    // query args: /?foo=&bar=baz = {"foo":{""},"bar":{"baz"}}
-    // no headers
-    // one header
-    // multiple headers
-    // duplicate headers
-    // multi-line header in middle (possibly failing)
-    // multi-line header at end (possibly failing)
-    // content length
-    // no content length
-    // unrecognized content length
-    // read content
-    // read long content
-    // read very long content
-    // client_disconnected after one request
+    // Parse tests /////////////////////////////////////////////////////////////
     
-    // connection_timeout on incomplete request w/ client hanging
-    // client_disconnected on incomplete request w/ client incomplete
-    // connection_timeout on content length < Content-Length w/ client hanging
-    // client_disconnected on content length < Content-Length w/ client incomplete
-    // \r\r => request_parse_error("malformed HTTP line ending")
-    // bad URL encoding in path middle element => request_parse_error("incomplete URL-encoded sequence")
-    // bad URL encoding in path end element => request_parse_error("incomplete URL-encoded sequence")
-    // bad URL encoding in path middle element => request_parse_error("invalid URL-encoded sequence")
-    // bad URL encoding in path end element => request_parse_error("invalid URL-encoded sequence")
-    // bad URL encoding in query args key => request_parse_error("incomplete URL-encoded sequence")
-    // bad URL encoding in query args value => request_parse_error("incomplete URL-encoded sequence")
-    // bad URL encoding in query args key => request_parse_error("invalid URL-encoded sequence")
-    // bad URL encoding in query args value => request_parse_error("invalid URL-encoded sequence")
-    // invalid header name => request_parse_error("malformed header")
-    // missing header value => request_parse_error("malformed header") (possibly failing)
+    TEST(  )
+    {
+        // standard method
+    }
+    
+    TEST(  )
+    {
+        // custom method
+    }
+    
+    TEST(  )
+    {
+        // method uppercasing
+    }
+    
+    TEST(  )
+    {
+        // LF newlines only
+    }
+    
+    TEST(  )
+    {
+        // mixed newlines CRLF/LF
+    }
+    
+    TEST(  )
+    {
+        // detect http_protocol::NONE
+    }
+    
+    TEST(  )
+    {
+        // detect http_protocol::UNKNOWN
+    }
+    
+    TEST(  )
+    {
+        // detect http_protocol::HTTP_1_0
+    }
+    
+    TEST(  )
+    {
+        // detect http_protocol::HTTP_1_1
+    }
+    
+    TEST(  )
+    {
+        // protocol string
+    }
+    
+    TEST(  )
+    {
+        // path: / = {}
+    }
+    
+    TEST(  )
+    {
+        // path: /foo = {"foo"}
+    }
+    
+    TEST(  )
+    {
+        // path: foo/ = {"foo"}
+    }
+    
+    TEST(  )
+    {
+        // path: /foo/ = {"foo"}
+    }
+    
+    TEST(  )
+    {
+        // path: /foo/bar/baz = {"foo", "bar", "baz"}
+    }
+    
+    TEST(  )
+    {
+        // path: /hello+world = {"hello world"}
+    }
+    
+    TEST(  )
+    {
+        // path: /hello%20world = {"hello world"}
+    }
+    
+    TEST(  )
+    {
+        // path: /http%3A%2F%2Fexample.com%2F = {"http://example.com/"}
+    }
+    
+    TEST(  )
+    {
+        // path: /%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF = {"こんにちは"}
+    }
+    
+    TEST(  )
+    {
+        // path + query args: /? = {},{}
+    }
+    
+    TEST(  )
+    {
+        // path + query args: ? = {},{}
+    }
+    
+    TEST(  )
+    {
+        // path + query args: ?foo = {},{"foo":{""}}
+    }
+    
+    TEST(  )
+    {
+        // path + query args: /?foo = {},{"foo":{""}}
+    }
+    
+    TEST(  )
+    {
+        // path + query args: /?foo= = {},{"foo":{""}}
+    }
+    
+    TEST(  )
+    {
+        // path + query args: /&foo=bar = {"foo=bar"},{}
+    }
+    
+    TEST(  )
+    {
+        // query args: /?foo=bar = {"foo":{"bar"}}
+    }
+    
+    TEST(  )
+    {
+        // query args: /?foo=bar = {"foo":{"bar"}}
+    }
+    
+    TEST(  )
+    {
+        // query args: /?foo=bar=baz = {"foo":{"baz"},"bar":{"baz"}}
+    }
+    
+    TEST(  )
+    {
+        // query args: /?foo=1&bar=2 = {"foo":{"1"},"bar":{"2"}}
+    }
+    
+    TEST(  )
+    {
+        // query args: /?foo=&bar=baz = {"foo":{""},"bar":{"baz"}}
+    }
+    
+    TEST(  )
+    {
+        // no headers
+    }
+    
+    TEST(  )
+    {
+        // one header
+    }
+    
+    TEST(  )
+    {
+        // multiple headers
+    }
+    
+    TEST(  )
+    {
+        // duplicate headers
+    }
+    
+    TEST(  )
+    {
+        // multi-line header in middle (possibly failing)
+    }
+    
+    TEST(  )
+    {
+        // multi-line header at end (possibly failing)
+    }
+    
+    TEST(  )
+    {
+        // content length
+    }
+    
+    TEST(  )
+    {
+        // no content length
+    }
+    
+    TEST(  )
+    {
+        // unrecognized content length
+    }
+    
+    TEST(  )
+    {
+        // read content
+    }
+    
+    TEST(  )
+    {
+        // read long content
+    }
+    
+    TEST(  )
+    {
+        // read very long content
+    }
+    
+    TEST(  )
+    {
+        // client_disconnected after one request
+    }
+    
+    // Failure tests ///////////////////////////////////////////////////////////
+    
+    TEST(  )
+    {
+        // connection_timeout on incomplete request w/ client hanging
+    }
+    
+    TEST(  )
+    {
+        // client_disconnected on incomplete request w/ client incomplete
+    }
+    
+    TEST(  )
+    {
+        // connection_timeout on content length < Content-Length w/ client hanging
+    }
+    
+    TEST(  )
+    {
+        // client_disconnected on content length < Content-Length w/ client incomplete
+    }
+    
+    TEST(  )
+    {
+        // \r\r => request_parse_error("malformed HTTP line ending")
+    }
+    
+    TEST(  )
+    {
+        // bad URL encoding in path middle element => request_parse_error("incomplete URL-encoded sequence")
+    }
+    
+    TEST(  )
+    {
+        // bad URL encoding in path end element => request_parse_error("incomplete URL-encoded sequence")
+    }
+    
+    TEST(  )
+    {
+        // bad URL encoding in path middle element => request_parse_error("invalid URL-encoded sequence")
+    }
+    
+    TEST(  )
+    {
+        // bad URL encoding in path end element => request_parse_error("invalid URL-encoded sequence")
+    }
+    
+    TEST(  )
+    {
+        // bad URL encoding in query args key => request_parse_error("incomplete URL-encoded sequence")
+    }
+    
+    TEST(  )
+    {
+        // bad URL encoding in query args value => request_parse_error("incomplete URL-encoded sequence")
+    }
+    
+    TEST(  )
+    {
+        // bad URL encoding in query args key => request_parse_error("invalid URL-encoded sequence")
+    }
+    
+    TEST(  )
+    {
+        // bad URL encoding in query args value => request_parse_error("invalid URL-encoded sequence")
+    }
+    
+    TEST(  )
+    {
+        // invalid header name => request_parse_error("malformed header")
+    }
+    
+    TEST(  )
+    {
+        // missing header value => request_parse_error("malformed header") (possibly failing)
+    }
+
 }
