@@ -11,8 +11,8 @@ compiler:
 before_install:
   - if [ $TRAVIS_OS_NAME = linux ]; then sudo docker pull centos:centos${OS_VERSION}; fi
 install:
-  - if [ $TRAVIS_OS_NAME = linux ]; then sudo docker run -i -t centos:centos${OS_VERSION} /bin/bash -c "yum -y install epel-release && yum -y install cmake3 libcurl-devel unittest-cpp-devel && mkdir make && cd make && cmake3 .. && make tests && ./tests"; fi
-  - if [ $TRAVIS_OS_NAME = osx ]; then brew install unittest-cpp && mkdir make && cd make && cmake .. && make tests && ./tests"; fi
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo docker run -i -t centos:centos${OS_VERSION} /bin/bash -c "yum -y install epel-release && yum -y install cmake3 libcurl-devel unittest-cpp-devel && cd ${TRAVIS_BUILD_DIR} && mkdir make && cd make && cmake3 .. && make tests && ./tests"; fi
+  - if [ $TRAVIS_OS_NAME = osx ]; then brew install unittest-cpp && cd ${TRAVIS_BUILD_DIR} && mkdir make && cd make && cmake .. && make tests && ./tests"; fi
 matrix:
   include:
     - os: osx
