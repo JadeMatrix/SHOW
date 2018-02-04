@@ -1,16 +1,27 @@
 language: cpp
+sudo: required
+services:
+  - docker
+env:
+  matrix:
+  # - OS_TYPE=centos OS_VERSION=6
+  - OS_TYPE=centos OS_VERSION=7
 compiler:
   - clang
   - gcc
 script:
   - mkdir make
   - cd make
-  - if [ $TRAVIS_OS_NAME = linux ]; then sudo ln -s /usr/include/unittest++ /usr/include/UnitTest++; fi
+  # - if [ $TRAVIS_OS_NAME = linux ]; then sudo ln -s /usr/include/unittest++ /usr/include/UnitTest++; fi
   - cmake ..
   - make tests
   - ./tests
+before_install:
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo docker pull centos:centos${OS_VERSION}; fi
 install:
-  - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install libunittest++-dev libcurl4-openssl-dev; else brew install unittest-cpp; fi
+  - if [ $TRAVIS_OS_NAME = linux ]; then sudo docker run -i -t centos:centos${OS_VERSION} /bin/bash -c "yum -y install epel-release && yum -y install libcurl-devel unittest-cpp-devel"; fi
+  # - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install libunittest++-dev libcurl4-openssl-dev; fi
+  - if [ $TRAVIS_OS_NAME = osx ]; then brew install unittest-cpp; fi
 matrix:
   include:
     - os: osx
