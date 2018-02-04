@@ -26,9 +26,6 @@ namespace
             port,
             request_feeder
         ]{
-            // hostent* server = gethostbyname( address );
-            // CHECK( server );
-            
             sockaddr_in6 server_address;
             std::memset( &server_address, 0, sizeof( server_address ) );
             server_address.sin6_family = AF_INET6;
@@ -50,13 +47,16 @@ namespace
                 SOCK_STREAM,
                 getprotobyname( "TCP" ) -> p_proto
             );
-            CHECK( request_socket >= 0 );
+            REQUIRE CHECK( request_socket >= 0 );
             
-            CHECK( connect(
+            int connect_result = connect(
                 request_socket,
                 ( sockaddr* )&server_address,
                 sizeof( server_address )
-            ) >= 0 );
+            );
+            if( connect_result < 0 )
+                close( request_socket );
+            REQUIRE CHECK( connect_result >= 0 );
             
             request_feeder( request_socket );
             
