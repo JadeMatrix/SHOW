@@ -78,6 +78,8 @@ namespace
                 m.size()
             );
             CHECK( written >= 0 );
+            if( written < 0 )
+                break;
             pos += written;
         }
     }
