@@ -859,7 +859,7 @@ SUITE( ShowRequestTests )
             []( show::request& test_request ){
                 // Order in which duplicate headers appear is important to
                 // preserve, so make sure "value 1" comes before "value 2"
-                CHECK_EQUAL(
+                REQUIRE CHECK_EQUAL(
                     show::headers_type( {
                         { "Duplicate-Header", { "value 1", "value 2" } },
                         { "Content-Type",     { "text/plain" } },
@@ -867,13 +867,13 @@ SUITE( ShowRequestTests )
                     } ),
                     test_request.headers()
                 );
-                auto header_found = test_request.headers().find(
-                    "Duplicate-Header"
-                );
-                if( header_found != test_request.headers().end() )
-                    CHECK( header_found -> second != std::vector< std::string >(
+                CHECK(
+                    test_request.headers().at(
+                        "Duplicate-Header"
+                    ) != show::headers_type::mapped_type(
                         { "value 2", "value 1" }
-                    ) );
+                    )
+                );
             }
         );
     }
