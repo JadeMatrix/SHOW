@@ -29,6 +29,7 @@ if( UNITTEST_LIBRARY )
         ../tests/connection_tests.cpp
         ../tests/url_encode_tests.cpp
         ../tests/request_tests.cpp
+        ../tests/response_tests.cpp
         ../tests/async_utils.cpp
     )
     TARGET_LINK_LIBRARIES(
