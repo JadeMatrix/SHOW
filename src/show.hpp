@@ -340,9 +340,10 @@ namespace show
         int timeout( int );
     };
     
-    class        socket_error : public std::runtime_error { using runtime_error::runtime_error; };
-    class request_parse_error : public std::runtime_error { using runtime_error::runtime_error; };
-    class    url_decode_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class            socket_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class     request_parse_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class response_marshall_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class        url_decode_error : public std::runtime_error { using runtime_error::runtime_error; };
     
     // Does not inherit from std::exception as these aren't meant to signal
     // strict error states
@@ -1184,18 +1185,41 @@ namespace show
             ++map_iter
         )
         {
+            if( map_iter -> first.size() < 1 )
+                throw response_marshall_error( "empty header name" );
+            else for( auto c : map_iter -> first )
+                if( !(
+                       ( c >= 'a' && c <= 'z' )
+                    || ( c >= 'A' && c <= 'Z' )
+                    || ( c >= '0' && c <= '9' )
+                    || c == '-'
+                ) )
+                    throw response_marshall_error( "invalid header name" );
+            
             for(
                 auto vector_iter = map_iter -> second.begin();
                 vector_iter != map_iter -> second.end();
                 ++vector_iter
             )
             {
-                headers_stream
-                    << map_iter -> first
-                    << ": "
-                    << *vector_iter
-                    << "\r\n"
-                ;
+                if( vector_iter -> size() < 1 )
+                    throw response_marshall_error( "empty header value" );
+                
+                headers_stream << map_iter -> first << ": ";
+                bool insert_newline = false;
+                for( auto c : *vector_iter )
+                    if( c == '\r' || c == '\n' )
+                        insert_newline = true;
+                    else
+                    {
+                        if( insert_newline )
+                        {
+                            headers_stream << "\r\n ";
+                            insert_newline = false;
+                        }
+                        headers_stream << c;
+                    }
+                headers_stream << "\r\n";
             }
         }
         headers_stream << "\r\n";

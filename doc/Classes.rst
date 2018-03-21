@@ -133,6 +133,14 @@ Exceptions
     
     As parsing the offending request almost certainly failed midway, garbage data will likely in the connection's buffer.  Currently, the only safe way to handle this exception is to close the connection.
 
+.. cpp:class:: response_marshall_error : std::runtime_error
+    
+    Thrown by :cpp:class:`response`'s constructor when the response arguments cannot be marshalled into a valid HTTP response:
+    
+    * One of the header names is an empty string
+    * One of the header names contains a character other than A-Z, a-z, 0-9, or _
+    * Any header value is an empty string
+
 .. cpp:class:: url_decode_error : std::runtime_error
     
     Thrown by :cpp:func:`url_decode()` when the input is not a valid `URL- or percent-encoded <https://en.wikipedia.org/wiki/Percent-encoding>`_ string.
