@@ -9,35 +9,32 @@
 // Implementations of operators from UnitTest++_wrap.hpp ///////////////////////
 
 
-namespace
+std::string escape_seq( const std::string& s )
 {
-    std::string escape_seq( const std::string& s )
-    {
-        std::stringstream escaped;
-        for( auto& c : s )
-            switch( c )
-            {
-            case '\n': escaped <<  "\\n"; break;
-            case '\r': escaped <<  "\\r"; break;
-            case '\t': escaped <<  "\\t"; break;
-            case  '"': escaped << "\\\""; break;
-            default:
-                if( c >= 0x20 && c <= 0x7E  )
-                    escaped << c;
-                else
-                    escaped
-                        << std::hex
-                        << "\\x"
-                        << std::uppercase
-                        << std::setfill( '0' )
-                        << std::setw( 2 )
-                        << ( unsigned int )( unsigned char )c
-                        << std::nouppercase
-                    ;
-                break;
-            }
-        return escaped.str();
-    }
+    std::stringstream escaped;
+    for( auto& c : s )
+        switch( c )
+        {
+        case '\n': escaped <<  "\\n"; break;
+        case '\r': escaped <<  "\\r"; break;
+        case '\t': escaped <<  "\\t"; break;
+        case  '"': escaped << "\\\""; break;
+        default:
+            if( c >= 0x20 && c <= 0x7E  )
+                escaped << c;
+            else
+                escaped
+                    << std::hex
+                    << "\\x"
+                    << std::uppercase
+                    << std::setfill( '0' )
+                    << std::setw( 2 )
+                    << ( unsigned int )( unsigned char )c
+                    << std::nouppercase
+                ;
+            break;
+        }
+    return escaped.str();
 }
 
 std::ostream& operator<<( std::ostream& out, const show::http_protocol& v )

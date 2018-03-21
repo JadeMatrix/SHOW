@@ -9,6 +9,8 @@
 #include <show.hpp>
 
 
+std::string escape_seq( const std::string& s );
+
 // Stream format operators for ues with UnitTest++ must be declared before
 // including UnitTest++.h
 std::ostream& operator<<( std::ostream& out, const show::http_protocol& v );

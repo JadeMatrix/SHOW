@@ -26,6 +26,11 @@ void run_checks_against_request(
     const std::string& request,
     const std::function< void( show::request& ) >& checks_callback
 );
+void run_checks_against_response(
+    const std::string& request,
+    const std::function< void( show::connection& ) >& server_callback,
+    const std::string& response
+);
 
 
 #endif
