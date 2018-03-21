@@ -799,7 +799,7 @@ namespace show
         bool in_endline_seq = false;
         // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
         bool check_for_multiline_header = false;
-        
+        bool path_begun = false;
         std::stack< std::string > key_buffer_stack;
         std::string key_buffer, value_buffer;
         
@@ -860,24 +860,36 @@ namespace show
                     case '?':
                         parse_state = READING_QUERY_ARGS;
                         break;
+                    case '\n':
+                        parse_state = READING_HEADER_NAME;
+                        break;
                     case ' ':
                         parse_state = READING_PROTOCOL;
                         break;
                     case '/':
-                        if( _path.size() > 0 )
+                        if( path_begun )
                             try
                             {
-                                *_path.rbegin() = url_decode( *_path.rbegin() );
+                                if( _path.size() < 1 )
+                                    _path.push_back( "" );
+                                *_path.rbegin() = url_decode(
+                                    *_path.rbegin()
+                                );
                                 _path.push_back( "" );
                             }
                             catch( const url_decode_error& ude )
                             {
                                 throw request_parse_error( ude.what() );
                             }
+                        else
+                            path_begun = true;
                         break;
                     default:
                         if( _path.size() < 1 )
+                        {
+                            path_begun = true;
                             _path.push_back( std::string( &current_char, 1 ) );
+                        }
                         else
                             _path[ _path.size() - 1 ] += current_char;
                         break;
