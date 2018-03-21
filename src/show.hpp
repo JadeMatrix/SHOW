@@ -985,7 +985,7 @@ namespace show
                         }
                     default:
                         if( !(
-                            ( current_char >= 'a' && current_char <= 'z' )
+                               ( current_char >= 'a' && current_char <= 'z' )
                             || ( current_char >= 'A' && current_char <= 'Z' )
                             || ( current_char >= '0' && current_char <= '9' )
                             || current_char == '-'
@@ -1322,7 +1322,7 @@ namespace show
         this -> timeout( timeout );
         
         sockaddr_in6 socket_address;
-        memset(&socket_address, 0, sizeof(socket_address));
+        std::memset( &socket_address, 0, sizeof( socket_address ) );
         socket_address.sin6_family = AF_INET6;
         socket_address.sin6_port   = htons( port );
         // socket_address.sin6_addr.s_addr  = in6addr_any;
