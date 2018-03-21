@@ -77,7 +77,7 @@ namespace show
     inline char _ASCII_upper( char c )
     {
         if( c >= 'a' && c <= 'z' )
-            c |= ~0x20;
+            c &= ~0x20;
         return c;
     }
     inline std::string _ASCII_upper( std::string s )
