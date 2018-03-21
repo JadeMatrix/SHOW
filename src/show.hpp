@@ -1071,12 +1071,18 @@ namespace show
             else
                 try
                 {
+                    std::size_t convert_stopped;
+                    std::size_t value_size =
+                        content_length_header -> second[ 0 ].size();
                     _content_length = std::stoull(
                         content_length_header -> second[ 0 ],
-                        nullptr,
-                        0
+                        &convert_stopped,
+                        10
                     );
-                    _unknown_content_length = NO;
+                    if( convert_stopped < value_size )
+                        _unknown_content_length = MAYBE;
+                    else
+                        _unknown_content_length = NO;
                 }
                 catch( const std::invalid_argument& e )
                 {
