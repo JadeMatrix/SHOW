@@ -1518,13 +1518,16 @@ namespace show
                     {
                         hex_convert_space[ 0 ] = o[ i + 1 ];
                         hex_convert_space[ 1 ] = o[ i + 2 ];
-                        
+                        std::size_t convert_stopped;
                         decoded += ( char )std::stoi(
                             hex_convert_space,
-                            0,
+                            &convert_stopped,
                             16
                         );
-                        
+                        if( convert_stopped < hex_convert_space.size() )
+                            throw url_decode_error(
+                                "invalid URL-encoded sequence"
+                            );
                         i += 2;
                     }
                     catch( const std::invalid_argument& e )
