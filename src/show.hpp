@@ -77,7 +77,7 @@ namespace show
     inline char _ASCII_upper( char c )
     {
         if( c >= 'a' && c <= 'z' )
-            c |= ~0x20;
+            c &= ~0x20;
         return c;
     }
     inline std::string _ASCII_upper( std::string s )
@@ -340,9 +340,10 @@ namespace show
         int timeout( int );
     };
     
-    class        socket_error : public std::runtime_error { using runtime_error::runtime_error; };
-    class request_parse_error : public std::runtime_error { using runtime_error::runtime_error; };
-    class    url_decode_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class            socket_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class     request_parse_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class response_marshall_error : public std::runtime_error { using runtime_error::runtime_error; };
+    class        url_decode_error : public std::runtime_error { using runtime_error::runtime_error; };
     
     // Does not inherit from std::exception as these aren't meant to signal
     // strict error states
@@ -798,7 +799,7 @@ namespace show
         bool in_endline_seq = false;
         // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
         bool check_for_multiline_header = false;
-        
+        bool path_begun = false;
         std::stack< std::string > key_buffer_stack;
         std::string key_buffer, value_buffer;
         
@@ -859,24 +860,36 @@ namespace show
                     case '?':
                         parse_state = READING_QUERY_ARGS;
                         break;
+                    case '\n':
+                        parse_state = READING_HEADER_NAME;
+                        break;
                     case ' ':
                         parse_state = READING_PROTOCOL;
                         break;
                     case '/':
-                        if( _path.size() > 0 )
+                        if( path_begun )
                             try
                             {
-                                *_path.rbegin() = url_decode( *_path.rbegin() );
+                                if( _path.size() < 1 )
+                                    _path.push_back( "" );
+                                *_path.rbegin() = url_decode(
+                                    *_path.rbegin()
+                                );
                                 _path.push_back( "" );
                             }
                             catch( const url_decode_error& ude )
                             {
                                 throw request_parse_error( ude.what() );
                             }
+                        else
+                            path_begun = true;
                         break;
                     default:
                         if( _path.size() < 1 )
+                        {
+                            path_begun = true;
                             _path.push_back( std::string( &current_char, 1 ) );
+                        }
                         else
                             _path[ _path.size() - 1 ] += current_char;
                         break;
@@ -972,7 +985,7 @@ namespace show
                         }
                     default:
                         if( !(
-                            ( current_char >= 'a' && current_char <= 'z' )
+                               ( current_char >= 'a' && current_char <= 'z' )
                             || ( current_char >= 'A' && current_char <= 'Z' )
                             || ( current_char >= '0' && current_char <= '9' )
                             || current_char == '-'
@@ -1004,8 +1017,14 @@ namespace show
                         break;
                     case ' ':
                     case '\t':
-                        if( value_buffer.size() < 1 )
-                            break;
+                        if( check_for_multiline_header )
+                            check_for_multiline_header = false;
+                        if(
+                            value_buffer.size() > 0
+                            && *value_buffer.rbegin() != ' '
+                        )
+                            value_buffer += ' ';
+                        break;
                     default:
                         if( check_for_multiline_header )
                         {
@@ -1052,12 +1071,18 @@ namespace show
             else
                 try
                 {
+                    std::size_t convert_stopped;
+                    std::size_t value_size =
+                        content_length_header -> second[ 0 ].size();
                     _content_length = std::stoull(
                         content_length_header -> second[ 0 ],
-                        nullptr,
-                        0
+                        &convert_stopped,
+                        10
                     );
-                    _unknown_content_length = NO;
+                    if( convert_stopped < value_size )
+                        _unknown_content_length = MAYBE;
+                    else
+                        _unknown_content_length = NO;
                 }
                 catch( const std::invalid_argument& e )
                 {
@@ -1184,18 +1209,41 @@ namespace show
             ++map_iter
         )
         {
+            if( map_iter -> first.size() < 1 )
+                throw response_marshall_error( "empty header name" );
+            else for( auto c : map_iter -> first )
+                if( !(
+                       ( c >= 'a' && c <= 'z' )
+                    || ( c >= 'A' && c <= 'Z' )
+                    || ( c >= '0' && c <= '9' )
+                    || c == '-'
+                ) )
+                    throw response_marshall_error( "invalid header name" );
+            
             for(
                 auto vector_iter = map_iter -> second.begin();
                 vector_iter != map_iter -> second.end();
                 ++vector_iter
             )
             {
-                headers_stream
-                    << map_iter -> first
-                    << ": "
-                    << *vector_iter
-                    << "\r\n"
-                ;
+                if( vector_iter -> size() < 1 )
+                    throw response_marshall_error( "empty header value" );
+                
+                headers_stream << map_iter -> first << ": ";
+                bool insert_newline = false;
+                for( auto c : *vector_iter )
+                    if( c == '\r' || c == '\n' )
+                        insert_newline = true;
+                    else
+                    {
+                        if( insert_newline )
+                        {
+                            headers_stream << "\r\n ";
+                            insert_newline = false;
+                        }
+                        headers_stream << c;
+                    }
+                headers_stream << "\r\n";
             }
         }
         headers_stream << "\r\n";
@@ -1274,7 +1322,7 @@ namespace show
         this -> timeout( timeout );
         
         sockaddr_in6 socket_address;
-        memset(&socket_address, 0, sizeof(socket_address));
+        std::memset( &socket_address, 0, sizeof( socket_address ) );
         socket_address.sin6_family = AF_INET6;
         socket_address.sin6_port   = htons( port );
         // socket_address.sin6_addr.s_addr  = in6addr_any;
@@ -1470,13 +1518,16 @@ namespace show
                     {
                         hex_convert_space[ 0 ] = o[ i + 1 ];
                         hex_convert_space[ 1 ] = o[ i + 2 ];
-                        
+                        std::size_t convert_stopped;
                         decoded += ( char )std::stoi(
                             hex_convert_space,
-                            0,
+                            &convert_stopped,
                             16
                         );
-                        
+                        if( convert_stopped < hex_convert_space.size() )
+                            throw url_decode_error(
+                                "invalid URL-encoded sequence"
+                            );
                         i += 2;
                     }
                     catch( const std::invalid_argument& e )
