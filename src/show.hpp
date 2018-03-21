@@ -1017,8 +1017,14 @@ namespace show
                         break;
                     case ' ':
                     case '\t':
-                        if( value_buffer.size() < 1 )
-                            break;
+                        if( check_for_multiline_header )
+                            check_for_multiline_header = false;
+                        if(
+                            value_buffer.size() > 0
+                            && *value_buffer.rbegin() != ' '
+                        )
+                            value_buffer += ' ';
+                        break;
                     default:
                         if( check_for_multiline_header )
                         {
