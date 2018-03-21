@@ -17,7 +17,7 @@ const show::headers_type::value_type server_header = {
 };
 
 
-void handle_connection( std::shared_ptr< show::connection > connection )
+void handle_connection( std::unique_ptr< show::connection > connection )
 {
     try
     {
@@ -92,7 +92,7 @@ int main( int argc, char* argv[] )
         {
             std::thread worker(
                 handle_connection,
-                std::shared_ptr< show::connection >(
+                std::unique_ptr< show::connection >(
                     new show::connection( test_server.serve() )
                 )
             );
