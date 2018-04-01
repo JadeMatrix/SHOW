@@ -138,7 +138,7 @@ Exceptions
     Thrown by :cpp:class:`response`'s constructor when the response arguments cannot be marshalled into a valid HTTP response:
     
     * One of the header names is an empty string
-    * One of the header names contains a character other than A-Z, a-z, 0-9, or _
+    * One of the header names contains a character other than A-Z, a-z, 0-9, or -
     * Any header value is an empty string
 
 .. cpp:class:: url_decode_error : std::runtime_error
