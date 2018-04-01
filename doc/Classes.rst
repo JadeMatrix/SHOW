@@ -99,7 +99,7 @@ Connection interruptions
 
 .. cpp:class:: connection_interrupted
     
-    A common base class for both types of connection interruptions
+    A common base class for both types of connection interruptions.  Note that this does not inherit from :cpp:type:`std::exception`.
 
 .. cpp:class:: connection_timeout : public connection_interrupted
     
