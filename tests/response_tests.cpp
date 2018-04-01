@@ -170,6 +170,34 @@ SUITE( ShowResponseTests )
         );
     }
     
+    TEST( StandardizeHeader )
+    {
+        run_checks_against_response(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                show::request test_request( test_connection );
+                show::response test_response(
+                    test_connection,
+                    show::UNKNOWN,
+                    { 200, "OK" },
+                    {
+                        { "HeaderOne", { "foo" } },
+                        { "header-two", { "bar" } }
+                    }
+                );
+            },
+            (
+                "HTTP/1.0 200 OK\r\n"
+                "Header-Two: bar\r\n"
+                "Headerone: foo\r\n"
+                "\r\n"
+            )
+        );
+    }
+    
     TEST( MultiLineHeader )
     {
         run_checks_against_response(

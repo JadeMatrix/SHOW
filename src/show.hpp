@@ -1209,16 +1209,35 @@ namespace show
             ++map_iter
         )
         {
-            if( map_iter -> first.size() < 1 )
+            auto header_name = map_iter -> first;
+            
+            if( header_name.size() < 1 )
                 throw response_marshall_error( "empty header name" );
-            else for( auto c : map_iter -> first )
-                if( !(
-                       ( c >= 'a' && c <= 'z' )
-                    || ( c >= 'A' && c <= 'Z' )
-                    || ( c >= '0' && c <= '9' )
-                    || c == '-'
-                ) )
-                    throw response_marshall_error( "invalid header name" );
+            else
+            {
+                bool next_should_be_capitalized = true;
+                for( auto& c : header_name )
+                    if( c >= 'a' && c <= 'z' )
+                    {
+                        if( next_should_be_capitalized )
+                        {
+                            c &= ~0x20;
+                            next_should_be_capitalized = false;
+                        }
+                    }
+                    else if( c >= 'A' && c <= 'Z' )
+                    {
+                        if( !next_should_be_capitalized )
+                            c |= 0x20;
+                        next_should_be_capitalized = false;
+                    }
+                    else if( c == '-' )
+                        next_should_be_capitalized = true;
+                    else if( c >= '0' && c <= '9' )
+                        next_should_be_capitalized = false;
+                    else
+                        throw response_marshall_error( "invalid header name" );
+            }
             
             for(
                 auto vector_iter = map_iter -> second.begin();
@@ -1229,7 +1248,7 @@ namespace show
                 if( vector_iter -> size() < 1 )
                     throw response_marshall_error( "empty header value" );
                 
-                headers_stream << map_iter -> first << ": ";
+                headers_stream << header_name << ": ";
                 bool insert_newline = false;
                 for( auto c : *vector_iter )
                     if( c == '\r' || c == '\n' )
