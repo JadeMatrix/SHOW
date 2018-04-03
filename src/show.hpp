@@ -1395,7 +1395,7 @@ namespace show
         sockaddr_in6 address_info;
         socklen_t address_info_len = sizeof( address_info );
         
-        char address_buffer[ 3 * 4 + 3 + 1 ];
+        char address_buffer[ INET6_ADDRSTRLEN ];
         
         socket_fd serve_socket = accept(
             listen_socket -> descriptor,
