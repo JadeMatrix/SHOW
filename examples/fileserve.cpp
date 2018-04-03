@@ -48,7 +48,7 @@ std::vector< std::pair< std::string, bool > > scan_directory(
     
     std::vector< std::pair< std::string, bool > > subs;
     
-    if( !std::filesystem::is_directory( path ) )
+    if( !std::filesystem::is_directory( root ) )
         throw no_such_path{};
     
     for( auto& entry : std::filesystem::directory_iterator{ root } )
@@ -56,17 +56,17 @@ std::vector< std::pair< std::string, bool > > scan_directory(
         // Only list directories, regular files, and symlinks, and skip special
         // entries for "this directory" and "parent directory"
         if(
-               entry -> path().filename() != "."
-            && entry -> path().filename() != ".."
+               entry.path().filename() != "."
+            && entry.path().filename() != ".."
             && (
-                   std::filesystem::is_directory   ( entry -> path() )
-                || std::filesystem::is_regular_file( entry -> path() )
-                || std::filesystem::is_symlink     ( entry -> path() )
+                   std::filesystem::is_directory   ( entry.path() )
+                || std::filesystem::is_regular_file( entry.path() )
+                || std::filesystem::is_symlink     ( entry.path() )
             )
         )
             subs.push_back( {
-                entry -> path().filename(),
-                std::filesystem::is_directory( entry -> path() )
+                entry.path().filename(),
+                std::filesystem::is_directory( entry.path() )
             } );
     }
     
@@ -144,7 +144,7 @@ std::string guess_mime_type( const std::string& path )
     
 #if __cplusplus >= 201703L  // Use std::filesystem
     
-    extension = std::filesystem::path{ path }.extension()
+    extension = std::filesystem::path{ path }.extension();
     
 #else
     
