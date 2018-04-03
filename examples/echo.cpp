@@ -6,7 +6,7 @@
 
 
 // Set a Server header to display the SHOW version
-const show::headers_type::value_type server_header = {
+const show::headers_type::value_type server_header{
     "Server",
     {
         show::version::name
@@ -18,13 +18,13 @@ const show::headers_type::value_type server_header = {
 
 void handle_POST_request( show::request& request )
 {
-    show::headers_type headers = { server_header };
+    show::headers_type headers{ server_header };
     
     if( request.unknown_content_length() )
     {
         // For this example, be safe and reject any request with no Content-
         // Length header
-        show::response response(
+        show::response response{
             request.connection(),
             show::http_protocol::HTTP_1_0,
             {
@@ -32,7 +32,7 @@ void handle_POST_request( show::request& request )
                 "Bad Request"
             },
             headers
-        );
+        };
     }
     else
     {
@@ -47,26 +47,24 @@ void handle_POST_request( show::request& request )
         // otherwise use the default MIME type recommended in the HTTP
         // specification, RFC 2616 §7.2.1:
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.2.1
-        auto content_type_header = request.headers().find( "Content-Type" );
+        auto content_type_header{ request.headers().find( "Content-Type" ) };
         if(
             content_type_header != request.headers().end()
             && content_type_header -> second.size() == 1
         )
-            headers[ "Content-Type" ].push_back(
-                content_type_header -> second[ 0 ]
-            );
+            headers[ "Content-Type" ] = { content_type_header -> second[ 0 ] };
         else
-            headers[ "Content-Type" ].push_back( "application/octet-stream" );
+            headers[ "Content-Type" ] = { "application/octet-stream" };
         
         // This is just the simplest way to read a whole streambuf into a
         // string, not the most the fastest; see
         // https://stackoverflow.com/questions/3203452/how-to-read-entire-stream-into-a-stdstring
-        std::string message = std::string(
+        std::string message = std::string{
             std::istreambuf_iterator< char >( &request ),
             {}
-        );
+        };
         
-        show::response response(
+        show::response response{
             request.connection(),
             // Just handling one request per connection in this example, so
             // respond with HTTP/1.0
@@ -76,7 +74,7 @@ void handle_POST_request( show::request& request )
                 "OK"
             },
             headers
-        );
+        };
         
         response.sputn( message.c_str(), message.size() );
     }
@@ -85,32 +83,29 @@ void handle_POST_request( show::request& request )
 
 int main( int argc, char* argv[] )
 {
-    std::string  host    = "::";    // IPv6 'any IP' (0.0.0.0 in IPv4)
-    unsigned int port    = 9090;    // Some random higher port
-    int          timeout = 10;      // Connection timeout in seconds
+    std::string  host   { "::" };   // IPv6 'any IP' (0.0.0.0 in IPv4)
+    unsigned int port   { 9090 };   // Some random higher port
+    int          timeout{ 10   };   // Connection timeout in seconds
     
-    show::server test_server(
+    show::server test_server{
         host,
         port,
         timeout
-    );
+    };
     
     while( true )
         try
         {
-            show::connection connection( test_server.serve() );
+            show::connection connection{ test_server.serve() };
             
             try
             {
-                show::request request( connection );
+                show::request request{ connection };
                 
                 if( request.method() == "POST" )
-                {
                     handle_POST_request( request );
-                }
                 else
-                {
-                    show::response response(
+                    show::response response{
                         request.connection(),
                         show::http_protocol::HTTP_1_0,
                         {
@@ -118,8 +113,7 @@ int main( int argc, char* argv[] )
                             "Method Not Allowed"
                         },
                         { server_header }
-                    );
-                }
+                    };
             }
             catch( const show::connection_interrupted& ct )
             {

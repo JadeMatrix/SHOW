@@ -9,7 +9,7 @@ void handle_connection( show::connection& connection )
     while( true )   // Loop over requests on this connection
         try
         {
-            show::request request( connection );
+            show::request request{ connection };
             
             std::cout
                 << "serving a "
@@ -27,28 +27,24 @@ void handle_connection( show::connection& connection )
             if( !request.unknown_content_length() )
                 request.flush();
             
-            bool is_1p1 = request.protocol() == show::HTTP_1_1;
+            bool is_1p1{ request.protocol() == show::HTTP_1_1 };
             
-            std::string message(
+            std::string message{
                 "HTTP/"
-                + std::string( is_1p1 ? "1.1" : "1.0" )
+                + std::string{ is_1p1 ? "1.1" : "1.0" }
                 + " "
                 + request.method()
                 + " request from "
                 + request.client_address()
                 + " on path /"
-            );
-            for(
-                auto iter = request.path().begin();
-                iter != request.path().end();
-                ++iter
-            )
+            };
+            for( auto& segment : request.path() )
             {
-                message += *iter;
+                message += segment;
                 message += "/";
             }
             
-            show::headers_type headers = {
+            show::headers_type headers{
                 // Set the Server header to display the SHOW version
                 { "Server", {
                     show::version::name
@@ -63,33 +59,29 @@ void handle_connection( show::connection& connection )
                 } }
             };
             
-            show::response response(
+            show::response response{
                 request.connection(),
                 is_1p1 ? show::HTTP_1_1 : show::HTTP_1_0,
                 { 200, "OK" },
                 headers
-            );
+            };
             
             response.sputn( message.c_str(), message.size() );
             
             // HTTP/1.0 "supports" persistent connections with the "Connection"
             // header; this example defers to this header's value (if it exists)
             // before checking the protocol version.
-            auto connection_header = request.headers().find(
-                "Connection"
-            );
+            auto connection_header{ request.headers().find( "Connection" ) };
             if(
                 connection_header != request.headers().end()
                 && connection_header -> second.size() == 1
             )
             {
-                const std::string& ch_val(
-                    connection_header -> second[ 0 ]
-                );
-                if( ch_val == "keep-alive" )
+                auto& header_val = connection_header -> second[ 0 ];
+                if( header_val == "keep-alive" )
                     // Keep connection open, loop to next request
                     continue;
-                else if( ch_val == "close" )
+                else if( header_val == "close" )
                     // Close connection
                     break;
                 // else fall back to this protocol's default
@@ -117,21 +109,20 @@ void handle_connection( show::connection& connection )
 
 int main( int argc, char* argv[] )
 {
-    std::string  host    = "::";    // IPv6 'any IP' (0.0.0.0 in IPv4)
-    unsigned int port    = 9090;    // Some random higher port
-    int          timeout = 10;      // Connection timeout in seconds
-    std::string  message = "Hello World!";
+    std::string  host   { "::" };   // IPv6 'any IP' (0.0.0.0 in IPv4)
+    unsigned int port   { 9090 };   // Some random higher port
+    int          timeout{ 10   };   // Connection timeout in seconds
     
-    show::server test_server(
+    show::server test_server{
         host,
         port,
         timeout
-    );
+    };
     
     while( true )   // Loop over connections
         try
         {
-            show::connection connection( test_server.serve() );
+            show::connection connection{ test_server.serve() };
             
             std::cout
                 << "client "

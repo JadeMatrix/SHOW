@@ -8,10 +8,12 @@
 
 namespace show
 {
-    static const char* base64_chars_standard =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    static const char* base64_chars_urlsafe  =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    static const char* base64_chars_standard{
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    };
+    static const char* base64_chars_urlsafe{
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    };
     
     
     std::string base64_encode(
@@ -38,10 +40,10 @@ namespace show
         unsigned char current_sextet;
         std::string encoded;
         
-        std::string::size_type b64_size = ( ( o.size() + 2 ) / 3 ) * 4;
+        std::string::size_type b64_size{ ( ( o.size() + 2 ) / 3 ) * 4 };
         
         for(
-            std::string::size_type i = 0, j = 0;
+            std::string::size_type i{ 0 }, j{ 0 };
             i < b64_size;
             ++i
         )
@@ -108,10 +110,10 @@ namespace show
         /*unsigned*/ char current_octet;
         std::string decoded;
         
-        std::string::size_type unpadded_len = o.size();
+        std::string::size_type unpadded_len{ o.size() };
         
         for(
-            auto r_iter = o.rbegin();
+            auto r_iter{ o.rbegin() };
             r_iter != o.rend();
             ++r_iter
         )
@@ -122,7 +124,7 @@ namespace show
                 break;
         }
         
-        std::string::size_type b64_size = unpadded_len;
+        std::string::size_type b64_size{ unpadded_len };
         
         if( b64_size % 4 )
             b64_size += 4 - ( b64_size % 4 );
@@ -130,29 +132,29 @@ namespace show
         if( b64_size > o.size() )
             // Missing required padding
             // TODO: add flag to explicitly ignore?
-            throw base64_decode_error( "missing required padding" );
+            throw base64_decode_error{ "missing required padding" };
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
-        for( /*unsigned*/ char i = 0; i < 64; ++i )
+        for( /*unsigned*/ char i{ 0 }; i < 64; ++i )
             reverse_lookup[ chars[ i ] ] = i;
         reverse_lookup[ '=' ] = 0;
         
-        for( std::string::size_type i = 0; i < b64_size; ++i )
+        for( std::string::size_type i{ 0 }; i < b64_size; ++i )
         {
             if( o[ i ] == '=' && i + 1 < b64_size && o[ i + 1 ] != '=' )
-                throw base64_decode_error( "premature padding" );
+                throw base64_decode_error{ "premature padding" };
             
             std::map< char, /*unsigned*/ char >::iterator first, second;
             
             first = reverse_lookup.find( o[ i ] );
             if( first == reverse_lookup.end() )
-                throw base64_decode_error( "invalid base64 character" );
+                throw base64_decode_error{ "invalid base64 character" };
             
             if( i + 1 < o.size() )
             {
                 second = reverse_lookup.find( o[ i + 1 ] );
                 if( second == reverse_lookup.end() )
-                    throw base64_decode_error( "invalid base64 character" );
+                    throw base64_decode_error{ "invalid base64 character" };
             }
             
             switch( i % 4 )

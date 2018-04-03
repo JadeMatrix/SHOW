@@ -1,15 +1,15 @@
 #include <show.hpp>
 
-#include <iostream>     // std::cout, std::cerr
-#include <string>       // std::string, std::to_string()
-#include <sstream>      // std::stringstream
-#include <map>          // std::map
-#include <fstream>      // std::ifstream
 #include <exception>    // std::runtime_error
+#include <fstream>      // std::ifstream
+#include <iostream>     // std::cout, std::cerr
+#include <map>          // std::map
+#include <sstream>      // std::stringstream
+#include <string>       // std::string, std::to_string()
 
 
 // Set a Server header to display the SHOW version
-const show::headers_type::value_type server_header = {
+const show::headers_type::value_type server_header{
     "Server",
     {
         show::version::name
@@ -49,9 +49,9 @@ std::vector< std::pair< std::string, bool > > scan_directory(
     std::vector< std::pair< std::string, bool > > subs;
     
     if( !std::filesystem::is_directory( path ) )
-        throw no_such_path( root );
+        throw no_such_path{};
     
-    for( auto& entry : std::filesystem::directory_iterator( root ) )
+    for( auto& entry : std::filesystem::directory_iterator{ root } )
     {
         // Only list directories, regular files, and symlinks, and skip special
         // entries for "this directory" and "parent directory"
@@ -59,13 +59,14 @@ std::vector< std::pair< std::string, bool > > scan_directory(
                entry -> path().filename() != "."
             && entry -> path().filename() != ".."
             && (
-                   std::filesystem::is_directory(    entry -> path() )
+                   std::filesystem::is_directory   ( entry -> path() )
                 || std::filesystem::is_regular_file( entry -> path() )
-                || std::filesystem::is_symlink(      entry -> path() )
+                || std::filesystem::is_symlink     ( entry -> path() )
             )
         )
             subs.push_back( {
-                entry -> path().filename()
+                entry -> path().filename(),
+                std::filesystem::is_directory( entry -> path() )
             } );
     }
     
@@ -75,14 +76,14 @@ std::vector< std::pair< std::string, bool > > scan_directory(
     
     std::vector< std::pair< std::string, bool > > subs;
     struct dirent* dir;
-    DIR* d = opendir( root.c_str() );
+    DIR* d{ opendir( root.c_str() ) };
     
     if( d == NULL )
-        throw no_such_path();
+        throw no_such_path{};
     
     while( ( dir = readdir( d ) ) != NULL )
     {
-        std::string sub_name( dir -> d_name );
+        std::string sub_name{ dir -> d_name };
         
         // While in theory the `dirent` type should contain node type info, this
         // isn't true for all implementations, so use `lstat()` on every child
@@ -105,7 +106,7 @@ std::vector< std::pair< std::string, bool > > scan_directory(
             )
         )
             subs.push_back( {
-                std::string( dir -> d_name ),
+                std::string{ dir -> d_name },
                 ( stat_info.st_mode & S_IFMT ) == S_IFDIR
             } );
     }
@@ -126,10 +127,10 @@ bool is_directory( const std::string& path )
     
 #else   // Use POSIX's dir/dirent
     
-    DIR* d = opendir( path.c_str() );
+    DIR* d{ opendir( path.c_str() ) };
     if( d != NULL )
         closedir( d );
-    return ( bool )d;
+    return static_cast< bool >( d );
     
 #endif
 }
@@ -143,7 +144,7 @@ std::string guess_mime_type( const std::string& path )
     
 #if __cplusplus >= 201703L  // Use std::filesystem
     
-    extension = std::filesystem::path( path ).extension()
+    extension = std::filesystem::path{ path }.extension()
     
 #else
     
@@ -187,16 +188,12 @@ void handle_GET_request(
     {
         std::string path_string;
         
-        for(
-            auto iter = request.path().begin();
-            iter != request.path().end();
-            ++iter
-        )
+        for( auto& segment : request.path() )
         {
-            if( *iter == "" )
+            if( segment == "" )
                 // Skip empty path elements; i.e., treat "//" as "/"
                 continue;
-            else if( *iter == ".." )
+            else if( segment == ".." )
             {
                 // Prevent directory traversal attacks by sending 404 for any
                 // path containing "..".  cURL and most browsers will normalize
@@ -206,22 +203,22 @@ void handle_GET_request(
                 // want to normalize the path and check if it is within your
                 // serve root, rather than reject any request path containing
                 // "..".
-                throw no_such_path();
+                throw no_such_path{};
                 return;
             }
             
             path_string += "/";
-            path_string += *iter;
+            path_string += segment;
         }
         
         // Keep a seperate string `full_path_string` to represent the path on
         // the server's system; this path should never be send back to the
         // client -- use `path_string` instead.
-        std::string full_path_string = rel_dir + path_string;
+        std::string full_path_string{ rel_dir + path_string };
         
         if( is_directory( full_path_string ) )
         {
-            auto children = scan_directory( full_path_string );
+            auto children{ scan_directory( full_path_string ) };
             
             // Send back a directory listing as an HTML5 page
             std::stringstream content;
@@ -231,24 +228,20 @@ void handle_GET_request(
                 << "/</title></head><body>"
             ;
             
-            for(
-                auto iter = children.begin();
-                iter != children.end();
-                ++iter
-            )
+            for( auto& child : children )
                 content
                     << "<p><a href=\""
-                    << iter -> first
-                    << ( iter -> second ? "/" : "" )
+                    << child.first
+                    << ( child.second ? "/" : "" )
                     << "\">"
-                    << iter -> first
-                    << ( iter -> second ? "/" : "" )
+                    << child.first
+                    << ( child.second ? "/" : "" )
                     << "</a></p>"
                 ;
             
             content << "</body></html>";
             
-            show::response response(
+            show::response response{
                 request.connection(),
                 show::http_protocol::HTTP_1_0,
                 { 200, "OK" },
@@ -261,7 +254,7 @@ void handle_GET_request(
                         std::to_string( content.str().size() )
                     } }
                 }
-            );
+            };
             
             response.sputn(
                 content.str().c_str(),
@@ -272,21 +265,21 @@ void handle_GET_request(
         {
             // Open the file in binary input mode, with the cursor starting at
             // the end so we can get the file size
-            std::ifstream file(
+            std::ifstream file{
                 full_path_string,
                 std::ios::binary | std::ios::in | std::ios::ate
-            );
+            };
             
             if( !file.is_open() )
-                throw no_such_path();
+                throw no_such_path{};
             else
             {
                 // Get the position of the cursor, which will be the file size
-                std::streamsize remaining = file.tellg();
+                std::streamsize remaining{ file.tellg() };
                 // Return the cursor to the beginning of the file for reading
                 file.seekg( 0, std::ios::beg );
             
-                show::response response(
+                show::response response{
                     request.connection(),
                     show::http_protocol::HTTP_1_0,
                     { 200, "OK" },
@@ -297,10 +290,11 @@ void handle_GET_request(
                             std::to_string( remaining )
                         } }
                     }
-                );
+                };
                 
                 // Read & return the file in kilobyte-sized chunks until less
-                // than a kilobyte is left, then read & return that much
+                // than a kilobyte is left (reading another kilobyte will fail),
+                // then read & return what's left in the file
                 char buffer[ 1024 ];
                 while( file.read( buffer, sizeof( buffer ) ) )
                     response.sputn( buffer, sizeof( buffer ) );
@@ -311,7 +305,7 @@ void handle_GET_request(
     catch( const no_such_path& e )
     {
         // Return a 404 for any file- or path-related errors
-        show::response response(
+        show::response response{
             request.connection(),
             show::http_protocol::HTTP_1_0,
             { 404, "Not Found" },
@@ -319,7 +313,7 @@ void handle_GET_request(
                 server_header,
                 { "Content-Length", { "0" } }
             }
-        );
+        };
     }
 }
 
@@ -336,35 +330,34 @@ int main( int argc, char* argv[] )
         return -1;
     }
     
-    std::string  host    = "::";    // IPv6 'any IP' (0.0.0.0 in IPv4)
-    unsigned int port    = 9090;    // Some random higher port
-    int          timeout = 10;      // Connection timeout in seconds
-    std::string  message = "Hello World!";
+    std::string  host   { "::" };   // IPv6 'any IP' (0.0.0.0 in IPv4)
+    unsigned int port   { 9090 };   // Some random higher port
+    int          timeout{ 10   };   // Connection timeout in seconds
     
-    show::server test_server(
+    show::server test_server{
         host,
         port,
         timeout
-    );
+    };
     
     while( true )
         try
         {
-            show::connection connection( test_server.serve() );
+            show::connection connection{ test_server.serve() };
             
             try
             {
-                show::request request( connection );
+                show::request request{ connection };
                 
                 // Only accept GET requests
                 if( request.method() != "GET" )
                 {
-                    show::response response(
+                    show::response response{
                         request.connection(),
                         show::http_protocol::HTTP_1_0,
                         { 501, "Not Implemented" },
                         { server_header }
-                    );
+                    };
                     continue;
                 }
                 
