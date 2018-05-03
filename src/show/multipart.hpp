@@ -18,7 +18,7 @@ namespace show
     class multipart
     {
     protected:
-        std::streambuf& _buffer;
+        std::streambuf* _buffer;
         std::string     _boundary;
         enum class state
         {
@@ -76,7 +76,7 @@ namespace show
             using iterator_category = std::input_iterator_tag;
             
         protected:
-            multipart&      _parent;
+            multipart*      _parent;
             bool            _is_end;
             bool            _locked;
             std::streamsize _segment_index;
@@ -88,6 +88,7 @@ namespace show
         public:
             iterator( iterator&& ) = default;
             
+            iterator& operator  =( iterator&&      ) = default;
             reference operator  *(                 );
             pointer   operator ->(                 );
             iterator& operator ++(                 );
@@ -99,7 +100,6 @@ namespace show
             std::streambuf&,
             String&& boundary
         );
-        multipart( multipart&& ) = default;
         
         const std::streambuf&   buffer();
         const std::string   & boundary();
@@ -319,7 +319,7 @@ namespace show
         // No standard content length information, so this is only ever either
         // "none" (-1) or "indeterminate" (0) (this is only called if the count
         // cannot be derived from `gptr()` and `egptr()`)
-        if( _finished || _parent -> _buffer.in_avail() == -1 )
+        if( _finished || _parent -> _buffer -> in_avail() == -1 )
             return -1;
         else
             return 0;
@@ -342,7 +342,7 @@ namespace show
         std::string::size_type next_boundary_char{ 0 };
         do
         {
-            auto got_i = _parent -> _buffer.sgetc();
+            auto got_i = _parent -> _buffer -> sgetc();
             
             if( traits_type::not_eof( got_i ) != got_i )
                 throw multipart_parse_error{
@@ -363,7 +363,7 @@ namespace show
                     gptr (),
                     egptr() + 1
                 );
-                _parent -> _buffer.sbumpc();
+                _parent -> _buffer -> sbumpc();
             }
             
             if( got_c == boundary[ next_boundary_char ] )
@@ -375,8 +375,8 @@ namespace show
             
         } while( next_boundary_char < _buffer.size() );
         
-        auto  int_1 = _parent -> _buffer.sbumpc();
-        auto  int_2 = _parent -> _buffer.sgetc ();
+        auto  int_1 = _parent -> _buffer -> sbumpc();
+        auto  int_2 = _parent -> _buffer -> sgetc ();
         auto char_1 = std::streambuf::traits_type::to_char_type( int_1 );
         auto char_2 = std::streambuf::traits_type::to_char_type( int_2 );
         
@@ -389,12 +389,12 @@ namespace show
             };
         else if( char_1 == '-' && char_2 == '-' )
         {
-            _parent -> _buffer.sbumpc();
+            _parent -> _buffer -> sbumpc();
             _parent -> _state = state::FINISHED;
         }
         else if( char_1 == '\r' && char_2 == '\n' )
         {
-            _parent -> _buffer.sbumpc();
+            _parent -> _buffer -> sbumpc();
         }
         else if( char_1 != '\n' )
             throw multipart_parse_error{
@@ -435,7 +435,7 @@ namespace show
     // Iterator ----------------------------------------------------------------
     
     inline multipart::iterator::iterator( multipart& p, bool end ) :
-        _parent         { p     },
+        _parent         { &p    },
         _is_end         { end   },
         _locked         { false },
         _segment_index  { 0     }
@@ -489,13 +489,13 @@ namespace show
         } while( segment::traits_type::not_eof( bumped ) == bumped );
         
         ++_segment_index;
-        if( _parent._state == state::FINISHED )
+        if( _parent -> _state == state::FINISHED )
         {
             _is_end = true;
             _current_segment = {};
         }
         else
-            _current_segment = { _parent };
+            _current_segment = { *_parent };
         
         return *this;
     }
@@ -509,7 +509,7 @@ namespace show
     
     inline bool multipart::iterator::operator ==( const iterator& o ) const
     {
-        if( &_parent._buffer != &o._parent._buffer )
+        if( _parent -> _buffer != o._parent -> _buffer )
             return false;
         else if( _is_end && o._is_end )
             return true;
@@ -525,7 +525,7 @@ namespace show
         std::streambuf& b,
         String&& boundary
     ) :
-        _buffer  { b                                  },
+        _buffer  { &b                                 },
         _boundary{ std::forward< String >( boundary ) },
         _state   { state::READY                       }
     {
@@ -536,7 +536,7 @@ namespace show
         // parsing the rest
         std::string got_boundary( _boundary.size() + 2, '\0' );
         if(
-            _buffer.sgetn(
+            _buffer -> sgetn(
                 // Non-cost std::string::data() only available in C++17
                 const_cast< char* >( got_boundary.data() ),
                 _boundary.size() + 2
@@ -548,8 +548,8 @@ namespace show
             );
         else
         {
-            auto  int_1 = _buffer.sbumpc();
-            auto  int_2 = _buffer.sgetc ();
+            auto  int_1 = _buffer -> sbumpc();
+            auto  int_2 = _buffer -> sgetc ();
             auto char_1 = std::streambuf::traits_type::to_char_type( int_1 );
             auto char_2 = std::streambuf::traits_type::to_char_type( int_2 );
             
@@ -562,11 +562,11 @@ namespace show
                 };
             else if( char_1 == '-' && char_2 == '-' )
             {
-                _buffer.sbumpc();
+                _buffer -> sbumpc();
                 _state = state::FINISHED;
             }
             else if( char_1 == '\r' && char_2 == '\n' )
-                _buffer.sbumpc();
+                _buffer -> sbumpc();
             else if( char_1 != '\n' )
                 throw multipart_parse_error{
                     "malformed first multipart boundary"
@@ -576,7 +576,7 @@ namespace show
     
     inline const std::streambuf& multipart::buffer()
     {
-        return _buffer;
+        return *_buffer;
     }
     
     inline const std::string& multipart::boundary()
