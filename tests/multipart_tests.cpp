@@ -31,10 +31,255 @@ std::ostream& operator<<(
 
 SUITE( ShowMultipartTests )
 {
+    TEST( MoveConstructMultipart )
+    {
+        auto make_multipart = [](
+            std::stringbuf& buffer,
+            const std::string& boundary
+        ){
+            return show::multipart{ buffer, boundary };
+        };
+        
+        std::stringbuf content{
+            (
+                "--" + boundaryA + "\r\n"
+                "\r\n"
+                "hello world\r\n"
+                "--" + boundaryA + "--"
+            ),
+            std::ios::in
+        };
+        
+        show::multipart test_multipart = make_multipart( content, boundaryA );
+        auto iter = test_multipart.begin();
+        
+        CHECK_EQUAL(
+            ( show::headers_type{} ),
+            iter -> headers()
+        );
+        CHECK_EQUAL(
+            "hello world",
+            ( std::string{
+                std::istreambuf_iterator< char >( &*iter ),
+                {}
+            } )
+        );
+        ++iter;
+        CHECK_EQUAL(
+            test_multipart.end(),
+            iter
+        );
+    }
+    
+    TEST( MoveAssignMultipart )
+    {
+        auto make_multipart = [](
+            std::stringbuf& buffer,
+            const std::string& boundary
+        ){
+            return show::multipart{ buffer, boundary };
+        };
+        
+        std::stringbuf content1{
+            (
+                "--" + boundaryA + "\r\n"
+                "\r\n"
+                "hello world\r\n"
+                "--" + boundaryA + "--"
+            ),
+            std::ios::in
+        };
+        show::multipart test_multipart = make_multipart( content1, boundaryA );
+        auto iter1 = test_multipart.begin();
+        
+        CHECK_EQUAL(
+            ( show::headers_type{} ),
+            iter1 -> headers()
+        );
+        CHECK_EQUAL(
+            "hello world",
+            ( std::string{
+                std::istreambuf_iterator< char >( &*iter1 ),
+                {}
+            } )
+        );
+        ++iter1;
+        CHECK_EQUAL(
+            test_multipart.end(),
+            iter1
+        );
+        
+        std::stringbuf content2{
+            (
+                "--" + boundaryA + "\r\n"
+                "Content-Type: text/plain\r\n"
+                "\r\n"
+                "foo bar\r\n"
+                "--" + boundaryA + "--"
+            ),
+            std::ios::in
+        };
+        test_multipart = make_multipart( content2, boundaryA );
+        auto iter2 = test_multipart.begin();
+        
+        CHECK_EQUAL(
+            ( show::headers_type{ { "Content-Type", { "text/plain" } } } ),
+            iter2 -> headers()
+        );
+        CHECK_EQUAL(
+            "foo bar",
+            ( std::string{
+                std::istreambuf_iterator< char >( &*iter2 ),
+                {}
+            } )
+        );
+        ++iter2;
+        CHECK_EQUAL(
+            test_multipart.end(),
+            iter2
+        );
+    }
+    
+    TEST( MoveConstructIterator )
+    {
+        auto make_begin_iterator = []( show::multipart& m ){
+            return m.begin();
+        };
+        auto make_end_iterator = []( show::multipart& m ){
+            return m.end();
+        };
+        
+        std::stringbuf content{
+            (
+                "--" + boundaryA + "\r\n"
+                "\r\n"
+                "hello world\r\n"
+                "--" + boundaryA + "--"
+            ),
+            std::ios::in
+        };
+        
+        show::multipart test_multipart{ content, boundaryA };
+        auto iter = make_begin_iterator( test_multipart );
+        
+        CHECK_EQUAL(
+            ( show::headers_type{} ),
+            iter -> headers()
+        );
+        CHECK_EQUAL(
+            "hello world",
+            ( std::string{
+                std::istreambuf_iterator< char >( &*iter ),
+                {}
+            } )
+        );
+        ++iter;
+        auto end_iter = make_end_iterator( test_multipart );
+        CHECK_EQUAL(
+            end_iter,
+            test_multipart.end()
+        );
+        CHECK_EQUAL(
+            end_iter,
+            iter
+        );
+    }
+    
+    TEST( MoveAssignIterator )
+    {
+        auto make_begin_iterator = []( show::multipart& m ){
+            return m.begin();
+        };
+        auto make_end_iterator = []( show::multipart& m ){
+            return m.end();
+        };
+        
+        std::stringbuf content1{
+            (
+                "--" + boundaryA + "\r\n"
+                "\r\n"
+                "hello world\r\n"
+                "--" + boundaryA + "--"
+            ),
+            std::ios::in
+        };
+        show::multipart test_multipart1{ content1, boundaryA };
+        
+        std::stringbuf content2{
+            (
+                "--" + boundaryA + "\r\n"
+                "Content-Type: text/plain\r\n"
+                "\r\n"
+                "foo bar\r\n"
+                "--" + boundaryA + "--"
+            ),
+            std::ios::in
+        };
+        show::multipart test_multipart2{ content2, boundaryA };
+        
+        auto iter = test_multipart1.begin();
+        
+        CHECK_EQUAL(
+            ( show::headers_type{} ),
+            iter -> headers()
+        );
+        CHECK_EQUAL(
+            "hello world",
+            ( std::string{
+                std::istreambuf_iterator< char >( &*iter ),
+                {}
+            } )
+        );
+        
+        iter = test_multipart2.begin();
+        
+        CHECK_EQUAL(
+            ( show::headers_type{ { "Content-Type", { "text/plain" } } } ),
+            iter -> headers()
+        );
+        CHECK_EQUAL(
+            "foo bar",
+            ( std::string{
+                std::istreambuf_iterator< char >( &*iter ),
+                {}
+            } )
+        );
+        
+        ++iter;
+        CHECK_EQUAL(
+            test_multipart2.end(),
+            iter
+        );
+        CHECK( !( test_multipart1.end() == iter ) );
+    }
+    
     TEST( NoSegments )
     {
         std::stringbuf content{
             (
+                "--" + boundaryA + "--"
+            ),
+            std::ios::in
+        };
+        
+        show::multipart test_multipart{
+            content,
+            boundaryA
+        };
+        auto iter = test_multipart.begin();
+        
+        CHECK_EQUAL(
+            test_multipart.end(),
+            iter
+        );
+    }
+    
+    TEST( IgnorePreArea )
+    {
+        std::stringbuf content{
+            (
+                "This should be ignored\r\n"
+                "This, too\r\n"
                 "--" + boundaryA + "--"
             ),
             std::ios::in
