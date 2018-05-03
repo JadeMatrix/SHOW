@@ -351,46 +351,28 @@ namespace show
             
             auto got_c = traits_type::to_char_type( got_i );
             
-            // TODO: Cleanup
+            if(
+                got_c == boundary[ next_boundary_char ]
+                || ( next_boundary_char == 0 && got_c == '\n' )
+                || egptr() - eback() == 0
+            )
+            {
+                ( *egptr() ) = got_c;
+                setg(
+                    eback(),
+                    gptr (),
+                    egptr() + 1
+                );
+                _parent -> _buffer.sbumpc();
+            }
+            
             if( got_c == boundary[ next_boundary_char ] )
-            {
-                ( *egptr() ) = got_c;
-                setg(
-                    eback(),
-                    gptr (),
-                    egptr() + 1
-                );
-                _parent -> _buffer.sbumpc();
-                
                 next_boundary_char += 1;
-            }
             else if( next_boundary_char == 0 && got_c == '\n' )
-            {
-                ( *egptr() ) = got_c;
-                setg(
-                    eback(),
-                    gptr (),
-                    egptr() + 1
-                );
-                _parent -> _buffer.sbumpc();
-                
                 next_boundary_char += 2;
-            }
             else
-            {
-                if( egptr() - eback() == 0 )
-                {
-                    ( *egptr() ) = got_c;
-                    setg(
-                        eback(),
-                        gptr (),
-                        egptr() + 1
-                    );
-                    _parent -> _buffer.sbumpc();
-                }
-                
                 return traits_type::to_int_type( _buffer[ 0 ] );
-            }
+            
         } while( next_boundary_char < _buffer.size() );
         
         auto  int_1 = _parent -> _buffer.sbumpc();
