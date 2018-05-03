@@ -31,7 +31,7 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
         
         * :cpp:var:`base64_chars_urlsafe`
 
-.. cpp:class:: base64_decode_error : exception
+.. cpp:class:: base64_decode_error : public std::runtime_error
     
     Thrown by :cpp:func:`base64_decode()` when the input is not valid base64.
     

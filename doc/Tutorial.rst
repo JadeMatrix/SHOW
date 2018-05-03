@@ -29,10 +29,10 @@ Creating a Server
 
 To start serving requests, first create a :cpp:class:`server` object::
     
-    show::server my_server(
+    show::server my_server{
         "0.0.0.0",  // IP address on which to serve
         9090,       // Port on which to serve
-    );
+    };
 
 That's it, you've made a server that sits there forever until it gets a connection, then hangs.  Not terribly useful, but that's easy to fix.
 
@@ -44,7 +44,7 @@ For each call of ``my_server.serve()`` a single :cpp:class:`connection` object w
     while( true )
         try
         {
-            show::connection connection( my_server.serve() );
+            show::connection connection{ my_server.serve() };
             // handle request(s) here
         }
         catch( const show::connection_timeout& ct )
@@ -69,9 +69,9 @@ Note that these fields do not include the request content, if any. This is becau
 
 For example, if your server is expecting the client to *POST* a single integer, you can use::
     
-    show::request request( test_server.serve() );
+    show::request request{ test_server.serve() };
     
-    std::istream request_content_stream( request );
+    std::istream request_content_stream{ &request };
     
     int my_integer;
     request_content_stream >> my_integer;
@@ -83,16 +83,16 @@ Also note that individual request operations may timeout, so the entire serve co
     while( true )
         try
         {
-            show::connection connection( my_server.serve() );
+            show::connection connection{ my_server.serve() };
             try
             {
-                show::request request( connection );
-                std::istream request_content_stream( request );
+                show::request request{ connection };
+                std::istream request_content_stream{ &request };
                 int my_integer;
                 request_content_stream >> my_integer;
                 std::cout << "client sent " << my_integer << "\n";
             }
-            catch( const show::connection_timeout& ct )
+            catch( const show::client_disconnected& ct )
             {
                 std::cout << "got a request, but client disconnected!" << std::endl;
             }
@@ -124,11 +124,11 @@ Sending Responses
 
 Sending responses is slightly more involved than reading basic requests.  Say you want to send a "Hello World" message for any incoming request. First, start with a string containing the response message::
     
-    std::string response_content = "Hello World";
+    std::string response_content{ "Hello World" };
 
 Next, create a headers object to hold the content type and length headers (note that header values must be strings)::
     
-    show::headers_t headers = {
+    show::headers_t headers{
         { "Content-Type", { "text/plain" } },
         { "Content-Length", {
             std::to_string( response_content.size() )
@@ -141,7 +141,7 @@ Since it's a :cpp:class:`std::map`, you can also add headers to a :cpp:type:`hea
 
 Then, set the `HTTP status code <https://en.wikipedia.org/wiki/List_of_HTTP_status_codes>`_ for the response to the generic *200 OK*::
     
-    show::response_code code = {
+    show::response_code code{
         200,
         "OK"
     };
@@ -150,16 +150,16 @@ Creating a response object requires the headers and response code to have been d
 
 Create a response like this::
     
-    show::response response(
+    show::response response{
         connection,
         show::http_protocol::HTTP_1_0,
         code,
         headers
-    );
+    };
 
 Finally, send the response content. Here, a :cpp:class:`std::ostream` is used, as :cpp:class:`response` inherits from and implements the write/put functionality of :cpp:class:`std::streambuf`::
     
-    std::ostream response_stream( &response );
+    std::ostream response_stream{ &response };
     response_stream << response_content;
 
 .. seealso::
