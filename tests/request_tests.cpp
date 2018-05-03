@@ -1268,6 +1268,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
@@ -1291,6 +1292,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
@@ -1314,6 +1316,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
@@ -1337,6 +1340,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
@@ -1360,6 +1364,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
@@ -1383,6 +1388,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
@@ -1406,6 +1412,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
@@ -1430,6 +1437,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
@@ -1455,11 +1463,12 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
                     CHECK_EQUAL(
-                        "malformed header",
+                        "missing header value",
                         e.what()
                     );
                 }
@@ -1479,11 +1488,12 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
                     CHECK_EQUAL(
-                        "malformed header",
+                        "missing header value",
                         e.what()
                     );
                 }
@@ -1503,11 +1513,12 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {
                     CHECK_EQUAL(
-                        "malformed header",
+                        "missing header value",
                         e.what()
                     );
                 }
@@ -1527,6 +1538,7 @@ SUITE( ShowRequestTests )
                 try
                 {
                     show::request test_request( test_connection );
+                    CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
                 {

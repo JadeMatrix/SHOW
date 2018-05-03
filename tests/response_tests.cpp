@@ -475,6 +475,7 @@ SUITE( ShowResponseTests )
                         { 200, "OK" },
                         { { "Invalid header n*me", { "asdf" } } }
                     );
+                    CHECK( false );
                 }
                 catch( const show::response_marshall_error& e )
                 {
@@ -506,6 +507,7 @@ SUITE( ShowResponseTests )
                         { 200, "OK" },
                         { { "", { "asdf" } } }
                     );
+                    CHECK( false );
                 }
                 catch( const show::response_marshall_error& e )
                 {
@@ -537,6 +539,7 @@ SUITE( ShowResponseTests )
                         { 200, "OK" },
                         { { "Empty-Header", { "" } } }
                     );
+                    CHECK( false );
                 }
                 catch( const show::response_marshall_error& e )
                 {
