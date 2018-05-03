@@ -754,6 +754,11 @@ namespace show
         _server_port   { std::move( o._server_port    ) }
     {
         // See comment in `request::request(&&)` implementation
+        setg(
+            o.eback(),
+            o.gptr (),
+            o.egptr()
+        );
     }
     
     inline connection::~connection()
@@ -814,6 +819,7 @@ namespace show
             READING_QUERY_ARGS,
             READING_PROTOCOL,
             READING_HEADER_NAME,
+            READING_HEADER_PADDING,
             READING_HEADER_VALUE
         } parse_state{ READING_METHOD };
         
@@ -982,7 +988,7 @@ namespace show
                     switch( current_char )
                     {
                     case ':':
-                        parse_state = READING_HEADER_VALUE;
+                        parse_state = READING_HEADER_PADDING;
                         break;
                     case '\n':
                         if( key_buffer.size() < 1 )
@@ -1005,6 +1011,17 @@ namespace show
                 }
                 break;
                 
+            case READING_HEADER_PADDING:
+                if( current_char == ' ' || current_char == '\t' )
+                {
+                    parse_state = READING_HEADER_VALUE;
+                    break;
+                }
+                else if( current_char == '\n' )
+                    parse_state = READING_HEADER_VALUE;
+                else
+                    throw request_parse_error{ "malformed header" };
+                
             case READING_HEADER_VALUE:
                 {
                     switch( current_char )
@@ -1013,9 +1030,15 @@ namespace show
                         if( seq_newlines >= 2 )
                         {
                             if( check_for_multiline_header )
+                            {
+                                if( value_buffer.size() < 1 )
+                                    throw request_parse_error{
+                                        "missing header value"
+                                    };
                                 _headers[ key_buffer ].push_back(
                                     value_buffer
                                 );
+                            }
                             
                             reading = false;
                         }
@@ -1035,6 +1058,11 @@ namespace show
                     default:
                         if( check_for_multiline_header )
                         {
+                            if( value_buffer.size() < 1 )
+                                throw request_parse_error{
+                                    "missing header value"
+                                };
+                            
                             _headers[ key_buffer ].push_back(
                                 value_buffer
                             );
