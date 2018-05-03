@@ -169,42 +169,6 @@ SUITE( ShowMultipartTests )
             iter -> headers()
         );
         
-        // // DEBUG:
-        // std::string message;
-        // while( true )
-        // {
-        //     auto got_i = iter -> sbumpc();
-        //     auto got_c = std::streambuf::traits_type::to_char_type( got_i );
-            
-        //     if( std::streambuf::traits_type::not_eof( got_i ) != got_i )
-        //     {
-        //         std::cout
-        //             << "TEST( NoHeadersWithData ): eof, message is \""
-        //             << __show::escape_seq( message )
-        //             << "\""
-        //             << std::endl
-        //             << std::endl
-        //         ;
-        //         break;
-        //     }
-            
-        //     message += got_c;
-            
-        //     std::cout
-        //         << "TEST( NoHeadersWithData ): got char '"
-        //         << __show::escape_seq( { got_c } )
-        //         << "', message is \""
-        //         << __show::escape_seq( message )
-        //         << "\""
-        //         << std::endl
-        //         << std::endl
-        //     ;
-        // }
-        // CHECK_EQUAL(
-        //     "hello world",
-        //     message
-        // );
-        
         CHECK_EQUAL(
             "hello world",
             ( std::string{
@@ -349,15 +313,6 @@ SUITE( ShowMultipartTests )
             iter -> headers()
         );
         auto got_c = iter -> sgetc();
-        
-        // DEBUG:
-        std::cout
-            << "TEST( PermissiveNewlinesInBoundary ): got_c = "
-            << got_c
-            << ", not_eof = "
-            << show::multipart::segment::traits_type::not_eof( got_c )
-            << std::endl
-        ;
         
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
@@ -599,7 +554,6 @@ SUITE( ShowMultipartTests )
                 "--" + boundaryA + "\r\n"
                 "Content-Type: multipart/form-data; boundary=" + boundaryB + "\r\n"
                 "\r\n"
-                // "\r\n"
                 "--" + boundaryB + "\r\n"
                 "Content-Disposition: form-data; name=\"some-text\"\r\n"
                 "\r\n"
@@ -607,7 +561,6 @@ SUITE( ShowMultipartTests )
                 "--" + boundaryB + "\r\n"
                 "Content-Type: multipart/form-data; boundary=" + boundaryC + "\r\n"
                 "\r\n"
-                // "\r\n"
                 "--" + boundaryC + "\r\n"
                 "Content-Disposition: form-data; name=\"some-text\"\r\n"
                 "\r\n"
