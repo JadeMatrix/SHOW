@@ -66,3 +66,7 @@ ADD_EXECUTABLE(
     multiple_clients
     ../examples/multiple_clients.cpp
 )
+ADD_EXECUTABLE(
+    multipart_form_handling
+    ../examples/multipart_form_handling.cpp
+)
