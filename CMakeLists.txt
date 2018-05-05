@@ -4,7 +4,7 @@ SET( CMAKE_CXX_STANDARD          11 )
 SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 PROJECT(
-    "SHOW examples"
+    "SHOW Tests & Examples"
     CXX
 )
 
@@ -69,4 +69,15 @@ ADD_EXECUTABLE(
 ADD_EXECUTABLE(
     multipart_form_handling
     ../examples/multipart_form_handling.cpp
+)
+
+ADD_CUSTOM_TARGET( examples )
+ADD_DEPENDENCIES( examples
+    hello_world
+    echo
+    http_1_1
+    streaming_echo
+    fileserve
+    multiple_clients
+    multipart_form_handling
 )

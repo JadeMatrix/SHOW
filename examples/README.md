@@ -6,7 +6,7 @@ cd make
 cmake ..
 ```
 
-then either run `make` to build all examples, or `make $NAME` to build a specific example.  The other way to build any of the examples is manually with Clang (`clang++`) or GCC (`g++`).  Assuming you're running this in the "make" directory from above:
+then either run `make examples` to build all examples, or `make $NAME` to build a specific example.  The other way to build any of the examples is manually with Clang (`clang++`) or GCC (`g++`).  Assuming you're running this in the "make" directory from above:
 
 ```sh
 clang++ -std=c++11 -I ../src ../examples/$NAME.cpp -o $NAME
