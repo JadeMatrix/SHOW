@@ -94,6 +94,7 @@ namespace show
             iterator& operator ++(                 );
             iterator  operator ++( int             );
             bool      operator ==( const iterator& ) const;
+            bool      operator !=( const iterator& ) const;
         };
         
         template< class String > multipart(
@@ -517,6 +518,11 @@ namespace show
             return _segment_index == o._segment_index;
         else
             return false;
+    }
+    
+    inline bool multipart::iterator::operator !=( const iterator& o ) const
+    {
+        return !( *this == o );
     }
     
     // Multipart ---------------------------------------------------------------
