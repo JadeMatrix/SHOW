@@ -11,32 +11,40 @@ SUITE( ShowURLEncodeTests )
     TEST( EncodeNoConversion )
     {
         CHECK_EQUAL(
-            "hello_world",
-            show::url_encode( "hello_world" )
+            "hello_world_0123",
+            show::url_encode( "hello_world_0123" )
         );
     }
     
     TEST( EncodeSpaceConversionPlus )
     {
         CHECK_EQUAL(
-            "hello+world",
-            show::url_encode( "hello world" )
+            "hello+world+0123",
+            show::url_encode( "hello world 0123" )
         );
     }
     
     TEST( EncodeSpaceConversionPercent )
     {
         CHECK_EQUAL(
-            "hello%20world",
-            show::url_encode( "hello world", false )
+            "hello%20world%200123",
+            show::url_encode( "hello world 0123", false )
         );
     }
     
     TEST( EncodeSlash )
     {
         CHECK_EQUAL(
-            "hello%2Fworld",
-            show::url_encode( "hello/world" )
+            "hello%2Fworld%2F0123",
+            show::url_encode( "hello/world/0123" )
+        );
+    }
+    
+    TEST( EncodeControlChars )
+    {
+        CHECK_EQUAL(
+            "%09%0D%0A",
+            show::url_encode( "\t\r\n" )
         );
     }
     
