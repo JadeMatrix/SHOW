@@ -138,6 +138,81 @@ void run_checks_against_request(
     );
 }
 
+void check_response_to_request(
+    const std::string& address,
+    unsigned int       port,
+    const std::string& request,
+    const std::string& response
+)
+{
+    show::socket_fd client_socket = get_client_socket( address, port );
+    
+    write_to_socket(
+        client_socket,
+        request
+    );
+    
+    // Set nonblocking
+    fcntl(
+        client_socket,
+        F_SETFL,
+        fcntl( client_socket, F_GETFL, 0 ) | O_NONBLOCK
+    );
+    
+    timespec timeout_spec = { 2, 0 };
+    fd_set read_descriptors;
+    
+    std::string got_response;
+    
+    while( true )
+    {
+        FD_ZERO( &read_descriptors );
+        FD_SET( client_socket, &read_descriptors );
+        
+        int select_result = pselect(
+            client_socket + 1,
+            &read_descriptors,
+            NULL,
+            NULL,
+            &timeout_spec,
+            NULL
+        );
+        
+        if( select_result == -1 )
+            throw std::runtime_error(
+                "failed to wait on response: "
+                + std::string( std::strerror( errno ) )
+            );
+        else if( select_result == 0 )
+            // Reading until timeout is easier & safer than trying to parse
+            // response & get content length
+            break;
+        
+        char buffer[ 512 ];
+        int read_bytes = read(
+            client_socket,
+            buffer,
+            sizeof( buffer )
+        );
+        
+        if( read_bytes == 0 )
+            break;
+        else if( read_bytes < 0 )
+            throw std::runtime_error(
+                "failed to read response: "
+                + std::string( std::strerror( errno ) )
+            );
+        
+        got_response += std::string( buffer, read_bytes );
+    }
+    
+    // Check escaped strings so UnitTest++ will pretty-print them
+    CHECK_EQUAL(
+        "\"" + escape_seq( response     ) + "\"",
+        "\"" + escape_seq( got_response ) + "\""
+    );
+}
+
 void run_checks_against_response(
     const std::string& request,
     const std::function< void( show::connection& ) >& server_callback,
@@ -145,7 +220,7 @@ void run_checks_against_response(
 )
 {
     std::string address = "::";
-    int port = 9090;
+    unsigned int port = 9090;
     
     auto server_thread = std::thread(
         [ address, port, server_callback ](){
@@ -171,71 +246,11 @@ void run_checks_against_response(
     
     try
     {
-        show::socket_fd client_socket = get_client_socket( address, port );
-        
-        write_to_socket(
-            client_socket,
-            request
-        );
-        
-        // Set nonblocking
-        fcntl(
-            client_socket,
-            F_SETFL,
-            fcntl( client_socket, F_GETFL, 0 ) | O_NONBLOCK
-        );
-        
-        timespec timeout_spec = { 2, 0 };
-        fd_set read_descriptors;
-        
-        std::string got_response;
-        
-        while( true )
-        {
-            FD_ZERO( &read_descriptors );
-            FD_SET( client_socket, &read_descriptors );
-            
-            int select_result = pselect(
-                client_socket + 1,
-                &read_descriptors,
-                NULL,
-                NULL,
-                &timeout_spec,
-                NULL
-            );
-            
-            if( select_result == -1 )
-                throw std::runtime_error(
-                    "failed to wait on response: "
-                    + std::string( std::strerror( errno ) )
-                );
-            else if( select_result == 0 )
-                // Reading until timeout is easier & safer than trying to parse
-                // response & get content length
-                break;
-            
-            char buffer[ 512 ];
-            int read_bytes = read(
-                client_socket,
-                buffer,
-                sizeof( buffer )
-            );
-            
-            if( read_bytes == 0 )
-                break;
-            else if( read_bytes < 0 )
-                throw std::runtime_error(
-                    "failed to read response: "
-                    + std::string( std::strerror( errno ) )
-                );
-            
-            got_response += std::string( buffer, read_bytes );
-        }
-        
-        // Check escaped strings so UnitTest++ will pretty-print them
-        CHECK_EQUAL(
-            "\"" + escape_seq( response     ) + "\"",
-            "\"" + escape_seq( got_response ) + "\""
+        check_response_to_request(
+            address,
+            port,
+            request,
+            response
         );
     }
     catch( ... )
