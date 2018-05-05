@@ -11,6 +11,7 @@
 #include <stack>
 #include <streambuf>
 #include <vector>
+#include <utility>  // std::swap
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -165,7 +166,10 @@ namespace show
         
         const socket_fd descriptor;
         
+        _socket( _socket&& );
         ~_socket();
+        
+        _socket& operator =( _socket&& );
         
         wait_for_type wait_for(
             wait_for_type      wf,
@@ -231,6 +235,8 @@ namespace show
         connection( connection&& );
         ~connection();
         
+        connection& operator =( connection&& );
+        
         int timeout() const;
         int timeout( int );
     };
@@ -251,23 +257,25 @@ namespace show
         request( class connection& );
         request( request&& );   // See note in implementation
         
-        show::connection                & connection            () const { return _connection;                  }
-        const std::string               & client_address        () const { return _connection.client_address(); }
-        const unsigned int                client_port           () const { return _connection.client_port   (); }
-        http_protocol                     protocol              () const { return _protocol;                    }
-        const std::string               & protocol_string       () const { return _protocol_string;             }
-        const std::string               & method                () const { return _method;                      }
-        const std::vector< std::string >& path                  () const { return _path;                        }
-        const query_args_type           & query_args            () const { return _query_args;                  }
-        const headers_type              & headers               () const { return _headers;                     }
-        content_length_flag               unknown_content_length() const { return _unknown_content_length;      }
-        unsigned long long                content_length        () const { return _content_length;              }
+        request& operator =( request&& );
+        
+        show::connection                & connection            () const { return *_connection;                    }
+        const std::string               & client_address        () const { return _connection -> client_address(); }
+        const unsigned int                client_port           () const { return _connection -> client_port   (); }
+        http_protocol                     protocol              () const { return _protocol;                       }
+        const std::string               & protocol_string       () const { return _protocol_string;                }
+        const std::string               & method                () const { return _method;                         }
+        const std::vector< std::string >& path                  () const { return _path;                           }
+        const query_args_type           & query_args            () const { return _query_args;                     }
+        const headers_type              & headers               () const { return _headers;                        }
+        content_length_flag               unknown_content_length() const { return _unknown_content_length;         }
+        unsigned long long                content_length        () const { return _content_length;                 }
         
         bool eof() const;
         void flush();
         
     protected:
-        class connection& _connection;
+        class connection* _connection;
         
         http_protocol              _protocol;
         std::string                _protocol_string;
@@ -301,12 +309,15 @@ namespace show
             const response_code&,
             const headers_type &
         );
+        response( response&& );
         ~response();
+        
+        response& operator =( response&& );
         
         virtual void flush();
         
     protected:
-        connection& _connection;
+        connection* _connection;
         
         virtual std::streamsize xsputn(
             const char_type*,
@@ -330,7 +341,10 @@ namespace show
             unsigned int       port,
             int                timeout = -1
         );
+        server( server&& );
         ~server();
+        
+        server& operator =( server&& );
         
         connection serve();
         
@@ -341,6 +355,7 @@ namespace show
         int timeout( int );
     };
     
+    // TODO: Add file descriptor to `socket_error` throws
     class            socket_error : public std::runtime_error { using runtime_error::runtime_error; };
     class     request_parse_error : public std::runtime_error { using runtime_error::runtime_error; };
     class response_marshall_error : public std::runtime_error { using runtime_error::runtime_error; };
@@ -413,7 +428,27 @@ namespace show
     
     inline _socket::~_socket()
     {
-        close( descriptor );
+        if( descriptor )
+            close( descriptor );
+    }
+    
+    inline _socket::_socket( _socket&& o ) :
+        address   { o.address    },
+        port      { o.port       },
+        descriptor{ o.descriptor }
+    {
+        // TODO: Redesign `_socket` class so `const_cast<>()`s aren't required
+        const_cast< socket_fd& >( o.descriptor ) = 0;
+    }
+    
+    inline _socket& _socket::operator =( _socket&& o )
+    {
+        // TODO: Redesign `_socket` class so `const_cast<>()`s aren't required
+        std::swap( const_cast< std::string & >( address    ), const_cast< std::string & >( o.address    ) );
+        std::swap( const_cast< unsigned int& >( port       ), const_cast< unsigned int& >( o.port       ) );
+        std::swap( const_cast< socket_fd   & >( descriptor ), const_cast< socket_fd   & >( o.descriptor ) );
+        
+        return *this;
     }
     
     inline _socket::wait_for_type _socket::wait_for(
@@ -767,6 +802,18 @@ namespace show
         if( put_buffer ) delete put_buffer;
     }
     
+    inline connection& connection::operator =( connection&& o )
+    {
+        std::swap( _serve_socket  , o._serve_socket   );
+        std::swap( get_buffer     , o.get_buffer      );
+        std::swap( put_buffer     , o.put_buffer      );
+        std::swap( _timeout       , o._timeout        );
+        std::swap( _server_address, o._server_address );
+        std::swap( _server_port   , o._server_port    );
+        
+        return *this;
+    }
+    
     inline int connection::timeout() const
     {
         return _timeout;
@@ -796,11 +843,28 @@ namespace show
         // constructor, as that relies on the `std::streambuf` implementation to
         // be move-friendly, which unfortunately it doesn't seem to be for some
         // of the major compilers.
+        o._connection = nullptr;
+    }
+    
+    inline request& request::operator =( request&& o )
+    {
+        std::swap( _connection            , o._connection              );
+        std::swap( read_content           , o.read_content             );
+        std::swap( _protocol              , o._protocol                );
+        std::swap( _protocol_string       , o._protocol_string         );
+        std::swap( _method                , o._method                  );
+        std::swap( _path                  , o._path                    );
+        std::swap( _query_args            , o._query_args              );
+        std::swap( _headers               , o._headers                 );
+        std::swap( _unknown_content_length, o._unknown_content_length  );
+        std::swap( _content_length        , o._content_length          );
+        
+        return *this;
     }
     
     inline request::request( class connection& c ) :
-        _connection { c },
-        read_content{ 0 }
+        _connection { &c },
+        read_content{ 0  }
     {
         bool reading{ true };
         int bytes_read;
@@ -826,7 +890,7 @@ namespace show
         while( reading )
         {
             char current_char{ connection::traits_type::to_char_type(
-                _connection.sbumpc()
+                _connection -> sbumpc()
             ) };
             
             // \r\n does not make the FSM parser happy
@@ -1150,7 +1214,7 @@ namespace show
             std::streamsize remaining{ static_cast< std::streamsize >(
                 _content_length - read_content
             ) };
-            std::streamsize in_connection{ _connection.showmanyc() };
+            std::streamsize in_connection{ _connection -> showmanyc() };
             return in_connection < remaining ? in_connection : remaining;
         }
     }
@@ -1161,7 +1225,7 @@ namespace show
             return traits_type::eof();
         else
         {
-            int_type c{ _connection.underflow() };
+            int_type c{ _connection -> underflow() };
             if( c != traits_type::not_eof( c ) )
                 throw client_disconnected{};
             return c;
@@ -1172,7 +1236,7 @@ namespace show
     {
         if( eof() )
             return traits_type::eof();
-        int_type c{ _connection.uflow() };
+        int_type c{ _connection -> uflow() };
         if( c != traits_type::not_eof( c ) )
             throw client_disconnected{};
         ++read_content;
@@ -1187,13 +1251,13 @@ namespace show
         std::streamsize read;
         
         if( _unknown_content_length )
-            read = _connection.sgetn( s, count );
+            read = _connection -> sgetn( s, count );
         else if( !eof() )
         {
             std::streamsize remaining{ static_cast< std::streamsize >(
                 _content_length - read_content
             ) };
-            read = _connection.sgetn(
+            read = _connection -> sgetn(
                 s,
                 count > remaining ? remaining : count
             );
@@ -1207,7 +1271,7 @@ namespace show
     
     inline request::int_type request::pbackfail( int_type c )
     {
-        int_type result{ _connection.pbackfail( c ) };
+        int_type result{ _connection -> pbackfail( c ) };
         
         if(
                traits_type::not_eof    ( result )
@@ -1225,7 +1289,7 @@ namespace show
         http_protocol        protocol,
         const response_code& code,
         const headers_type & headers
-    ) : _connection{ c }
+    ) : _connection{ &c }
     {
         std::stringstream headers_stream;
         
@@ -1305,14 +1369,27 @@ namespace show
         );
     }
     
+    inline response::response( response&& o ) :
+        _connection{ o._connection }
+    {
+        o._connection = nullptr;
+    }
+    
     inline response::~response()
     {
-        flush();
+        if( _connection )
+            flush();
+    }
+    
+    inline response& response::operator =( response&& o )
+    {
+        std::swap( _connection, o._connection );
+        return *this;
     }
     
     inline void response::flush()
     {
-        _connection.flush();
+        _connection -> flush();
     }
     
     inline std::streamsize response::xsputn(
@@ -1320,12 +1397,12 @@ namespace show
         std::streamsize  count
     )
     {
-        return _connection.sputn( s, count );
+        return _connection -> sputn( s, count );
     }
     
     inline response::int_type response::overflow( int_type ch )
     {
-        return _connection.overflow( ch );
+        return _connection -> overflow( ch );
     }
     
     // server ------------------------------------------------------------------
@@ -1406,9 +1483,24 @@ namespace show
             };
     }
     
+    inline server::server( server&& o ) :
+        _timeout     { o._timeout      },
+        listen_socket{ o.listen_socket }
+    {
+        o.listen_socket = nullptr;
+    }
+    
     inline server::~server()
     {
-        delete listen_socket;
+        if( listen_socket )
+            delete listen_socket;
+    }
+    
+    inline server& server::operator =( server&& o )
+    {
+        std::swap( listen_socket, o.listen_socket );
+        _timeout = o._timeout;
+        return *this;
     }
     
     inline connection server::serve()
