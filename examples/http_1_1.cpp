@@ -1,6 +1,6 @@
 #include <show.hpp>
 
-#include <iostream> // std::cout, std::cerr
+#include <iostream> // std::cout
 #include <string>   // std::string, std::to_string()
 
 
@@ -27,7 +27,7 @@ void handle_connection( show::connection& connection )
             if( !request.unknown_content_length() )
                 request.flush();
             
-            bool is_1p1{ request.protocol() == show::HTTP_1_1 };
+            auto is_1p1{ request.protocol() == show::HTTP_1_1 };
             
             std::string message{
                 "HTTP/"

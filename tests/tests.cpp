@@ -15,6 +15,7 @@ std::string escape_seq( const std::string& s )
     for( auto& c : s )
         switch( c )
         {
+        case '\0': escaped <<  "\\0"; break;
         case '\n': escaped <<  "\\n"; break;
         case '\r': escaped <<  "\\r"; break;
         case '\t': escaped <<  "\\t"; break;
@@ -29,7 +30,9 @@ std::string escape_seq( const std::string& s )
                     << std::uppercase
                     << std::setfill( '0' )
                     << std::setw( 2 )
-                    << ( unsigned int )( unsigned char )c
+                    << static_cast< unsigned int >(
+                        static_cast< unsigned char >( c )
+                    )
                     << std::nouppercase
                 ;
             break;
@@ -116,7 +119,7 @@ int main( int argc, char* argv[] )
 {
     std::srand( std::time( nullptr ) );
     curl_global_init( CURL_GLOBAL_ALL );
-    int failed = UnitTest::RunAllTests();
+    auto failed{ UnitTest::RunAllTests() };
     curl_global_cleanup();
     return failed;
 }

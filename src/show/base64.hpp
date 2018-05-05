@@ -40,7 +40,7 @@ namespace show
         unsigned char current_sextet;
         std::string encoded;
         
-        std::string::size_type b64_size{ ( ( o.size() + 2 ) / 3 ) * 4 };
+        auto b64_size{ ( ( o.size() + 2 ) / 3 ) * 4 };
         
         for(
             std::string::size_type i{ 0 }, j{ 0 };
@@ -109,8 +109,7 @@ namespace show
     {
         /*unsigned*/ char current_octet;
         std::string decoded;
-        
-        std::string::size_type unpadded_len{ o.size() };
+        auto unpadded_len{ o.size() };
         
         for(
             auto r_iter{ o.rbegin() };
@@ -124,7 +123,7 @@ namespace show
                 break;
         }
         
-        std::string::size_type b64_size{ unpadded_len };
+        auto b64_size{ unpadded_len };
         
         if( b64_size % 4 )
             b64_size += 4 - ( b64_size % 4 );

@@ -105,10 +105,10 @@ std::vector< std::pair< std::string, bool > > scan_directory(
                 || ( stat_info.st_mode & S_IFMT ) == S_IFLNK
             )
         )
-            subs.push_back( {
-                std::string{ dir -> d_name },
+            subs.emplace_back(
+                sub_name,
                 ( stat_info.st_mode & S_IFMT ) == S_IFDIR
-            } );
+            );
     }
     
     closedir( d );
@@ -138,6 +138,9 @@ bool is_directory( const std::string& path )
 // Simple MIME type guessing based on a few common file extensions.  If you feel
 // like adding more, take a look at
 // http://hul.harvard.edu/ois/////systems/wax/wax-public-help/mimetypes.htm
+// To prevent MIME spoofing, production code should also examine the files'
+// signatures (see https://www.garykessler.net/library/file_sigs.html) or use a
+// dedicated library.
 std::string guess_mime_type( const std::string& path )
 {
     std::string extension;
@@ -214,7 +217,7 @@ void handle_GET_request(
         // Keep a seperate string `full_path_string` to represent the path on
         // the server's system; this path should never be send back to the
         // client -- use `path_string` instead.
-        std::string full_path_string{ rel_dir + path_string };
+        auto full_path_string{ rel_dir + path_string };
         
         if( is_directory( full_path_string ) )
         {

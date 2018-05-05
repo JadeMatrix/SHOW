@@ -19,20 +19,18 @@ INCLUDE_DIRECTORIES(
 
 if( UNITTEST_LIBRARY )
     FIND_LIBRARY( CURL_LIBRARY curl )
-    ADD_EXECUTABLE(
-        tests
-        ../tests/tests.cpp
+    ADD_EXECUTABLE( tests
+        ../tests/async_utils.cpp
         ../tests/base64_tests.cpp
         ../tests/connection_tests.cpp
         ../tests/request_tests.cpp
         ../tests/response_tests.cpp
         ../tests/server_tests.cpp
+        ../tests/tests.cpp
         ../tests/type_tests.cpp
         ../tests/url_encode_tests.cpp
-        ../tests/async_utils.cpp
     )
-    TARGET_LINK_LIBRARIES(
-        tests
+    TARGET_LINK_LIBRARIES( tests
         ${UNITTEST_LIBRARY}
         ${CURL_LIBRARY}
     )
@@ -41,37 +39,31 @@ endif( UNITTEST_LIBRARY )
 
 # Examples #####################################################################
 
-ADD_EXECUTABLE(
-    hello_world
-    ../examples/hello_world.cpp
-)
-ADD_EXECUTABLE(
-    echo
+ADD_EXECUTABLE( echo
     ../examples/echo.cpp
 )
-ADD_EXECUTABLE(
-    http_1_1
-    ../examples/http_1_1.cpp
-)
-ADD_EXECUTABLE(
-    streaming_echo
-    ../examples/streaming_echo.cpp
-)
-ADD_EXECUTABLE(
-    fileserve
+ADD_EXECUTABLE( fileserve
     ../examples/fileserve.cpp
 )
-ADD_EXECUTABLE(
-    multiple_clients
+ADD_EXECUTABLE( hello_world
+    ../examples/hello_world.cpp
+)
+ADD_EXECUTABLE( http_1_1
+    ../examples/http_1_1.cpp
+)
+ADD_EXECUTABLE( multiple_clients
     ../examples/multiple_clients.cpp
+)
+ADD_EXECUTABLE( streaming_echo
+    ../examples/streaming_echo.cpp
 )
 
 ADD_CUSTOM_TARGET( examples )
 ADD_DEPENDENCIES( examples
-    hello_world
     echo
-    http_1_1
-    streaming_echo
     fileserve
+    hello_world
+    http_1_1
     multiple_clients
+    streaming_echo
 )

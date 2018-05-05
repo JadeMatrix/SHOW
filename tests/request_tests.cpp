@@ -24,9 +24,9 @@ SUITE( ShowRequestTests )
     
     TEST( MoveConstruct )
     {
-        auto make_request = []( show::connection& test_connection ){
+        auto make_request{ []( show::connection& test_connection ){
             return show::request{ test_connection };
-        };
+        } };
         
         std::string message{ "hello world" };
         
@@ -38,7 +38,7 @@ SUITE( ShowRequestTests )
                 + message
             ),
             [ make_request, & message ]( show::connection& test_connection ){
-                auto test_request = make_request( test_connection );
+                auto test_request{ make_request( test_connection ) };
                 CHECK_EQUAL(
                     message,
                     ( std::string{
@@ -52,9 +52,9 @@ SUITE( ShowRequestTests )
     
     TEST( MoveAssign )
     {
-        auto make_request = []( show::connection& test_connection ){
+        auto make_request{ []( show::connection& test_connection ){
             return show::request{ test_connection };
-        };
+        } };
         
         std::string message1{ "hello world" };
         std::string message2{ "foo bar"     };
@@ -75,7 +75,7 @@ SUITE( ShowRequestTests )
                 & message1,
                 & message2
             ]( show::connection& test_connection ){
-                auto test_request = make_request( test_connection );
+                auto test_request{ make_request( test_connection ) };
                 CHECK_EQUAL(
                     message1,
                     ( std::string{
@@ -278,7 +278,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
             }
@@ -294,7 +294,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "", "" } ),
+                    ( std::vector< std::string >{ "", "" } ),
                     test_request.path()
                 );
             }
@@ -310,7 +310,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "foo" } ),
+                    ( std::vector< std::string >{ "foo" } ),
                     test_request.path()
                 );
             }
@@ -326,7 +326,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "foo", "" } ),
+                    ( std::vector< std::string >{ "foo", "" } ),
                     test_request.path()
                 );
             }
@@ -342,7 +342,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "foo" } ),
+                    ( std::vector< std::string >{ "foo" } ),
                     test_request.path()
                 );
             }
@@ -358,7 +358,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "foo", "" } ),
+                    ( std::vector< std::string >{ "foo", "" } ),
                     test_request.path()
                 );
             }
@@ -374,7 +374,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "foo", "bar", "baz" } ),
+                    ( std::vector< std::string >{ "foo", "bar", "baz" } ),
                     test_request.path()
                 );
             }
@@ -390,7 +390,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "foo", "", "bar" } ),
+                    ( std::vector< std::string >{ "foo", "", "bar" } ),
                     test_request.path()
                 );
             }
@@ -406,7 +406,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "hello world" } ),
+                    ( std::vector< std::string >{ "hello world" } ),
                     test_request.path()
                 );
             }
@@ -422,7 +422,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "hello world" } ),
+                    ( std::vector< std::string >{ "hello world" } ),
                     test_request.path()
                 );
             }
@@ -438,7 +438,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "http://example.com/" } ),
+                    ( std::vector< std::string >{ "http://example.com/" } ),
                     test_request.path()
                 );
             }
@@ -454,7 +454,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "こんにちは" } ),
+                    ( std::vector< std::string >{ "こんにちは" } ),
                     test_request.path()
                 );
             }
@@ -470,11 +470,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( {} ),
+                    ( show::query_args_type{} ),
                     test_request.query_args()
                 );
             }
@@ -490,11 +490,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( {} ),
+                    ( show::query_args_type{} ),
                     test_request.query_args()
                 );
             }
@@ -510,11 +510,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( { { "foo", { "" } } } ),
+                    ( show::query_args_type{ { "foo", { "" } } } ),
                     test_request.query_args()
                 );
             }
@@ -530,11 +530,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( { { "foo", { "" } } } ),
+                    ( show::query_args_type{ { "foo", { "" } } } ),
                     test_request.query_args()
                 );
             }
@@ -550,11 +550,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( { { "foo", { "" } } } ),
+                    ( show::query_args_type{ { "foo", { "" } } } ),
                     test_request.query_args()
                 );
             }
@@ -570,11 +570,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "&foo=bar" } ),
+                    ( std::vector< std::string >{ "&foo=bar" } ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( {} ),
+                    ( show::query_args_type{} ),
                     test_request.query_args()
                 );
             }
@@ -590,11 +590,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( { "&foo=bar" } ),
+                    ( std::vector< std::string >{ "&foo=bar" } ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( {} ),
+                    ( show::query_args_type{} ),
                     test_request.query_args()
                 );
             }
@@ -610,11 +610,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( { { "foo", { "bar" } } } ),
+                    ( show::query_args_type{ { "foo", { "bar" } } } ),
                     test_request.query_args()
                 );
             }
@@ -630,11 +630,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( {
+                    ( show::query_args_type{
                         { "foo", { "" } },
                         { "bar", { "" } }
                     } ),
@@ -653,11 +653,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( {
+                    ( show::query_args_type{
                         { "foo", { "baz" } },
                         { "bar", { "baz" } }
                     } ),
@@ -676,11 +676,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( {
+                    ( show::query_args_type{
                         { "foo", { "1" } },
                         { "bar", { "2" } }
                     } ),
@@ -699,11 +699,11 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    std::vector< std::string >( {} ),
+                    ( std::vector< std::string >{} ),
                     test_request.path()
                 );
                 CHECK_EQUAL(
-                    show::query_args_type( {
+                    ( show::query_args_type{
                         { "foo", { ""    } },
                         { "bar", { "baz" } }
                     } ),
@@ -722,7 +722,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::headers_type( {} ),
+                    ( show::headers_type{} ),
                     test_request.headers()
                 );
             }
@@ -739,7 +739,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::headers_type( {
+                    ( show::headers_type{
                         { "Test-Header", { "hello world" } }
                     } ),
                     test_request.headers()
@@ -758,7 +758,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::headers_type( {
+                    ( show::headers_type{
                         { "Test-Header",    { "hello world" } }
                     } ),
                     test_request.headers()
@@ -780,7 +780,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::headers_type( {
+                    ( show::headers_type{
                         { "Test-Header",    { "hello world" } },
                         { "Another-Header", { "!@#$()*+=="  } },
                         { "Content-Type",   { "text/plain"  } },
@@ -804,22 +804,23 @@ SUITE( ShowRequestTests )
                 "\r\n"
             ),
             []( show::request& test_request ){
-                // Order in which duplicate headers appear is important to
-                // preserve, so make sure "value 1" comes before "value 2"
                 REQUIRE CHECK_EQUAL(
-                    show::headers_type( {
+                    ( show::headers_type{
                         { "Duplicate-Header", { "value 1", "value 2" } },
                         { "Content-Type",     { "text/plain" } },
                         { "Content-Length",   { "0"          } }
                     } ),
                     test_request.headers()
                 );
+                // Order in which duplicate headers appear is important to
+                // preserve, so make sure "value 1" comes before "value 2"
                 CHECK(
                     test_request.headers().at(
                         "Duplicate-Header"
-                    ) != show::headers_type::mapped_type(
-                        { "value 2", "value 1" }
-                    )
+                    ) != ( show::headers_type::mapped_type{
+                        "value 2",
+                        "value 1"
+                    } )
                 );
             }
         );
@@ -837,7 +838,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::headers_type( {
+                    ( show::headers_type{
                         { "Multi-Line-Header", { "part 1, part 2" } },
                         { "Content-Length",    { "0" } }
                     } ),
@@ -859,7 +860,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::headers_type( {
+                    ( show::headers_type{
                         { "Multi-Line-Header", { "part 1, part 2" } },
                         { "Content-Length",    { "0" } }
                     } ),
@@ -882,7 +883,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::headers_type( {
+                    ( show::headers_type{
                         { "Multi-Line-Header", { "part 1, part 2" } },
                         { "Content-Length",    { "0" } }
                     } ),
@@ -905,7 +906,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::headers_type( {
+                    ( show::headers_type{
                         { "Multi-Line-Header", { "part 1, part 2" } },
                         { "Content-Length",    { "0" } }
                     } ),
@@ -932,7 +933,7 @@ SUITE( ShowRequestTests )
                 );
                 CHECK_EQUAL(
                     false,
-                    ( bool )test_request.unknown_content_length()
+                    static_cast< bool >( test_request.unknown_content_length() )
                 );
                 CHECK_EQUAL(
                     11,
@@ -956,7 +957,7 @@ SUITE( ShowRequestTests )
                 );
                 CHECK_EQUAL(
                     true,
-                    ( bool )test_request.unknown_content_length()
+                    static_cast< bool >( test_request.unknown_content_length() )
                 );
             }
         );
@@ -977,7 +978,7 @@ SUITE( ShowRequestTests )
                 );
                 CHECK_EQUAL(
                     true,
-                    ( bool )test_request.unknown_content_length()
+                    static_cast< bool >( test_request.unknown_content_length() )
                 );
             }
         );
@@ -998,7 +999,7 @@ SUITE( ShowRequestTests )
                 );
                 CHECK_EQUAL(
                     true,
-                    ( bool )test_request.unknown_content_length()
+                    static_cast< bool >( test_request.unknown_content_length() )
                 );
             }
         );
@@ -1019,7 +1020,7 @@ SUITE( ShowRequestTests )
                 );
                 CHECK_EQUAL(
                     true,
-                    ( bool )test_request.unknown_content_length()
+                    static_cast< bool >( test_request.unknown_content_length() )
                 );
             }
         );
@@ -1041,7 +1042,7 @@ SUITE( ShowRequestTests )
                 );
                 CHECK_EQUAL(
                     true,
-                    ( bool )test_request.unknown_content_length()
+                    static_cast< bool >( test_request.unknown_content_length() )
                 );
             }
         );
@@ -1059,21 +1060,18 @@ SUITE( ShowRequestTests )
                 "sit amet"
             ),
             []( show::request& test_request ){
-                CHECK_EQUAL(
+                REQUIRE CHECK_EQUAL(
                     show::request::NO,
                     test_request.unknown_content_length()
                 );
-                if( !test_request.unknown_content_length() )
-                {
-                    std::string content = std::string(
-                        std::istreambuf_iterator< char >( &test_request ),
-                        {}
-                    );
-                    CHECK_EQUAL(
-                        "Lorem ipsum dolor\r\nsit amet",
-                        content
-                    );
-                }
+                std::string content{
+                    std::istreambuf_iterator< char >{ &test_request },
+                    {}
+                };
+                CHECK_EQUAL(
+                    "Lorem ipsum dolor\r\nsit amet",
+                    content
+                );
             }
         );
     }
@@ -1089,21 +1087,18 @@ SUITE( ShowRequestTests )
                 + long_message
             ),
             []( show::request& test_request ){
-                CHECK_EQUAL(
+                REQUIRE CHECK_EQUAL(
                     show::request::NO,
                     test_request.unknown_content_length()
                 );
-                if( !test_request.unknown_content_length() )
-                {
-                    std::string content = std::string(
-                        std::istreambuf_iterator< char >( &test_request ),
-                        {}
-                    );
-                    CHECK_EQUAL(
-                        long_message,
-                        content
-                    );
-                }
+                std::string content = std::string(
+                    std::istreambuf_iterator< char >{ &test_request },
+                    {}
+                );
+                CHECK_EQUAL(
+                    long_message,
+                    content
+                );
             }
         );
     }
@@ -1123,21 +1118,18 @@ SUITE( ShowRequestTests )
                 + very_long_content
             ),
             [ very_long_content ]( show::request& test_request ){
-                CHECK_EQUAL(
+                REQUIRE CHECK_EQUAL(
                     show::request::NO,
                     test_request.unknown_content_length()
                 );
-                if( !test_request.unknown_content_length() )
-                {
-                    std::string content = std::string(
-                        std::istreambuf_iterator< char >( &test_request ),
-                        {}
-                    );
-                    CHECK_EQUAL(
-                        very_long_content,
-                        content
-                    );
-                }
+                std::string content = std::string(
+                    std::istreambuf_iterator< char >{ &test_request },
+                    {}
+                );
+                CHECK_EQUAL(
+                    very_long_content,
+                    content
+                );
             }
         );
     }
@@ -1151,11 +1143,12 @@ SUITE( ShowRequestTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request_1( test_connection );
+                show::request test_request_1{ test_connection };
                 test_request_1.flush();
                 try
                 {
-                    show::request test_request_2( test_connection );
+                    show::request test_request_2{ test_connection };
+                    CHECK( false );
                 }
                 catch( const show::client_disconnected& e )
                 {}
@@ -1168,11 +1161,11 @@ SUITE( ShowRequestTests )
     TEST( FailIncompleteClientHang )
     {
         // connection_timeout on incomplete request w/ client hanging
-        std::string address = "::";
-        int port = 9090;
-        show::server test_server( address, port, 1 );
+        std::string  address{ "::" };
+        unsigned int port   { 9090 };
+        show::server test_server{ address, port, 1 };
         
-        auto request_thread = send_request_async(
+        auto request_thread{ send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -1182,15 +1175,15 @@ SUITE( ShowRequestTests )
                     "Content-Type: text/plain\r\n"
                     "Content-Len"
                 );
-                std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+                std::this_thread::sleep_for( std::chrono::seconds{ 2 } );
             }
-        );
+        ) };
         
         try
         {
-            show::connection test_connection = test_server.serve();
+            auto test_connection{ test_server.serve() };
             CHECK_THROW(
-                ( show::request( test_connection ) ),
+                ( show::request{ test_connection } ),
                 show::connection_timeout
             );
         }
@@ -1206,11 +1199,11 @@ SUITE( ShowRequestTests )
     TEST( FailIncompleteClientDisconnect )
     {
         // client_disconnected on incomplete request w/ client incomplete
-        std::string address = "::";
-        int port = 9090;
-        show::server test_server( address, port, 1 );
+        std::string  address{ "::" };
+        unsigned int port   { 9090 };
+        show::server test_server{ address, port, 1 };
         
-        auto request_thread = send_request_async(
+        auto request_thread{ send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -1221,13 +1214,13 @@ SUITE( ShowRequestTests )
                     "Content-Len"
                 );
             }
-        );
+        ) };
         
         try
         {
-            show::connection test_connection = test_server.serve();
+            auto test_connection{ test_server.serve() };
             CHECK_THROW(
-                ( show::request( test_connection ) ),
+                ( show::request{ test_connection } ),
                 show::client_disconnected
             );
         }
@@ -1244,11 +1237,11 @@ SUITE( ShowRequestTests )
     {
         // connection_timeout on content length < Content-Length w/ client
         // hanging
-        std::string address = "::";
-        int port = 9090;
-        show::server test_server( address, port, 1 );
+        std::string  address{ "::" };
+        unsigned int port   { 9090 };
+        show::server test_server{ address, port, 1 };
         
-        auto request_thread = send_request_async(
+        auto request_thread{ send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -1260,19 +1253,19 @@ SUITE( ShowRequestTests )
                     "\r\n"
                     "Lorem ipsum dolor sit amet,"
                 );
-                std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+                std::this_thread::sleep_for( std::chrono::seconds{ 2 } );
             }
-        );
+        ) };
         
         try
         {
-            show::connection test_connection = test_server.serve();
-            show::request test_request( test_connection );
+            auto test_connection{ test_server.serve() };
+            show::request test_request{ test_connection };
             CHECK_THROW(
-                ( std::string(
+                ( std::string{
                     std::istreambuf_iterator< char >( &test_request ),
                     {}
-                ) ),
+                } ),
                 show::connection_timeout
             );
         }
@@ -1289,11 +1282,11 @@ SUITE( ShowRequestTests )
     {
         // client_disconnected on content length < Content-Length w/ client
         // incomplete
-        std::string address = "::";
-        int port = 9090;
-        show::server test_server( address, port, 1 );
+        std::string  address{ "::" };
+        unsigned int port   { 9090 };
+        show::server test_server{ address, port, 1 };
         
-        auto request_thread = send_request_async(
+        auto request_thread{ send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -1306,17 +1299,17 @@ SUITE( ShowRequestTests )
                     "Lorem ipsum dolor sit amet,"
                 );
             }
-        );
+        ) };
         
         try
         {
-            show::connection test_connection = test_server.serve();
-            show::request test_request( test_connection );
+            auto test_connection{ test_server.serve() };
+            show::request test_request{ test_connection };
             CHECK_THROW(
-                ( std::string(
+                ( std::string{
                     std::istreambuf_iterator< char >( &test_request ),
                     {}
-                ) ),
+                } ),
                 show::client_disconnected
             );
         }
@@ -1339,7 +1332,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1363,7 +1356,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1387,7 +1380,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1411,7 +1404,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1435,7 +1428,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1459,7 +1452,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1483,7 +1476,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1508,7 +1501,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1534,7 +1527,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1559,7 +1552,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1584,7 +1577,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )
@@ -1609,7 +1602,7 @@ SUITE( ShowRequestTests )
             []( show::connection& test_connection ){
                 try
                 {
-                    show::request test_request( test_connection );
+                    show::request test_request{ test_connection };
                     CHECK( false );
                 }
                 catch( const show::request_parse_error& e )

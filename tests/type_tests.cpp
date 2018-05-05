@@ -22,11 +22,9 @@ SUITE( ShowTypeTests )
     
     TEST( ASCIIUpperCase )
     {
-        std::string string = "Hello World";
-        std::string string_uppercase = show::_ASCII_upper( string );
         CHECK_EQUAL(
             "HELLO WORLD",
-            string_uppercase
+            show::_ASCII_upper( "Hello World" )
         );
     }
     

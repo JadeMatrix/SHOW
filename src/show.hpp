@@ -52,7 +52,8 @@ namespace show
     
     
     using socket_fd = int;
-    // `int` instead of `size_t` because this is a buffer for POSIX `read()`
+    // `int` instead of `std::streamsize` because this is a buffer for POSIX
+    // `read()`
     using buffer_size_type = int;
     
     enum http_protocol
@@ -110,8 +111,8 @@ namespace show
                 ++i
             )
             {
-                char lhc{ _ASCII_upper( lhs[ i ] ) };
-                char rhc{ _ASCII_upper( rhs[ i ] ) };
+                auto lhc{ _ASCII_upper( lhs[ i ] ) };
+                auto rhc{ _ASCII_upper( rhs[ i ] ) };
                 
                 if( lhc < rhc )
                     return true;
@@ -154,6 +155,7 @@ namespace show
         );
     
     public:
+        const socket_fd    descriptor;
         const std::string  address;
         const unsigned int port;
         
@@ -163,8 +165,6 @@ namespace show
             WRITE      = 2,
             READ_WRITE = 3
         };
-        
-        const socket_fd descriptor;
         
         _socket( _socket&& );
         ~_socket();
@@ -228,9 +228,9 @@ namespace show
         
     public:
         const std::string& client_address() const { return _serve_socket.address; };
-        const unsigned int client_port   () const { return _serve_socket.port;    };
-        const std::string& server_address() const { return _server_address;       };
-        const unsigned int server_port   () const { return _server_port;          };
+        const unsigned int client_port   () const { return _serve_socket.port   ; };
+        const std::string& server_address() const { return _server_address      ; };
+        const unsigned int server_port   () const { return _server_port         ; };
         
         connection( connection&& );
         ~connection();
@@ -255,21 +255,21 @@ namespace show
         };
         
         request( class connection& );
-        request( request&& );   // See note in implementation
+        request( request&& );
         
         request& operator =( request&& );
         
-        show::connection                & connection            () const { return *_connection;                    }
+        show::connection                & connection            () const { return *_connection                   ; }
         const std::string               & client_address        () const { return _connection -> client_address(); }
         const unsigned int                client_port           () const { return _connection -> client_port   (); }
-        http_protocol                     protocol              () const { return _protocol;                       }
-        const std::string               & protocol_string       () const { return _protocol_string;                }
-        const std::string               & method                () const { return _method;                         }
-        const std::vector< std::string >& path                  () const { return _path;                           }
-        const query_args_type           & query_args            () const { return _query_args;                     }
-        const headers_type              & headers               () const { return _headers;                        }
-        content_length_flag               unknown_content_length() const { return _unknown_content_length;         }
-        unsigned long long                content_length        () const { return _content_length;                 }
+        http_protocol                     protocol              () const { return _protocol                      ; }
+        const std::string               & protocol_string       () const { return _protocol_string               ; }
+        const std::string               & method                () const { return _method                        ; }
+        const std::vector< std::string >& path                  () const { return _path                          ; }
+        const query_args_type           & query_args            () const { return _query_args                    ; }
+        const headers_type              & headers               () const { return _headers                       ; }
+        content_length_flag               unknown_content_length() const { return _unknown_content_length        ; }
+        unsigned long long                content_length        () const { return _content_length                ; }
         
         bool eof() const;
         void flush();
@@ -324,7 +324,7 @@ namespace show
             std::streamsize
         );
         virtual int_type overflow(
-            int_type ch = std::char_traits< char >::eof()
+            int_type ch = std::streambuf::traits_type::eof()
         );
     };
     
@@ -422,7 +422,7 @@ namespace show
                 "failed to set listen socket "
                 + description
                 + ": "
-                + std::string( std::strerror( errno ) )
+                + std::string{ std::strerror( errno ) }
             };
     }
     
@@ -487,7 +487,7 @@ namespace show
             FD_SET( descriptor, &write_descriptors );
         }
         
-        int select_result{ pselect(
+        auto select_result{ pselect(
             descriptor + 1,
             r ? &read_descriptors  : NULL,
             w ? &write_descriptors : NULL,
@@ -564,7 +564,7 @@ namespace show
                     "response send"
                 );
             
-            buffer_size_type bytes_sent{ static_cast< buffer_size_type >( send(
+            auto bytes_sent{ static_cast< buffer_size_type >( send(
                 _serve_socket.descriptor,
                 pbase() + send_offset,
                 pptr() - ( pbase() + send_offset ),
@@ -866,14 +866,13 @@ namespace show
         _connection { &c },
         read_content{ 0  }
     {
-        bool reading{ true };
-        int bytes_read;
-        
-        int seq_newlines{ 0 };
-        bool in_endline_seq{ false };
+        int  bytes_read;
+        bool reading                   { true  };
+        int  seq_newlines              { 0     };
+        bool in_endline_seq            { false };
         // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
         bool check_for_multiline_header{ false };
-        bool path_begun{ false };
+        bool path_begun                { false };
         std::stack< std::string > key_buffer_stack;
         std::string key_buffer, value_buffer;
         
@@ -889,7 +888,7 @@ namespace show
         
         while( reading )
         {
-            char current_char{ connection::traits_type::to_char_type(
+            auto current_char{ connection::traits_type::to_char_type(
                 _connection -> sbumpc()
             ) };
             
@@ -965,7 +964,7 @@ namespace show
                         if( _path.size() < 1 )
                         {
                             path_begun = true;
-                            _path.push_back( std::string{ &current_char, 1 } );
+                            _path.push_back( std::string( &current_char, 1 ) );
                         }
                         else
                             _path[ _path.size() - 1 ] += current_char;
@@ -1211,10 +1210,10 @@ namespace show
         {
             // Don't just return `remaining` as that may cause reading to hang
             // on unresponsive clients (trying to read bytes we don't have yet)
-            std::streamsize remaining{ static_cast< std::streamsize >(
+            auto remaining{ static_cast< std::streamsize >(
                 _content_length - read_content
             ) };
-            std::streamsize in_connection{ _connection -> showmanyc() };
+            auto in_connection{ _connection -> showmanyc() };
             return in_connection < remaining ? in_connection : remaining;
         }
     }
@@ -1225,7 +1224,7 @@ namespace show
             return traits_type::eof();
         else
         {
-            int_type c{ _connection -> underflow() };
+            auto c{ _connection -> underflow() };
             if( c != traits_type::not_eof( c ) )
                 throw client_disconnected{};
             return c;
@@ -1236,8 +1235,8 @@ namespace show
     {
         if( eof() )
             return traits_type::eof();
-        int_type c{ _connection -> uflow() };
-        if( c != traits_type::not_eof( c ) )
+        auto c{ _connection -> uflow() };
+        if( traits_type::not_eof( c ) != c )
             throw client_disconnected{};
         ++read_content;
         return c;
@@ -1254,7 +1253,7 @@ namespace show
             read = _connection -> sgetn( s, count );
         else if( !eof() )
         {
-            std::streamsize remaining{ static_cast< std::streamsize >(
+            auto remaining{ static_cast< std::streamsize >(
                 _content_length - read_content
             ) };
             read = _connection -> sgetn(
@@ -1271,12 +1270,9 @@ namespace show
     
     inline request::int_type request::pbackfail( int_type c )
     {
-        int_type result{ _connection -> pbackfail( c ) };
+        auto result{ _connection -> pbackfail( c ) };
         
-        if(
-               traits_type::not_eof    ( result )
-            == traits_type::to_int_type( result )
-        )
+        if( traits_type::not_eof( result ) == result )
             --read_content;
         
         return result;
@@ -1309,7 +1305,7 @@ namespace show
         // Marshall headers
         for( auto& name_values_pair : headers )
         {
-            auto header_name = name_values_pair.first;
+            auto header_name{ name_values_pair.first };
             
             if( header_name.size() < 1 )
                 throw response_marshall_error{ "empty header name" };
@@ -1413,7 +1409,7 @@ namespace show
         int                timeout
     )
     {
-        socket_fd listen_socket_fd{ socket(
+        auto listen_socket_fd{ socket(
             AF_INET6,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
@@ -1517,11 +1513,11 @@ namespace show
         
         char address_buffer[ INET6_ADDRSTRLEN ];
         
-        socket_fd serve_socket = accept(
+        auto serve_socket{ accept(
             listen_socket -> descriptor,
             reinterpret_cast< sockaddr* >( &address_info ),
             &address_info_len
-        );
+        ) };
         
         if(
             serve_socket == -1
@@ -1613,19 +1609,19 @@ namespace show
         
         std::string space{ use_plus_space ? "+" : "%20" };
         
-        for( std::string::size_type i = 0; i < o.size(); ++i )
+        for( auto c : o )
         {
-            if( o[ i ] == ' ' )
+            if( c == ' ' )
                 encoded << space;
             else if (
-                   ( o[ i ] >= 'A' && o[ i ] <= 'Z' )
-                || ( o[ i ] >= 'a' && o[ i ] <= 'z' )
-                || o[ i ] == '-'
-                || o[ i ] == '_'
-                || o[ i ] == '.'
-                || o[ i ] == '~'
+                   ( c >= 'A' && c <= 'Z' )
+                || ( c >= 'a' && c <= 'z' )
+                || c == '-'
+                || c == '_'
+                || c == '.'
+                || c == '~'
             )
-                encoded << o[ i ];
+                encoded << c;
             else
                 encoded
                     << '%'
@@ -1633,7 +1629,7 @@ namespace show
                     << std::setfill( '0' )
                     << std::setw( 2 )
                     << static_cast< unsigned int >(
-                        static_cast< unsigned char >( o[ i ] )
+                        static_cast< unsigned char >( c )
                     )
                     << std::nouppercase
                 ;

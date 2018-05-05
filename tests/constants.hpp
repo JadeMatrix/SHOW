@@ -6,7 +6,7 @@
 #include <string>
 
 
-const std::string long_message =
+const std::string long_message{
 "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer varius in "
 "magna eget euismod. Aliquam a cursus sapien. Vivamus at vestibulum massa. In "
 "eget dui a tortor fringilla sagittis nec at quam. Nam rhoncus scelerisque "
@@ -45,8 +45,9 @@ const std::string long_message =
 "eleifend tortor. Morbi id ipsum placerat, auctor neque id, elementum enim. "
 "Nullam finibus, dolor sit amet rhoncus laoreet, ex justo congue sem, molestie "
 "tristique nunc augue id dui. Donec at ex iaculis, volutpat lacus a, "
-"consectetur dui.";
-const std::string long_message_base64_encoded =
+"consectetur dui."
+};
+const std::string long_message_base64_encoded{
 "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gSW"
 "50ZWdlciB2YXJpdXMgaW4gbWFnbmEgZWdldCBldWlzbW9kLiBBbGlxdWFtIGEgY3Vyc3VzIHNhcGll"
 "bi4gVml2YW11cyBhdCB2ZXN0aWJ1bHVtIG1hc3NhLiBJbiBlZ2V0IGR1aSBhIHRvcnRvciBmcmluZ2"
@@ -93,8 +94,9 @@ const std::string long_message_base64_encoded =
 "QgdG9ydG9yLiBNb3JiaSBpZCBpcHN1bSBwbGFjZXJhdCwgYXVjdG9yIG5lcXVlIGlkLCBlbGVtZW50"
 "dW0gZW5pbS4gTnVsbGFtIGZpbmlidXMsIGRvbG9yIHNpdCBhbWV0IHJob25jdXMgbGFvcmVldCwgZX"
 "gganVzdG8gY29uZ3VlIHNlbSwgbW9sZXN0aWUgdHJpc3RpcXVlIG51bmMgYXVndWUgaWQgZHVpLiBE"
-"b25lYyBhdCBleCBpYWN1bGlzLCB2b2x1dHBhdCBsYWN1cyBhLCBjb25zZWN0ZXR1ciBkdWku";
-const std::string long_message_url_encoded =
+"b25lYyBhdCBleCBpYWN1bGlzLCB2b2x1dHBhdCBsYWN1cyBhLCBjb25zZWN0ZXR1ciBkdWku"
+};
+const std::string long_message_url_encoded{
 "Lorem%20ipsum%20dolor%20sit%20amet%2C%20consectetur%20adipiscing%20elit.%20Int"
 "eger%20varius%20in%20magna%20eget%20euismod.%20Aliquam%20a%20cursus%20sapien.%"
 "20Vivamus%20at%20vestibulum%20massa.%20In%20eget%20dui%20a%20tortor%20fringill"
@@ -142,7 +144,8 @@ const std::string long_message_url_encoded =
 "0elementum%20enim.%20Nullam%20finibus%2C%20dolor%20sit%20amet%20rhoncus%20laor"
 "eet%2C%20ex%20justo%20congue%20sem%2C%20molestie%20tristique%20nunc%20augue%20"
 "id%20dui.%20Donec%20at%20ex%20iaculis%2C%20volutpat%20lacus%20a%2C%20consectet"
-"ur%20dui.";
+"ur%20dui."
+};
 
 
 #endif
