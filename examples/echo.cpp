@@ -1,6 +1,6 @@
 #include <show.hpp>
 
-#include <iostream> // std::cerr
+#include <iostream> // std::cout
 #include <iterator> // std::istreambuf_iterator
 #include <string>   // std::string, std::to_string()
 
@@ -27,10 +27,7 @@ void handle_POST_request( show::request& request )
         show::response response{
             request.connection(),
             show::http_protocol::HTTP_1_0,
-            {
-                400,
-                "Bad Request"
-            },
+            { 400, "Bad Request" },
             headers
         };
     }
@@ -59,20 +56,14 @@ void handle_POST_request( show::request& request )
         // This is just the simplest way to read a whole streambuf into a
         // string, not the most the fastest; see
         // https://stackoverflow.com/questions/3203452/how-to-read-entire-stream-into-a-stdstring
-        std::string message = std::string{
-            std::istreambuf_iterator< char >( &request ),
-            {}
-        };
+        std::string message{ std::istreambuf_iterator< char >{ &request }, {} };
         
         show::response response{
             request.connection(),
             // Just handling one request per connection in this example, so
             // respond with HTTP/1.0
             show::http_protocol::HTTP_1_0,
-            {
-                200,
-                "OK"
-            },
+            { 200, "OK" },
             headers
         };
         
@@ -108,10 +99,7 @@ int main( int argc, char* argv[] )
                     show::response response{
                         request.connection(),
                         show::http_protocol::HTTP_1_0,
-                        {
-                            405,
-                            "Method Not Allowed"
-                        },
+                        { 405, "Method Not Allowed" },
                         { server_header }
                     };
             }

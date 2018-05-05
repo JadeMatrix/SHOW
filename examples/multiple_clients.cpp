@@ -91,7 +91,7 @@ int main( int argc, char* argv[] )
         {
             std::thread worker{
                 handle_connection,
-                // Prefer std::make_unique<>() in C++14+
+                // In C++14 and later std::make_unique<>() should be preferred
                 std::unique_ptr< show::connection >{
                     new show::connection{ test_server.serve() }
                 }

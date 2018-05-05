@@ -1,6 +1,6 @@
 #include <show.hpp>
 
-#include <iostream> // std::cerr
+#include <iostream> // std::cout
 #include <string>   // std::to_string()
 
 
@@ -10,7 +10,7 @@ int main( int argc, char* argv[] )
     unsigned int port   { 9090 };   // Some random higher port
     int          timeout{ 10   };   // Connection timeout in seconds
     
-    std::string  message{ "Hello World!" };
+    std::string message{ "Hello World!" };
     
     show::server test_server{
         host,
@@ -34,10 +34,7 @@ int main( int argc, char* argv[] )
                 if( !request.unknown_content_length() )
                     request.flush();
                 
-                show::response_code code{
-                    200,
-                    "OK"
-                };
+                show::response_code code{ 200, "OK" };
                 show::headers_type headers{
                     // Set the Server header to display the SHOW version
                     { "Server", {
