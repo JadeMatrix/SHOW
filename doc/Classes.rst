@@ -54,7 +54,7 @@ Types
     
     An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string > >`, and can be statically initialized like one::
         
-        show::query_args_type args = {
+        show::query_args_type args{
             { "tag", { "foo", "bar" } },
             { "page", { "3" } }
         };
@@ -75,7 +75,7 @@ Types
     
     Headers can be statically initialized::
         
-        show::headers_type headers = {
+        show::headers_type headers{
             { "Content-Type", { "text/plain" } },
             { "Set-Cookie", {
                 "cookie1=foobar",
@@ -99,7 +99,7 @@ Connection interruptions
 
 .. cpp:class:: connection_interrupted
     
-    A common base class for both types of connection interruptions
+    A common base class for both types of connection interruptions.  Note that this does not inherit from :cpp:type:`std::exception`.
 
 .. cpp:class:: connection_timeout : public connection_interrupted
     
@@ -121,27 +121,27 @@ Exceptions
     
     * :cpp:type:`std::runtime_error` on `cppreference.com <http://en.cppreference.com/w/cpp/error/runtime_error/runtime_error>`_
 
-.. cpp:class:: socket_error : std::runtime_error
+.. cpp:class:: socket_error : public std::runtime_error
     
     An unrecoverable, low-level error occurred inside SHOW.  If thrown while handling a connection, the connection will no longer be valid but the server should be fine.  If thrown while creating or working with a server, the server object itself is in an unrecoverable state and can no longer serve.
     
     The nature of this error when thrown by a server typically implies trying again will not work.  If the application is designed to serve on a single IP/port, you will most likely want to exit the program with an error.
 
-.. cpp:class:: request_parse_error : std::runtime_error
+.. cpp:class:: request_parse_error : public std::runtime_error
     
     Thrown when creating a request object from a connection and SHOW encounters something it can't manage to interpret into a :cpp:class:`request`.
     
     As parsing the offending request almost certainly failed midway, garbage data will likely in the connection's buffer.  Currently, the only safe way to handle this exception is to close the connection.
 
-.. cpp:class:: response_marshall_error : std::runtime_error
+.. cpp:class:: response_marshall_error : public std::runtime_error
     
     Thrown by :cpp:class:`response`'s constructor when the response arguments cannot be marshalled into a valid HTTP response:
     
     * One of the header names is an empty string
-    * One of the header names contains a character other than A-Z, a-z, 0-9, or _
+    * One of the header names contains a character other than A-Z, a-z, 0-9, or -
     * Any header value is an empty string
 
-.. cpp:class:: url_decode_error : std::runtime_error
+.. cpp:class:: url_decode_error : public std::runtime_error
     
     Thrown by :cpp:func:`url_decode()` when the input is not a valid `URL- or percent-encoded <https://en.wikipedia.org/wiki/Percent-encoding>`_ string.
     

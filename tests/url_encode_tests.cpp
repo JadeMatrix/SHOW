@@ -10,98 +10,73 @@ SUITE( ShowURLEncodeTests )
 {
     TEST( EncodeNoConversion )
     {
-        std::string message = "hello_world";
-        std::string message_encoded = show::url_encode(
-            message
-        );
         CHECK_EQUAL(
-            "hello_world",
-            message_encoded
+            "hello_world_0123",
+            show::url_encode( "hello_world_0123" )
         );
     }
     
     TEST( EncodeSpaceConversionPlus )
     {
-        std::string message = "hello world";
-        std::string message_encoded = show::url_encode(
-            message
-        );
         CHECK_EQUAL(
-            "hello+world",
-            message_encoded
+            "hello+world+0123",
+            show::url_encode( "hello world 0123" )
         );
     }
     
     TEST( EncodeSpaceConversionPercent )
     {
-        std::string message = "hello world";
-        std::string message_encoded = show::url_encode(
-            message,
-            false
-        );
         CHECK_EQUAL(
-            "hello%20world",
-            message_encoded
+            "hello%20world%200123",
+            show::url_encode( "hello world 0123", false )
         );
     }
     
     TEST( EncodeSlash )
     {
-        std::string message = "hello/world";
-        std::string message_encoded = show::url_encode(
-            message
-        );
         CHECK_EQUAL(
-            "hello%2Fworld",
-            message_encoded
+            "hello%2Fworld%2F0123",
+            show::url_encode( "hello/world/0123" )
+        );
+    }
+    
+    TEST( EncodeControlChars )
+    {
+        CHECK_EQUAL(
+            "%09%0D%0A",
+            show::url_encode( "\t\r\n" )
         );
     }
     
     TEST( EncodeEmptyString )
     {
-        std::string message = "";
-        std::string message_encoded = show::url_encode(
-            message
-        );
         CHECK_EQUAL(
             "",
-            message_encoded
+            show::url_encode( "" )
         );
     }
     
     TEST( EncodeNullBytesString )
     {
-        std::string message = std::string( "\0\0\0", 3 );
-        std::string message_encoded = show::url_encode(
-            message
-        );
         CHECK_EQUAL(
             "%00%00%00",
-            message_encoded
+            show::url_encode( std::string( "\0\0\0", 3 ) )
         );
     }
     
     TEST( EncodeUnicodeString )
     {
-        std::string message = "こんにちは皆様";
-        std::string message_encoded = show::url_encode(
-            message
-        );
         CHECK_EQUAL(
             "%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF%E7%9A%86%E6%A7%98",
-            message_encoded
+            show::url_encode( "こんにちは皆様" )
         );
     }
     
     TEST( EncodeLongString )
     {
-        std::string message_encoded = show::url_encode(
-            long_message,
-            false
-        );
         CHECK_EQUAL(
             long_message_url_encoded,
-            message_encoded
+            show::url_encode( long_message, false )
         );
     }
     
@@ -114,122 +89,85 @@ SUITE( ShowURLEncodeTests )
             very_long_message         += long_message;
             very_long_message_encoded += long_message_url_encoded;
         }
-        std::string message_encoded = show::url_encode(
-            very_long_message,
-            false
-        );
         CHECK_EQUAL(
             very_long_message_encoded,
-            message_encoded
+            show::url_encode( very_long_message, false )
         );
     }
     
     TEST( DecodeNoConversion )
     {
-        std::string message_encoded = "hello_world";
-        std::string message = show::url_decode(
-            message_encoded
-        );
         CHECK_EQUAL(
             "hello_world",
-            message
+            show::url_decode( "hello_world" )
         );
     }
     
     TEST( DecodeSpaceConversionPlus )
     {
-        std::string message_encoded = "hello+world";
-        std::string message = show::url_decode(
-            message_encoded
-        );
         CHECK_EQUAL(
             "hello world",
-            message
+            show::url_decode( "hello+world" )
         );
     }
     
     TEST( DecodeSpaceConversionPercent )
     {
-        std::string message_encoded = "hello%20world";
-        std::string message = show::url_decode(
-            message_encoded
-        );
         CHECK_EQUAL(
             "hello world",
-            message
+            show::url_decode( "hello%20world" )
         );
     }
     
     TEST( DecodeSlash )
     {
-        std::string message_encoded = "hello%2Fworld";
-        std::string message = show::url_decode(
-            message_encoded
-        );
         CHECK_EQUAL(
             "hello/world",
-            message
+            show::url_decode( "hello%2Fworld" )
         );
     }
     
     TEST( DecodeEmptyString )
     {
-        std::string message_encoded = "";
-        std::string message = show::url_decode(
-            message_encoded
-        );
         CHECK_EQUAL(
             "",
-            message
+            show::url_decode( "" )
         );
     }
     
     TEST( DecodeNullBytesString )
     {
-        std::string message_encoded = "%00%00%00";
-        std::string message = show::url_decode(
-            message_encoded
-        );
         CHECK_EQUAL(
             std::string( "\0\0\0", 3 ),
-            message
+            show::url_decode( "%00%00%00" )
         );
     }
     
     TEST( DecodeUnicodeString )
     {
-        std::string message_encoded =
-            "%E4%B8%B9%E7%BE%BD%E3%81%95%E3%82%93%E3%81%AE%E5%BA%AD%E3%81%AB%E3%81%AF";
-        std::string message = show::url_decode(
-            message_encoded
-        );
         CHECK_EQUAL(
             "丹羽さんの庭には",
-            message
+            show::url_decode(
+                "%E4%B8%B9%E7%BE%BD%E3%81%95%E3%82%93%E3%81%AE%E5%BA%AD%E3%81%AB%E3%81%AF"
+            )
         );
     }
     
     TEST( DecodeLowercase )
     {
-        std::string message_encoded =
-            "%e4%b8%b9%e7%be%bd%e3%81%95%e3%82%93%e3%81%ae%e5%ba%ad%e3%81%ab%e3%81%af";
-        std::string message = show::url_decode(
-            message_encoded
-        );
         CHECK_EQUAL(
             "丹羽さんの庭には",
-            message
+            show::url_decode(
+                "%e4%b8%b9%e7%be%bd%e3%81%95%e3%82%93%e3%81%ae%e5%ba%ad%e3%81%ab%e3%81%af"
+            )
         );
     }
     
     TEST( DecodeLongString )
     {
-        std::string message_encoded = show::url_decode(
-            long_message_url_encoded
-        );
         CHECK_EQUAL(
             long_message,
-            message_encoded
+            show::url_decode( long_message_url_encoded )
         );
     }
     
@@ -242,21 +180,17 @@ SUITE( ShowURLEncodeTests )
             very_long_message         += long_message;
             very_long_message_encoded += long_message_url_encoded;
         }
-        std::string message = show::url_decode(
-            very_long_message_encoded
-        );
         CHECK_EQUAL(
             very_long_message,
-            message
+            show::url_decode( very_long_message_encoded )
         );
     }
     
     TEST( DecodeFailIncompleteEscapeSequence )
     {
-        std::string message_encoded = "hello%2";
         try
         {
-            show::url_decode( message_encoded );
+            show::url_decode( "hello%2" );
             CHECK( false );
         }
         catch( const show::url_decode_error& e )
@@ -270,10 +204,9 @@ SUITE( ShowURLEncodeTests )
     
     TEST( DecodeFailIncompleteEscapeSequenceFirstChar )
     {
-        std::string message_encoded = "hello%m0world";
         try
         {
-            show::url_decode( message_encoded );
+            show::url_decode( "hello%m0world" );
             CHECK( false );
         }
         catch( const show::url_decode_error& e )
@@ -287,10 +220,9 @@ SUITE( ShowURLEncodeTests )
     
     TEST( DecodeFailIncompleteEscapeSequenceSecondChar )
     {
-        std::string message_encoded = "hello%2zworld";
         try
         {
-            show::url_decode( message_encoded );
+            show::url_decode( "hello%2zworld" );
             CHECK( false );
         }
         catch( const show::url_decode_error& e )

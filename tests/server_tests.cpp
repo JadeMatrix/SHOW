@@ -12,9 +12,9 @@ SUITE( ShowServerTests )
 {
     TEST( IPV4Address )
     {
-        std::string address = "0.0.0.0";
-        int port = 9090;
-        show::server test_server( address, port );
+        std::string  address{ "0.0.0.0" };
+        unsigned int port   { 9090      };
+        show::server test_server{ address, port };
         CHECK_EQUAL(
             address,
             test_server.address()
@@ -27,9 +27,9 @@ SUITE( ShowServerTests )
     
     TEST( IPV6Address )
     {
-        std::string address = "::";
-        int port = 9090;
-        show::server test_server( address, port );
+        std::string  address{ "::" };
+        unsigned int port   { 9090 };
+        show::server test_server{ address, port };
         CHECK_EQUAL(
             address,
             test_server.address()
@@ -42,7 +42,7 @@ SUITE( ShowServerTests )
     
     TEST( IndefiniteServeByDefault )
     {
-        show::server test_server( "::", 9090 );
+        show::server test_server{ "::", 9090 };
         CHECK_EQUAL(
             -1,
             test_server.timeout()
@@ -51,8 +51,8 @@ SUITE( ShowServerTests )
     
     TEST( ConstructWithIndefiniteTimout )
     {
-        int timeout = -1;
-        show::server test_server( "::", 9090, timeout );
+        int timeout{ -1 };
+        show::server test_server{ "::", 9090, timeout };
         CHECK_EQUAL(
             timeout,
             test_server.timeout()
@@ -65,8 +65,8 @@ SUITE( ShowServerTests )
     
     TEST( ConstructWithImmediateTimout )
     {
-        int timeout = 0;
-        show::server test_server( "::", 9090, timeout );
+        int timeout{ 0 };
+        show::server test_server{ "::", 9090, timeout };
         CHECK_EQUAL(
             timeout,
             test_server.timeout()
@@ -84,8 +84,8 @@ SUITE( ShowServerTests )
     
     TEST( ConstructWithPositiveTimout )
     {
-        int timeout = 1;
-        show::server test_server( "::", 9090, timeout );
+        int timeout{ 1 };
+        show::server test_server{ "::", 9090, timeout };
         CHECK_EQUAL(
             timeout,
             test_server.timeout()
@@ -101,8 +101,8 @@ SUITE( ShowServerTests )
     
     TEST( ChangeToIndefiniteTimout )
     {
-        int timeout = -1;
-        show::server test_server( "::", 9090, 0 );
+        int timeout{ -1 };
+        show::server test_server{ "::", 9090, 0 };
         test_server.timeout( timeout );
         CHECK_EQUAL(
             timeout,
@@ -112,8 +112,8 @@ SUITE( ShowServerTests )
     
     TEST( ChangeToImmediateTimout )
     {
-        int timeout = 0;
-        show::server test_server( "::", 9090 );
+        int timeout{ 0 };
+        show::server test_server{ "::", 9090 };
         test_server.timeout( timeout );
         CHECK_EQUAL(
             timeout,
@@ -129,8 +129,8 @@ SUITE( ShowServerTests )
     
     TEST( ChangeToPositiveTimout )
     {
-        int timeout = 1;
-        show::server test_server( "::", 9090 );
+        int timeout{ 1 };
+        show::server test_server{ "::", 9090 };
         test_server.timeout( timeout );
         CHECK_EQUAL(
             timeout,
@@ -147,21 +147,21 @@ SUITE( ShowServerTests )
     
     TEST( FailInUsePort )
     {
-        show::socket_fd test_socket = socket(
+        auto test_socket{ socket(
             AF_INET6,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
-        );
+        ) };
         REQUIRE CHECK( test_socket != 0 );
         
         sockaddr_in6 socket_address;
-        memset(&socket_address, 0, sizeof(socket_address));
+        memset( &socket_address, 0, sizeof( socket_address ) );
         socket_address.sin6_family = AF_INET6;
         
         REQUIRE CHECK(
             bind(
                 test_socket,
-                ( sockaddr* )&socket_address,
+                reinterpret_cast< sockaddr* >( &socket_address ),
                 sizeof( socket_address )
             ) == 0
         );
@@ -170,14 +170,14 @@ SUITE( ShowServerTests )
         REQUIRE CHECK(
             getsockname(
                 test_socket,
-                ( sockaddr* )&socket_address,
+                reinterpret_cast< sockaddr* >( &socket_address ),
                 &got_length
             ) == 0
         );
         
         try
         {
-            show::server test_server( "::", ntohs( socket_address.sin6_port ) );
+            show::server test_server{ "::", ntohs( socket_address.sin6_port ) };
             CHECK( false );
         }
         catch( const show::socket_error& e )
@@ -195,7 +195,7 @@ SUITE( ShowServerTests )
     {
         try
         {
-            show::server test_server( "*", 9090 );
+            show::server test_server{ "*", 9090 };
             CHECK( false );
         }
         catch( const show::socket_error& e )
@@ -209,29 +209,26 @@ SUITE( ShowServerTests )
     
     TEST( ConnectionIndefiniteTimeout )
     {
-        show::server test_server( "::", 9090, -1 );
+        show::server test_server{ "::", 9090, -1 };
         
-        std::thread test_thread( []{
-            std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                // Don't bother checking return code, we just need the request
-                // sent
-                curl_easy_perform( curl );
-                // CHECK_EQUAL(
-                //     CURLE_OK,
-                //     curl_easy_perform( curl )
-                // );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ []{
+            std::this_thread::sleep_for( std::chrono::seconds{ 2 } );
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            // Don't bother checking return code, we just need the request
+            // sent
+            curl_easy_perform( curl );
+            // CHECK_EQUAL(
+            //     CURLE_OK,
+            //     curl_easy_perform( curl )
+            // );
+            curl_easy_cleanup( curl );
+        } };
         
         try
         {
@@ -248,24 +245,21 @@ SUITE( ShowServerTests )
     
     TEST( ConnectionImmediateTimeout )
     {
-        show::server test_server( "::", 9090, 0 );
+        show::server test_server{ "::", 9090, 0 };
         
-        std::thread test_thread( []{
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                curl_easy_perform( curl );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ []{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
         
-        std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+        std::this_thread::sleep_for( std::chrono::seconds{ 1 } );
         
         try
         {
@@ -282,22 +276,19 @@ SUITE( ShowServerTests )
     
     TEST( ConnectionPositiveTimeout )
     {
-        show::server test_server( "::", 9090, 2 );
+        show::server test_server{ "::", 9090, 2 };
         
-        std::thread test_thread( []{
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                curl_easy_perform( curl );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ []{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
         
         try
         {
@@ -310,6 +301,59 @@ SUITE( ShowServerTests )
         }
         
         test_thread.join();
+    }
+    
+    TEST( MoveConstruct )
+    {
+        auto make_server{ []( const std::string& address, unsigned int port ){
+            return show::server{ address, port };
+        } };
+        
+        std::string  address{ "::" };
+        unsigned int port   { 9090 };
+        auto test_server{ make_server( address, port ) };
+        
+        CHECK_EQUAL(
+            address,
+            test_server.address()
+        );
+        CHECK_EQUAL(
+            port,
+            test_server.port()
+        );
+    }
+    
+    TEST( MoveAssign )
+    {
+        auto make_server{ []( const std::string& address, unsigned int port ){
+            return show::server{ address, port };
+        } };
+        
+        std::string  address1{ "0.0.0.0" };
+        unsigned int port1   { 9090      };
+        auto test_server{ make_server( address1, port1 ) };
+        
+        CHECK_EQUAL(
+            address1,
+            test_server.address()
+        );
+        CHECK_EQUAL(
+            port1,
+            test_server.port()
+        );
+        
+        std::string  address2{ "::" };
+        unsigned int port2   { 9595 };
+        test_server = make_server( address2, port2 );
+        
+        CHECK_EQUAL(
+            address2,
+            test_server.address()
+        );
+        CHECK_EQUAL(
+            port2,
+            test_server.port()
+        );
     }
     
     // TODO: TEST( UseRandomPort ) -- ensure updates server.port

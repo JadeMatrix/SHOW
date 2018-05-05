@@ -9,6 +9,111 @@
 
 SUITE( ShowResponseTests )
 {
+    TEST( MoveConstruct )
+    {
+        run_checks_against_response(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                auto make_response{ []( show::connection& c ){
+                    return show::response{
+                        c,
+                        show::http_protocol::HTTP_1_0,
+                        { 200, "OK" },
+                        { { "Test-Header", { "foo" } } }
+                    };
+                } };
+                
+                show::request test_request{ test_connection };
+                auto test_response{ make_response( test_connection ) };
+            },
+            (
+                "HTTP/1.0 200 OK\r\n"
+                "Test-Header: foo\r\n"
+                "\r\n"
+            )
+        );
+    }
+    
+    TEST( MoveAssign )
+    {
+        auto make_response{ []( show::connection& c ){
+            show::request r{ c };
+            return show::response{
+                c,
+                show::http_protocol::HTTP_1_0,
+                { 200, "OK" },
+                { { "Test-Header", { r.headers().at( "Test-Header" )[ 0 ] } } }
+            };
+        } };
+        
+        std::string  address{ "::" };
+        unsigned int port   { 9090 };
+        
+        show::server test_server{ address, port, 2 };
+        
+        std::thread request_thread1{ [ address, port ](){
+            check_response_to_request(
+                address,
+                port,
+                (
+                    "GET / HTTP/1.0\r\n"
+                    "Test-Header: foo\r\n"
+                    "\r\n"
+                ),
+                (
+                    "HTTP/1.0 200 OK\r\n"
+                    "Test-Header: foo\r\n"
+                    "\r\n"
+                )
+            );
+        } };
+        std::thread request_thread2{ [ address, port ](){
+            check_response_to_request(
+                address,
+                port,
+                (
+                    "GET / HTTP/1.0\r\n"
+                    "Test-Header: bar\r\n"
+                    "\r\n"
+                ),
+                (
+                    "HTTP/1.0 200 OK\r\n"
+                    "Test-Header: bar\r\n"
+                    "\r\n"
+                )
+            );
+        } };
+        
+        try
+        {
+            // Get the two connections before creating a response to either to
+            // prevent one of the connections' destructors from running before
+            // the response's.
+            auto test_connection1{ test_server.serve() };
+            auto test_connection2{ test_server.serve() };
+            
+            auto test_response{ make_response( test_connection1 ) };
+            test_response = make_response( test_connection2 );
+        }
+        catch( const show::connection_timeout& e )
+        {
+            throw std::runtime_error{ "show::connection_timeout" };
+        }
+        catch( const show::client_disconnected& e )
+        {
+            throw std::runtime_error{ "show::client_disconnected" };
+        }
+        
+        // Make sure client threads have finished
+        std::this_thread::sleep_for( std::chrono::seconds{ 1 } );
+        
+        request_thread1.join();
+        request_thread2.join();
+    }
+    
     TEST( ReturnHTTP_1_0 )
     {
         run_checks_against_response(
@@ -17,13 +122,13 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::HTTP_1_0,
                     { 200, "OK" },
                     {}
-                );
+                };
             },
             (
                 "HTTP/1.0 200 OK\r\n"
@@ -40,13 +145,13 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::HTTP_1_1,
                     { 200, "OK" },
                     {}
-                );
+                };
             },
             (
                 "HTTP/1.1 200 OK\r\n"
@@ -63,13 +168,13 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::NONE,
                     { 200, "OK" },
                     {}
-                );
+                };
             },
             (
                 "HTTP/1.0 200 OK\r\n"
@@ -86,13 +191,13 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::UNKNOWN,
                     { 200, "OK" },
                     {}
-                );
+                };
             },
             (
                 "HTTP/1.0 200 OK\r\n"
@@ -109,13 +214,13 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::UNKNOWN,
                     { 451, "Unavailable For Legal Reasons" },
                     {}
-                );
+                };
             },
             (
                 "HTTP/1.0 451 Unavailable For Legal Reasons\r\n"
@@ -132,13 +237,13 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::UNKNOWN,
                     { 790, "Custom Response Code" },
                     {}
-                );
+                };
             },
             (
                 "HTTP/1.0 790 Custom Response Code\r\n"
@@ -155,16 +260,44 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::UNKNOWN,
                     { 3920, "Custom Long Response Code" },
                     {}
-                );
+                };
             },
             (
                 "HTTP/1.0 3920 Custom Long Response Code\r\n"
+                "\r\n"
+            )
+        );
+    }
+    
+    TEST( StandardizeHeader )
+    {
+        run_checks_against_response(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                show::request test_request{ test_connection };
+                show::response test_response{
+                    test_connection,
+                    show::UNKNOWN,
+                    { 200, "OK" },
+                    {
+                        { "HeaderOne", { "foo" } },
+                        { "header-two", { "bar" } }
+                    }
+                };
+            },
+            (
+                "HTTP/1.0 200 OK\r\n"
+                "Header-Two: bar\r\n"
+                "Headerone: foo\r\n"
                 "\r\n"
             )
         );
@@ -178,8 +311,8 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::UNKNOWN,
                     { 200, "OK" },
@@ -187,7 +320,7 @@ SUITE( ShowResponseTests )
                         { "Header1", { "foo\nbar" } },
                         { "Header2", { "asdf" } }
                     }
-                );
+                };
             },
             (
                 "HTTP/1.0 200 OK\r\n"
@@ -207,8 +340,8 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::UNKNOWN,
                     { 200, "OK" },
@@ -216,7 +349,7 @@ SUITE( ShowResponseTests )
                         { "Header1", { "\nfoo\nbar" } },
                         { "Header2", { "asdf" } }
                     }
-                );
+                };
             },
             (
                 "HTTP/1.0 200 OK\r\n"
@@ -245,8 +378,8 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             [ &content ]( show::connection& test_connection ){
-                show::request test_request( test_connection );
-                show::response test_response(
+                show::request test_request{ test_connection };
+                show::response test_response{
                     test_connection,
                     show::UNKNOWN,
                     { 200, "OK" },
@@ -256,7 +389,7 @@ SUITE( ShowResponseTests )
                         } },
                         { "Content-Type", { "text/plain" } }
                     }
-                );
+                };
                 test_response.sputn(
                     content.c_str(),
                     content.size()
@@ -289,11 +422,11 @@ SUITE( ShowResponseTests )
     
     TEST( ... )
     {
-        std::string address = "::";
-        int port = 9090;
-        show::server test_server( address, port, 1 );
+        std::string  address{ "::" };
+        unsigned int port   { 9090 };
+        show::server test_server{ address, port, 1 };
         
-        auto request_thread = send_request_async(
+        auto request_thread{ send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -306,21 +439,21 @@ SUITE( ShowResponseTests )
                     "\r\n"
                 );
             }
-        );
+        ) };
         
         try
         {
-            show::connection test_connection = test_server.serve();
-            show::request test_request( test_connection );
+            show::connection test_connection{ test_server.serve() };
+            show::request test_request{ test_connection };
             test_request.flush();
-            std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+            std::this_thread::sleep_for( std::chrono::seconds{ 2 } );
             CHECK_THROW(
-                ( show::response(
+                ( show::response{
                     test_connection,
                     show::HTTP_1_0,
                     { 200, "OK" },
                     {}
-                ) ).flush(),
+                } ).flush(),
                 show::client_disconnected
             );
         }
@@ -437,16 +570,17 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
+                show::request test_request{ test_connection };
                 test_request.flush();
                 try
                 {
-                    show::response test_response(
+                    show::response test_response{
                         test_connection,
                         show::HTTP_1_0,
                         { 200, "OK" },
                         { { "Invalid header n*me", { "asdf" } } }
-                    );
+                    };
+                    CHECK( false );
                 }
                 catch( const show::response_marshall_error& e )
                 {
@@ -468,16 +602,17 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
+                show::request test_request{ test_connection };
                 test_request.flush();
                 try
                 {
-                    show::response test_response(
+                    show::response test_response{
                         test_connection,
                         show::HTTP_1_0,
                         { 200, "OK" },
                         { { "", { "asdf" } } }
-                    );
+                    };
+                    CHECK( false );
                 }
                 catch( const show::response_marshall_error& e )
                 {
@@ -499,16 +634,17 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                show::request test_request( test_connection );
+                show::request test_request{ test_connection };
                 test_request.flush();
                 try
                 {
-                    show::response test_response(
+                    show::response test_response{
                         test_connection,
                         show::HTTP_1_0,
                         { 200, "OK" },
                         { { "Empty-Header", { "" } } }
-                    );
+                    };
+                    CHECK( false );
                 }
                 catch( const show::response_marshall_error& e )
                 {

@@ -30,28 +30,25 @@ SUITE( ShowConnectionTests )
 {
     TEST( InheritServerAddressPort )
     {
-        std::string address = "0.0.0.0";
-        int port = 9090;
-        show::server test_server( address, port, -1 );
+        std::string  address{ "0.0.0.0" };
+        unsigned int port   { 9090      };
+        show::server test_server{ address, port, -1 };
         
-        std::thread test_thread( []{
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                curl_easy_perform( curl );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ []{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
         
         try
         {
-            auto test_connection = test_server.serve();
+            auto test_connection{ test_server.serve() };
             
             CHECK_EQUAL(
                 test_server.address(),
@@ -73,32 +70,33 @@ SUITE( ShowConnectionTests )
     
     TEST( DetectClientAddressPort )
     {
-        show::server test_server( "0.0.0.0", 9090, -1 );
-        int client_port = 49152 + std::rand() % ( 65535 - 49152 + 1 );
+        show::server test_server{ "0.0.0.0", 9090, -1 };
+        unsigned int client_port{
+            49152
+            + static_cast< unsigned int >( std::rand() )
+            % ( 65535 - 49152 + 1 )
+        };
         
-        std::thread test_thread( [ client_port ]{
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_LOCALPORT,
-                    client_port
-                );
-                curl_easy_perform( curl );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ [ client_port ]{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_LOCALPORT,
+                client_port
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
         
         try
         {
-            auto test_connection = test_server.serve();
+            auto test_connection{ test_server.serve() };
             CHECK_EQUAL(
                 "0.0.0.0",
                 test_connection.client_address()
@@ -119,32 +117,30 @@ SUITE( ShowConnectionTests )
     
     TEST( SetIndependentIndefiniteTimeout )
     {
-        show::server test_server( "::", 9090, 0 );
+        show::server test_server{ "::", 9090, 0 };
         
-        std::thread test_thread( []{
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                curl_easy_perform( curl );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ []{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
         
         // Wait for cURL thread to send request
-        std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+        std::this_thread::sleep_for( std::chrono::seconds{ 1 } );
         
         try
         {
-            show::connection test_connection( test_server.serve() );
+            auto test_connection{ test_server.serve() };
             
-            int old_server_timeout = test_server.timeout();
-            int new_server_timeout = 0;
+            int old_server_timeout{ test_server.timeout() };
+            int new_server_timeout{ 0                     };
+            
             CHECK_EQUAL(
                 old_server_timeout,
                 test_connection.timeout()
@@ -173,29 +169,27 @@ SUITE( ShowConnectionTests )
     
     TEST( SetIndependentImmediateTimeout )
     {
-        show::server test_server( "::", 9090, -1 );
+        show::server test_server{ "::", 9090, -1 };
         
-        std::thread test_thread( []{
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                curl_easy_perform( curl );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ []{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
         
         try
         {
-            show::connection test_connection( test_server.serve() );
+            auto test_connection{ test_server.serve() };
             
-            int old_server_timeout = test_server.timeout();
-            int new_server_timeout = 1;
+            int old_server_timeout{ test_server.timeout() };
+            int new_server_timeout{ 1                     };
+            
             CHECK_EQUAL(
                 old_server_timeout,
                 test_connection.timeout()
@@ -224,29 +218,27 @@ SUITE( ShowConnectionTests )
     
     TEST( SetIndependentPositiveTimeout )
     {
-        show::server test_server( "::", 9090, -1 );
+        show::server test_server{ "::", 9090, -1 };
         
-        std::thread test_thread( []{
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                curl_easy_perform( curl );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ []{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
         
         try
         {
-            show::connection test_connection( test_server.serve() );
+            auto test_connection{ test_server.serve() };
             
-            int old_server_timeout = test_server.timeout();
-            int new_server_timeout = 0;
+            int old_server_timeout{ test_server.timeout() };
+            int new_server_timeout{ 0                     };
+            
             CHECK_EQUAL(
                 old_server_timeout,
                 test_connection.timeout()
@@ -275,43 +267,40 @@ SUITE( ShowConnectionTests )
     
     TEST( HandleConnectionSeparateThread )
     {
-        show::server test_server( "::", 9090, -1 );
+        show::server test_server{ "::", 9090, -1 };
         
-        std::thread test_thread( []{
-            CURL* curl = curl_easy_init();
-            CHECK( curl );
-            if( curl )
-            {
-                curl_easy_setopt(
-                    curl,
-                    CURLOPT_URL,
-                    "http://0.0.0.0:9090/"
-                );
-                curl_easy_perform( curl );
-                curl_easy_cleanup( curl );
-            }
-        } );
+        std::thread test_thread{ []{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
         
         try
         {
-            std::unique_ptr< show::connection > connection_ptr(
-                new show::connection( test_server.serve() )
-            );
+            std::unique_ptr< show::connection > connection_ptr{
+                new show::connection{ test_server.serve() }
+            };
             
-            std::thread test_connection_thread(
+            std::thread test_connection_thread{
                 connection_labmda_thread,
                 std::move( connection_ptr ),
                 []( std::unique_ptr< show::connection >& connection ){
                     try
                     {
-                        show::request test_request( *connection );
+                        show::request test_request{ *connection };
                     }
                     catch( ... )
                     {
                         CHECK( false );
                     }
                 }
-            );
+            };
             
             test_connection_thread.join();
         }
@@ -322,5 +311,61 @@ SUITE( ShowConnectionTests )
         }
         
         test_thread.join();
+    }
+    
+    // No "MoveConstruct" test as that's how all `server::serve()` calls work
+    
+    TEST( MoveAssign )
+    {
+        std::string  address{ "0.0.0.0" };
+        unsigned int port   { 9090      };
+        show::server test_server{ address, port, 1 };
+        
+        auto do_curl{ []{
+            auto curl{ curl_easy_init() };
+            REQUIRE CHECK( curl );
+            curl_easy_setopt(
+                curl,
+                CURLOPT_URL,
+                "http://0.0.0.0:9090/"
+            );
+            curl_easy_perform( curl );
+            curl_easy_cleanup( curl );
+        } };
+        
+        std::thread test_thread1{ do_curl };
+        std::thread test_thread2{ do_curl };
+        
+        try
+        {
+            auto test_connection{ test_server.serve() };
+            CHECK_EQUAL(
+                test_server.address(),
+                test_connection.server_address()
+            );
+            CHECK_EQUAL(
+                test_server.port(),
+                test_connection.server_port()
+            );
+            
+            test_connection = test_server.serve();
+            CHECK_EQUAL(
+                test_server.address(),
+                test_connection.server_address()
+            );
+            CHECK_EQUAL(
+                test_server.port(),
+                test_connection.server_port()
+            );
+        }
+        catch( ... )
+        {
+            test_thread1.join();
+            test_thread2.join();
+            throw;
+        }
+        
+        test_thread1.join();
+        test_thread2.join();
     }
 }

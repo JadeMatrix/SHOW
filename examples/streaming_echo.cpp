@@ -1,13 +1,13 @@
 #include <show.hpp>
 
-#include <iostream> // std::cout, std::cerr
+#include <iostream> // std::cout
 #include <istream>  // std::istream
 #include <ostream>  // std::ostream
 #include <string>   // std::string, std::to_string()
 
 
 // Set a Server header to display the SHOW version
-const show::headers_type::value_type server_header = {
+const show::headers_type::value_type server_header{
     "Server",
     {
         show::version::name
@@ -16,22 +16,22 @@ const show::headers_type::value_type server_header = {
     }
 };
 
-const std::streamsize buffer_size = 256;
+const std::streamsize buffer_size{ 256 };
 
 
 void handle_POST_request( show::request& request )
 {
     // Always require a Content-Length header for this example
     if( request.unknown_content_length() )
-        show::response response(
+        show::response response{
             request.connection(),
             show::http_protocol::HTTP_1_0,
             { 400, "Bad Request" },
             { server_header }
-        );
+        };
     else
     {
-        show::headers_type headers = {
+        show::headers_type headers{
             {
                 "Content-Length",
                 // Header values must be strings
@@ -43,29 +43,27 @@ void handle_POST_request( show::request& request )
         // otherwise use the default MIME type recommended in the HTTP
         // specification, RFC 2616 §7.2.1:
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.2.1
-        auto content_type_header = request.headers().find( "Content-Type" );
+        auto content_type_header{ request.headers().find( "Content-Type" ) };
         if(
             content_type_header != request.headers().end()
             && content_type_header -> second.size() == 1
         )
-            headers[ "Content-Type" ].push_back(
-                content_type_header -> second[ 0 ]
-            );
+            headers[ "Content-Type" ] = { content_type_header -> second[ 0 ] };
         else
-            headers[ "Content-Type" ].push_back( "application/octet-stream" );
+            headers[ "Content-Type" ] = { "application/octet-stream" };
         
         // Start a response before we read any data
-        show::response response(
+        show::response response{
             request.connection(),
             show::http_protocol::HTTP_1_0,
             { 200, "OK" },
             headers
-        );
+        };
         
         // Create stream objects for request & response, as well as a read
         // buffer for the echoed contents
-        std::istream  request_stream( &request  );
-        std::ostream response_stream( &response );
+        std::istream  request_stream{ &request  };
+        std::ostream response_stream{ &response };
         char buffer[ buffer_size ];
         
         // Note that std::istream::eof() only returns true after the first read
@@ -79,7 +77,7 @@ void handle_POST_request( show::request& request )
             // waiting for content from the client.
             buffer[ 0 ] = request_stream.get();
             
-            // `std::istream` & `std::ostream` swallow all exceptions and set
+            // `std::istream` & `std::ostream` swallow all throws and set
             // `badbit`, so code that uses streams for reading & writing will
             // never actually be able to catch a `show::client_disconnected` or
             // `show::connection_timeout` during those operations.
@@ -114,35 +112,34 @@ void handle_POST_request( show::request& request )
 
 int main( int argc, char* argv[] )
 {
-    std::string  host    = "::";    // IPv6 'any IP' (0.0.0.0 in IPv4)
-    unsigned int port    = 9090;    // Some random higher port
-    int          timeout = 10;      // Connection timeout in seconds
-    std::string  message = "Hello World!";
+    std::string  host   { "::" };   // IPv6 'any IP' (0.0.0.0 in IPv4)
+    unsigned int port   { 9090 };   // Some random higher port
+    int          timeout{ 10   };   // Connection timeout in seconds
     
-    show::server test_server(
+    show::server test_server{
         host,
         port,
         timeout
-    );
+    };
     
     while( true )
         try
         {
-            show::connection connection( test_server.serve() );
+            show::connection connection{ test_server.serve() };
             
             try
             {
-                show::request request( connection );
+                show::request request{ connection };
                 
                 // Only accept POST requests
                 if( request.method() != "POST" )
                 {
-                    show::response response(
+                    show::response response{
                         request.connection(),
                         show::http_protocol::HTTP_1_0,
                         { 501, "Not Implemented" },
                         { server_header }
-                    );
+                    };
                     continue;
                 }
                 
