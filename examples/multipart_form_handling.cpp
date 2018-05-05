@@ -3,6 +3,7 @@
 
 #include <iostream> // std::cout
 #include <iterator> // std::istreambuf_iterator
+#include <sstream>
 #include <string>   // std::string, std::to_string()
 
 
@@ -84,7 +85,6 @@ void analyze_form( show::request& request )
     }
     else
     {
-        std::string analysis{ "Form contains:\n" };
         auto header_value   = found_content_type_header -> second[ 0 ];
         auto boundary_begin = header_value.find( "boundary=" ) + 9;
         auto boundary_end   = header_value.find( ";", boundary_begin );
@@ -96,37 +96,40 @@ void analyze_form( show::request& request )
             )
         };
         
+        std::stringstream analysis;
+        analysis << "Form contains:\n";
+        
         for( auto& segment : parser )
         {
             auto content = std::string{
                 std::istreambuf_iterator< char >( &segment ),
                 {}
             };
-            analysis += (
-                " -  segment with size "
-                + std::to_string( content.size() )
-                + " bytes, headers:\n"
-            );
+            analysis
+                << " -  segment with size "
+                << content.size()
+                << " bytes, headers:\n"
+            ;
             for( auto& header : segment.headers() )
                 for( auto& value : header.second )
-                    analysis += (
-                        "     -  "
-                        + header.first
-                        + ": "
-                        + value
-                        + "\n"
-                    );
-            analysis += (
-                "    first eight bytes (URL-encoded): \""
-                + show::url_encode( content.substr( 0, 8 ) )
-                + "\"\n"
-            );
+                    analysis
+                        << "     -  "
+                        << header.first
+                        << ": "
+                        << value
+                        << "\n"
+                    ;
+            analysis
+                << "    first eight bytes (URL-encoded): \""
+                << show::url_encode( content.substr( 0, 8 ) )
+                << "\"\n"
+            ;
         }
         
         std::string result_html{
             "<!doctype html><html><head><meta charset=utf-8>"
             "<title>Result</title></head><body><pre>"
-            + analysis
+            + analysis.str()
             + "</pre></body></html>"
         };
         
