@@ -101,3 +101,7 @@ then navigate to `http://0.0.0.0:9090/` in your browser.
 # `multiple_clients`
 
 A multi-threaded server that handles one connection per thread, as a real application should.  This server doesn't do much except return *501 Not Implemented* for every request.
+
+#`multipart_form_handling`
+
+A very basic demonstration of the multipart content parsing utilities in `show/multipart.hpp`.  To try this example, run `multipart_form_handling` and navigate to `http://0.0.0.0:9090/form` in your browser.  You'll be presented with a very basic HTML form (which you can change by editing the example).  Upon submission, some information about the submitted form data will be displayed.

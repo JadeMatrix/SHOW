@@ -23,6 +23,7 @@ if( UNITTEST_LIBRARY )
         ../tests/async_utils.cpp
         ../tests/base64_tests.cpp
         ../tests/connection_tests.cpp
+        ../tests/multipart_tests.cpp
         ../tests/request_tests.cpp
         ../tests/response_tests.cpp
         ../tests/server_tests.cpp
@@ -51,6 +52,10 @@ ADD_EXECUTABLE( hello_world
 ADD_EXECUTABLE( http_1_1
     ../examples/http_1_1.cpp
 )
+ADD_EXECUTABLE(
+    multipart_form_handling
+    ../examples/multipart_form_handling.cpp
+)
 ADD_EXECUTABLE( multiple_clients
     ../examples/multiple_clients.cpp
 )
@@ -64,6 +69,7 @@ ADD_DEPENDENCIES( examples
     fileserve
     hello_world
     http_1_1
+    multipart_form_handling
     multiple_clients
     streaming_echo
 )
