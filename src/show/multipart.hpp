@@ -114,6 +114,20 @@ namespace show
         using request_parse_error::request_parse_error;
     };
     
+    std::streambuf::int_type _read_buffer_until_boundary(
+        bool                       crlf_start,
+        std::streambuf           & buffer,
+        const std::string        & boundary,
+        std::streambuf::char_type* get_buffer,
+        std::function< void(
+            std::streambuf::char_type*,
+            std::streambuf::char_type*,
+            std::streambuf::char_type*
+        ) >                        setg_callback,
+        bool                     & segment_boundary_reached,
+        std::function< void() >    parent_finished_callback
+    );
+    
     
     // Implementations /////////////////////////////////////////////////////////
     
@@ -129,8 +143,9 @@ namespace show
     
     inline multipart::segment::segment( multipart& p ) :
         _parent  { &p                            },
-        // \r (usually), \n, and two dashes followed by boundary
-        _buffer  ( p.boundary().size() + 4, '\0' ),
+        // \r (usually), \n, and two dashes followed by boundary then possibly
+        // two more dashes
+        _buffer  ( p.boundary().size() + 6, '\0' ),
         _finished{ false                         }
     {
         // Non-cost std::string::data() only available in C++17
@@ -329,85 +344,24 @@ namespace show
         if( _finished )
             return traits_type::eof();
         
-        // Non-cost std::string::data() only available in C++17
-        setg(
+        return _read_buffer_until_boundary(
+            true,
+            *( _parent -> _buffer ),
+            _parent -> boundary(),
+            // Non-cost std::string::data() only available in C++17
             const_cast< char* >( _buffer.data() ),
-            const_cast< char* >( _buffer.data() ),
-            const_cast< char* >( _buffer.data() )
-        );
-        
-        auto boundary{ "\r\n--" + _parent -> boundary() };
-        
-        std::string::size_type next_boundary_char{ 0 };
-        do
-        {
-            auto got_i{ _parent -> _buffer -> sgetc() };
-            
-            if( traits_type::not_eof( got_i ) != got_i )
-                throw multipart_parse_error{
-                    "premature end of multipart data"
-                };
-            
-            auto got_c{ traits_type::to_char_type( got_i ) };
-            
-            if(
-                got_c == boundary[ next_boundary_char ]
-                || ( next_boundary_char == 0 && got_c == '\n' )
-                || egptr() - eback() == 0
-            )
-            {
-                ( *egptr() ) = got_c;
-                setg(
-                    eback(),
-                    gptr (),
-                    egptr() + 1
-                );
-                _parent -> _buffer -> sbumpc();
+            [ this ](
+                char_type* gbeg,
+                char_type* gcurr,
+                char_type* gend
+            ){
+                this -> setg( gbeg, gcurr, gend );
+            },
+            _finished,
+            [ this ](){
+                this -> _parent -> _state = state::FINISHED;
             }
-            
-            if( got_c == boundary[ next_boundary_char ] )
-                next_boundary_char += 1;
-            else if( next_boundary_char == 0 && got_c == '\n' )
-                next_boundary_char += 2;
-            else
-                return traits_type::to_int_type( _buffer[ 0 ] );
-            
-        } while( next_boundary_char < _buffer.size() );
-        
-        auto  int_1{ _parent -> _buffer -> sbumpc()                     };
-        auto  int_2{ _parent -> _buffer -> sgetc ()                     };
-        auto char_1{ std::streambuf::traits_type::to_char_type( int_1 ) };
-        auto char_2{ std::streambuf::traits_type::to_char_type( int_2 ) };
-        
-        if(
-               std::streambuf::traits_type::not_eof( int_1 ) != int_1
-            || std::streambuf::traits_type::not_eof( int_2 ) != int_2
-        )
-            throw multipart_parse_error{
-                "premature end of multipart boundary"
-            };
-        else if( char_1 == '-' && char_2 == '-' )
-        {
-            _parent -> _buffer -> sbumpc();
-            _parent -> _state = state::FINISHED;
-        }
-        else if( char_1 == '\r' && char_2 == '\n' )
-        {
-            _parent -> _buffer -> sbumpc();
-        }
-        else if( char_1 != '\n' )
-            throw multipart_parse_error{
-                "malformed multipart boundary"
-            };
-        
-        _finished = true;
-        // Non-cost std::string::data() only available in C++17
-        setg(
-            const_cast< char* >( _buffer.data() ),
-            const_cast< char* >( _buffer.data() ),
-            const_cast< char* >( _buffer.data() )
         );
-        return traits_type::eof();
     }
     
     inline multipart::segment::int_type multipart::segment::pbackfail(
@@ -536,46 +490,37 @@ namespace show
         if( _boundary.size() < 1 )
             throw std::invalid_argument{ "empty string as multipart boundary" };
         
-        // Multipart data starts with a boundary, so flush that out to simplify
-        // parsing the rest
-        std::string got_boundary( _boundary.size() + 2, '\0' );
-        if(
-            _buffer -> sgetn(
+        std::streambuf::int_type got_c;
+        // \r (usually), \n, and two dashes followed by boundary then possibly
+        // two more dashes
+        std::string got_boundary( _boundary.size() + 6, '\0' );
+        bool end_of_pre_content{ false };
+        // There will not be a (CR)LF before the first boundary if there is no
+        // pre-boundary content to be ignored
+        bool         crlf_start{ false };
+        do
+        {
+            got_c = _read_buffer_until_boundary(
+                crlf_start,
+                *_buffer,
+                _boundary,
                 // Non-cost std::string::data() only available in C++17
                 const_cast< char* >( got_boundary.data() ),
-                _boundary.size() + 2
-            ) < _boundary.size() + 2
-            || got_boundary != "--" + _boundary
-        )
-            throw multipart_parse_error(
-                "multipart data did not start with boundary sequence"
+                [](
+                    std::streambuf::char_type* gbeg,
+                    std::streambuf::char_type* gcurr,
+                    std::streambuf::char_type* gend
+                ){
+                    
+                },
+                end_of_pre_content,
+                [ this ](){
+                    this -> _state = state::FINISHED;
+                }
             );
-        else
-        {
-            auto  int_1{ _buffer -> sbumpc()                                };
-            auto  int_2{ _buffer -> sgetc ()                                };
-            auto char_1{ std::streambuf::traits_type::to_char_type( int_1 ) };
-            auto char_2{ std::streambuf::traits_type::to_char_type( int_2 ) };
-            
-            if(
-                   std::streambuf::traits_type::not_eof( int_1 ) != int_1
-                || std::streambuf::traits_type::not_eof( int_2 ) != int_2
-            )
-                throw multipart_parse_error{
-                    "premature end of first multipart boundary"
-                };
-            else if( char_1 == '-' && char_2 == '-' )
-            {
-                _buffer -> sbumpc();
-                _state = state::FINISHED;
-            }
-            else if( char_1 == '\r' && char_2 == '\n' )
-                _buffer -> sbumpc();
-            else if( char_1 != '\n' )
-                throw multipart_parse_error{
-                    "malformed first multipart boundary"
-                };
+            crlf_start = true;
         }
+        while( !end_of_pre_content );
     }
     
     inline const std::streambuf& multipart::buffer()
@@ -608,6 +553,110 @@ namespace show
     inline multipart::iterator multipart::end()
     {
         return iterator{ *this, true };
+    }
+    
+    // Helper functions --------------------------------------------------------
+    
+    inline std::streambuf::int_type _read_buffer_until_boundary(
+        bool                       crlf_start,
+        std::streambuf           & buffer,
+        const std::string        & boundary,
+        std::streambuf::char_type* get_buffer,
+        std::function< void(
+            std::streambuf::char_type*,
+            std::streambuf::char_type*,
+            std::streambuf::char_type*
+        ) >                        setg_callback,
+        bool                     & segment_boundary_reached,
+        std::function< void() >    parent_finished_callback
+    )
+    {
+        std::string boundary_string;
+        if( crlf_start )
+            boundary_string = { "\r\n--" + boundary };
+        else
+            boundary_string = { "--" + boundary };
+        
+        std::streamsize read_count{ 0 };
+        
+        setg_callback(
+            get_buffer,
+            get_buffer,
+            get_buffer
+        );
+        
+        std::string::size_type next_boundary_char{ 0 };
+        do
+        {
+            auto got_i{ buffer.sgetc() };
+            
+            if( std::streambuf::traits_type::not_eof( got_i ) != got_i )
+                throw multipart_parse_error{
+                    "premature end of multipart data"
+                };
+            
+            auto got_c{ std::streambuf::traits_type::to_char_type( got_i ) };
+            
+            if(
+                got_c == boundary_string[ next_boundary_char ]
+                || ( next_boundary_char == 0 && got_c == '\n' )
+                || read_count == 0
+            )
+            {
+                *( get_buffer + read_count ) = got_c;
+                ++read_count;
+                setg_callback(
+                    get_buffer,
+                    get_buffer,
+                    get_buffer + read_count
+                );
+                buffer.sbumpc();
+            }
+            
+            if( got_c == boundary_string[ next_boundary_char ] )
+                next_boundary_char += 1;
+            else if( next_boundary_char == 0 && got_c == '\n' )
+                next_boundary_char += 2;
+            else
+                return std::streambuf::traits_type::to_int_type(
+                    get_buffer[ 0 ]
+                );
+            
+        } while( next_boundary_char < boundary_string.size() );
+        
+        auto  int_1{ buffer.sbumpc()                                    };
+        auto  int_2{ buffer.sgetc ()                                    };
+        auto char_1{ std::streambuf::traits_type::to_char_type( int_1 ) };
+        auto char_2{ std::streambuf::traits_type::to_char_type( int_2 ) };
+        
+        if(
+               std::streambuf::traits_type::not_eof( int_1 ) != int_1
+            || std::streambuf::traits_type::not_eof( int_2 ) != int_2
+        )
+            throw multipart_parse_error{
+                "premature end of multipart boundary"
+            };
+        else if( char_1 == '-' && char_2 == '-' )
+        {
+            buffer.sbumpc();
+            parent_finished_callback();
+        }
+        else if( char_1 == '\r' && char_2 == '\n' )
+        {
+            buffer.sbumpc();
+        }
+        else if( char_1 != '\n' )
+            throw multipart_parse_error{
+                "malformed multipart boundary"
+            };
+        
+        segment_boundary_reached = true;
+        setg_callback(
+            get_buffer,
+            get_buffer,
+            get_buffer
+        );
+        return std::streambuf::traits_type::eof();
     }
 }
 

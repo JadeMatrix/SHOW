@@ -958,32 +958,6 @@ SUITE( ShowMultipartTests )
         );
     }
     
-    TEST( FailMissingStartingBoundarySequence )
-    {
-        std::stringbuf content{
-            (
-                "\r\n"
-                "\r\n"
-                "foo bar\r\n"
-                "--" + boundaryA + "--"
-            ),
-            std::ios::in
-        };
-        
-        try
-        {
-            show::multipart{ content, boundaryA };
-            CHECK( false );
-        }
-        catch( const show::multipart_parse_error& e )
-        {
-            CHECK_EQUAL(
-                "multipart data did not start with boundary sequence",
-                e.what()
-            );
-        }
-    }
-    
     TEST( FailMissingEndingBoundarySequence )
     // a.k.a. FailPrematureEndInSegment
     {
