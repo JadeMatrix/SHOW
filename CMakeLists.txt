@@ -4,7 +4,7 @@ SET( CMAKE_CXX_STANDARD          11 )
 SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 PROJECT(
-    "SHOW examples"
+    "SHOW Tests & Examples"
     CXX
 )
 
