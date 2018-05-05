@@ -11,7 +11,6 @@
 
 SUITE( ShowRequestTests )
 {
-    
     TEST( SimpleRequest )
     {
         run_checks_against_request(
@@ -20,6 +19,79 @@ SUITE( ShowRequestTests )
                 "\r\n"
             ),
             []( show::request& test_request ){}
+        );
+    }
+    
+    TEST( MoveConstruct )
+    {
+        auto make_request = []( show::connection& test_connection ){
+            return show::request{ test_connection };
+        };
+        
+        std::string message{ "hello world" };
+        
+        handle_request(
+            (
+                "GET / HTTP/1.0\r\n"
+                "Content-Length: " + std::to_string( message.size() ) + "\r\n"
+                "\r\n"
+                + message
+            ),
+            [ make_request, & message ]( show::connection& test_connection ){
+                auto test_request = make_request( test_connection );
+                CHECK_EQUAL(
+                    message,
+                    ( std::string{
+                        std::istreambuf_iterator< char >( &test_request ),
+                        {}
+                    } )
+                );
+            }
+        );
+    }
+    
+    TEST( MoveAssign )
+    {
+        auto make_request = []( show::connection& test_connection ){
+            return show::request{ test_connection };
+        };
+        
+        std::string message1{ "hello world" };
+        std::string message2{ "foo bar"     };
+        
+        handle_request(
+            (
+                "GET / HTTP/1.1\r\n"
+                "Content-Length: " + std::to_string( message1.size() ) + "\r\n"
+                "\r\n"
+                + message1 +
+                "GET / HTTP/1.1\r\n"
+                "Content-Length: " + std::to_string( message2.size() ) + "\r\n"
+                "\r\n"
+                + message2
+            ),
+            [
+                make_request,
+                & message1,
+                & message2
+            ]( show::connection& test_connection ){
+                auto test_request = make_request( test_connection );
+                CHECK_EQUAL(
+                    message1,
+                    ( std::string{
+                        std::istreambuf_iterator< char >( &test_request ),
+                        {}
+                    } )
+                );
+                test_request = make_request( test_connection );
+                CHECK_EQUAL(
+                    message2,
+                    ( std::string{
+                        std::istreambuf_iterator< char >( &test_request ),
+                        {}
+                    } )
+                );
+            }
         );
     }
     

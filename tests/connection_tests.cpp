@@ -323,4 +323,63 @@ SUITE( ShowConnectionTests )
         
         test_thread.join();
     }
+    
+    // No "MoveConstruct" test as that's how all `server::serve()` calls work
+    
+    TEST( MoveAssign )
+    {
+        std::string address = "0.0.0.0";
+        int port = 9090;
+        show::server test_server( address, port, 1 );
+        
+        auto do_curl = []{
+            CURL* curl = curl_easy_init();
+            CHECK( curl );
+            if( curl )
+            {
+                curl_easy_setopt(
+                    curl,
+                    CURLOPT_URL,
+                    "http://0.0.0.0:9090/"
+                );
+                curl_easy_perform( curl );
+                curl_easy_cleanup( curl );
+            }
+        };
+        
+        std::thread test_thread1( do_curl );
+        std::thread test_thread2( do_curl );
+        
+        try
+        {
+            auto test_connection = test_server.serve();
+            CHECK_EQUAL(
+                test_server.address(),
+                test_connection.server_address()
+            );
+            CHECK_EQUAL(
+                test_server.port(),
+                test_connection.server_port()
+            );
+            
+            test_connection = test_server.serve();
+            CHECK_EQUAL(
+                test_server.address(),
+                test_connection.server_address()
+            );
+            CHECK_EQUAL(
+                test_server.port(),
+                test_connection.server_port()
+            );
+        }
+        catch( ... )
+        {
+            test_thread1.join();
+            test_thread2.join();
+            throw;
+        }
+        
+        test_thread1.join();
+        test_thread2.join();
+    }
 }

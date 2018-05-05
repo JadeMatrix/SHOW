@@ -312,6 +312,59 @@ SUITE( ShowServerTests )
         test_thread.join();
     }
     
+    TEST( MoveConstruct )
+    {
+        auto make_server = []( const std::string& address, unsigned int port ){
+            return show::server{ address, port };
+        };
+        
+        std::string address = "0.0.0.0";
+        unsigned int port = 9090;
+        auto test_server = make_server( address, port );
+        
+        CHECK_EQUAL(
+            address,
+            test_server.address()
+        );
+        CHECK_EQUAL(
+            port,
+            test_server.port()
+        );
+    }
+    
+    TEST( MoveAssign )
+    {
+        auto make_server = []( const std::string& address, unsigned int port ){
+            return show::server{ address, port };
+        };
+        
+        std::string address1 = "0.0.0.0";
+        unsigned int port1 = 9090;
+        auto test_server = make_server( address1, port1 );
+        
+        CHECK_EQUAL(
+            address1,
+            test_server.address()
+        );
+        CHECK_EQUAL(
+            port1,
+            test_server.port()
+        );
+        
+        std::string address2 = "::";
+        unsigned int port2 = 9595;
+        test_server = make_server( address2, port2 );
+        
+        CHECK_EQUAL(
+            address2,
+            test_server.address()
+        );
+        CHECK_EQUAL(
+            port2,
+            test_server.port()
+        );
+    }
+    
     // TODO: TEST( UseRandomPort ) -- ensure updates server.port
     // TODO: create & serve on non-main thread
 }
