@@ -65,3 +65,13 @@ ADD_EXECUTABLE(
     multiple_clients
     ../examples/multiple_clients.cpp
 )
+
+ADD_CUSTOM_TARGET( examples )
+ADD_DEPENDENCIES( examples
+    hello_world
+    echo
+    http_1_1
+    streaming_echo
+    fileserve
+    multiple_clients
+)
