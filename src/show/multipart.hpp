@@ -158,9 +158,7 @@ namespace show
         
         while( reading )
         {
-            auto current_i = sbumpc();
-            
-            auto current_char = traits_type::to_char_type( current_i );
+            auto current_char{ traits_type::to_char_type( sbumpc() ) };
             
             if( in_endline_seq )
             {
@@ -338,19 +336,19 @@ namespace show
             const_cast< char* >( _buffer.data() )
         );
         
-        auto boundary = "\r\n--" + _parent -> boundary();
+        auto boundary{ "\r\n--" + _parent -> boundary() };
         
         std::string::size_type next_boundary_char{ 0 };
         do
         {
-            auto got_i = _parent -> _buffer -> sgetc();
+            auto got_i{ _parent -> _buffer -> sgetc() };
             
             if( traits_type::not_eof( got_i ) != got_i )
                 throw multipart_parse_error{
                     "premature end of multipart data"
                 };
             
-            auto got_c = traits_type::to_char_type( got_i );
+            auto got_c{ traits_type::to_char_type( got_i ) };
             
             if(
                 got_c == boundary[ next_boundary_char ]
@@ -376,10 +374,10 @@ namespace show
             
         } while( next_boundary_char < _buffer.size() );
         
-        auto  int_1 = _parent -> _buffer -> sbumpc();
-        auto  int_2 = _parent -> _buffer -> sgetc ();
-        auto char_1 = std::streambuf::traits_type::to_char_type( int_1 );
-        auto char_2 = std::streambuf::traits_type::to_char_type( int_2 );
+        auto  int_1{ _parent -> _buffer -> sbumpc()                     };
+        auto  int_2{ _parent -> _buffer -> sgetc ()                     };
+        auto char_1{ std::streambuf::traits_type::to_char_type( int_1 ) };
+        auto char_2{ std::streambuf::traits_type::to_char_type( int_2 ) };
         
         if(
                std::streambuf::traits_type::not_eof( int_1 ) != int_1
@@ -536,7 +534,7 @@ namespace show
         _state   { state::READY                       }
     {
         if( _boundary.size() < 1 )
-            throw std::invalid_argument( "empty string as multipart boundary" );
+            throw std::invalid_argument{ "empty string as multipart boundary" };
         
         // Multipart data starts with a boundary, so flush that out to simplify
         // parsing the rest
@@ -554,10 +552,10 @@ namespace show
             );
         else
         {
-            auto  int_1 = _buffer -> sbumpc();
-            auto  int_2 = _buffer -> sgetc ();
-            auto char_1 = std::streambuf::traits_type::to_char_type( int_1 );
-            auto char_2 = std::streambuf::traits_type::to_char_type( int_2 );
+            auto  int_1{ _buffer -> sbumpc()                                };
+            auto  int_2{ _buffer -> sgetc ()                                };
+            auto char_1{ std::streambuf::traits_type::to_char_type( int_1 ) };
+            auto char_2{ std::streambuf::traits_type::to_char_type( int_2 ) };
             
             if(
                    std::streambuf::traits_type::not_eof( int_1 ) != int_1
