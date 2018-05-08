@@ -147,11 +147,11 @@ SUITE( ShowServerTests )
     
     TEST( FailInUsePort )
     {
-        auto test_socket{ socket(
+        auto test_socket = socket(
             AF_INET6,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
-        ) };
+        );
         REQUIRE CHECK( test_socket != 0 );
         
         sockaddr_in6 socket_address;
@@ -213,7 +213,7 @@ SUITE( ShowServerTests )
         
         std::thread test_thread{ []{
             std::this_thread::sleep_for( std::chrono::seconds{ 2 } );
-            auto curl{ curl_easy_init() };
+            auto curl = curl_easy_init();
             REQUIRE CHECK( curl );
             curl_easy_setopt(
                 curl,
@@ -248,7 +248,7 @@ SUITE( ShowServerTests )
         show::server test_server{ "::", 9090, 0 };
         
         std::thread test_thread{ []{
-            auto curl{ curl_easy_init() };
+            auto curl = curl_easy_init();
             REQUIRE CHECK( curl );
             curl_easy_setopt(
                 curl,
@@ -279,7 +279,7 @@ SUITE( ShowServerTests )
         show::server test_server{ "::", 9090, 2 };
         
         std::thread test_thread{ []{
-            auto curl{ curl_easy_init() };
+            auto curl = curl_easy_init();
             REQUIRE CHECK( curl );
             curl_easy_setopt(
                 curl,
@@ -305,13 +305,13 @@ SUITE( ShowServerTests )
     
     TEST( MoveConstruct )
     {
-        auto make_server{ []( const std::string& address, unsigned int port ){
+        auto make_server = []( const std::string& address, unsigned int port ){
             return show::server{ address, port };
-        } };
+        };
         
         std::string  address{ "::" };
         unsigned int port   { 9090 };
-        auto test_server{ make_server( address, port ) };
+        auto test_server = make_server( address, port );
         
         CHECK_EQUAL(
             address,
@@ -325,13 +325,13 @@ SUITE( ShowServerTests )
     
     TEST( MoveAssign )
     {
-        auto make_server{ []( const std::string& address, unsigned int port ){
+        auto make_server = []( const std::string& address, unsigned int port ){
             return show::server{ address, port };
-        } };
+        };
         
         std::string  address1{ "0.0.0.0" };
         unsigned int port1   { 9090      };
-        auto test_server{ make_server( address1, port1 ) };
+        auto test_server = make_server( address1, port1 );
         
         CHECK_EQUAL(
             address1,

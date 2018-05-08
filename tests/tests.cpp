@@ -119,7 +119,7 @@ int main( int argc, char* argv[] )
 {
     std::srand( std::time( nullptr ) );
     curl_global_init( CURL_GLOBAL_ALL );
-    auto failed{ UnitTest::RunAllTests() };
+    auto failed = UnitTest::RunAllTests();
     curl_global_cleanup();
     return failed;
 }

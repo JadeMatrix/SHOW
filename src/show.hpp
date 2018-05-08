@@ -111,8 +111,8 @@ namespace show
                 ++i
             )
             {
-                auto lhc{ _ASCII_upper( lhs[ i ] ) };
-                auto rhc{ _ASCII_upper( rhs[ i ] ) };
+                auto lhc = _ASCII_upper( lhs[ i ] );
+                auto rhc = _ASCII_upper( rhs[ i ] );
                 
                 if( lhc < rhc )
                     return true;
@@ -487,14 +487,14 @@ namespace show
             FD_SET( descriptor, &write_descriptors );
         }
         
-        auto select_result{ pselect(
+        auto select_result = pselect(
             descriptor + 1,
             r ? &read_descriptors  : NULL,
             w ? &write_descriptors : NULL,
             NULL,
             timeout > 0 ? &timeout_spec : NULL,
             NULL
-        ) };
+        );
         
         if( select_result == -1 )
             throw socket_error{
@@ -564,16 +564,16 @@ namespace show
                     "response send"
                 );
             
-            auto bytes_sent{ static_cast< buffer_size_type >( send(
+            auto bytes_sent = static_cast< buffer_size_type >( send(
                 _serve_socket.descriptor,
                 pbase() + send_offset,
                 pptr() - ( pbase() + send_offset ),
                 0
-            )) };
+            ) );
             
             if( bytes_sent == -1 )
             {
-                auto errno_copy{ errno };
+                auto errno_copy = errno;
                 
                 if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                     throw connection_timeout{};
@@ -625,7 +625,7 @@ namespace show
                 
                 if( bytes_read == -1 )  // Error
                 {
-                    auto errno_copy{ errno };
+                    auto errno_copy = errno;
                     
                     if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                         throw connection_timeout{};
@@ -888,9 +888,9 @@ namespace show
         
         while( reading )
         {
-            auto current_char{ connection::traits_type::to_char_type(
+            auto current_char = connection::traits_type::to_char_type(
                 _connection -> sbumpc()
-            ) };
+            );
             
             // \r\n does not make the FSM parser happy
             if( in_endline_seq )
@@ -1160,7 +1160,7 @@ namespace show
         else
             _protocol = UNKNOWN;
         
-        auto content_length_header{ _headers.find( "Content-Length" ) };
+        auto content_length_header = _headers.find( "Content-Length" );
         
         if( content_length_header != _headers.end() )
         {
@@ -1210,10 +1210,10 @@ namespace show
         {
             // Don't just return `remaining` as that may cause reading to hang
             // on unresponsive clients (trying to read bytes we don't have yet)
-            auto remaining{ static_cast< std::streamsize >(
+            auto remaining = static_cast< std::streamsize >(
                 _content_length - read_content
-            ) };
-            auto in_connection{ _connection -> showmanyc() };
+            );
+            auto in_connection = _connection -> showmanyc();
             return in_connection < remaining ? in_connection : remaining;
         }
     }
@@ -1224,7 +1224,7 @@ namespace show
             return traits_type::eof();
         else
         {
-            auto c{ _connection -> underflow() };
+            auto c = _connection -> underflow();
             if( c != traits_type::not_eof( c ) )
                 throw client_disconnected{};
             return c;
@@ -1235,7 +1235,7 @@ namespace show
     {
         if( eof() )
             return traits_type::eof();
-        auto c{ _connection -> uflow() };
+        auto c = _connection -> uflow();
         if( traits_type::not_eof( c ) != c )
             throw client_disconnected{};
         ++read_content;
@@ -1253,9 +1253,9 @@ namespace show
             read = _connection -> sgetn( s, count );
         else if( !eof() )
         {
-            auto remaining{ static_cast< std::streamsize >(
+            auto remaining = static_cast< std::streamsize >(
                 _content_length - read_content
-            ) };
+            );
             read = _connection -> sgetn(
                 s,
                 count > remaining ? remaining : count
@@ -1270,7 +1270,7 @@ namespace show
     
     inline request::int_type request::pbackfail( int_type c )
     {
-        auto result{ _connection -> pbackfail( c ) };
+        auto result = _connection -> pbackfail( c );
         
         if( traits_type::not_eof( result ) == result )
             --read_content;
@@ -1305,7 +1305,7 @@ namespace show
         // Marshall headers
         for( auto& name_values_pair : headers )
         {
-            auto header_name{ name_values_pair.first };
+            auto header_name = name_values_pair.first;
             
             if( header_name.size() < 1 )
                 throw response_marshall_error{ "empty header name" };
@@ -1409,11 +1409,11 @@ namespace show
         int                timeout
     )
     {
-        auto listen_socket_fd{ socket(
+        auto listen_socket_fd = socket(
             AF_INET6,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
-        ) };
+        );
         
         if( listen_socket_fd == 0 )
             throw socket_error{
@@ -1513,11 +1513,11 @@ namespace show
         
         char address_buffer[ INET6_ADDRSTRLEN ];
         
-        auto serve_socket{ accept(
+        auto serve_socket = accept(
             listen_socket -> descriptor,
             reinterpret_cast< sockaddr* >( &address_info ),
             &address_info_len
-        ) };
+        );
         
         if(
             serve_socket == -1
@@ -1537,7 +1537,7 @@ namespace show
             )
         )
         {
-            auto errno_copy{ errno };
+            auto errno_copy = errno;
             
             if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
                 throw connection_timeout{};
@@ -1559,7 +1559,7 @@ namespace show
             ) == -1
         )
         {
-            auto errno_copy{ errno };
+            auto errno_copy = errno;
             throw socket_error{
                 "could not get port information from socket: "
                 + std::string{ std::strerror( errno_copy ) }

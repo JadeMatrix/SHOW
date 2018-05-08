@@ -33,12 +33,12 @@ SUITE( ShowMultipartTests )
 {
     TEST( MoveConstructMultipart )
     {
-        auto make_multipart{ [](
+        auto make_multipart = [](
             std::stringbuf& buffer,
             const std::string& boundary
         ){
             return show::multipart{ buffer, boundary };
-        } };
+        };
         
         std::stringbuf content{
             (
@@ -50,8 +50,8 @@ SUITE( ShowMultipartTests )
             std::ios::in
         };
         
-        auto test_multipart{ make_multipart( content, boundaryA ) };
-        auto iter          { test_multipart.begin()               };
+        auto test_multipart = make_multipart( content, boundaryA );
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{} ),
@@ -73,12 +73,12 @@ SUITE( ShowMultipartTests )
     
     TEST( MoveAssignMultipart )
     {
-        auto make_multipart{ [](
+        auto make_multipart = [](
             std::stringbuf& buffer,
             const std::string& boundary
         ){
             return show::multipart{ buffer, boundary };
-        } };
+        };
         
         std::stringbuf content1{
             (
@@ -89,8 +89,8 @@ SUITE( ShowMultipartTests )
             ),
             std::ios::in
         };
-        auto test_multipart{ make_multipart( content1, boundaryA ) };
-        auto iter1         { test_multipart.begin()                };
+        auto test_multipart = make_multipart( content1, boundaryA );
+        auto iter1 = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{} ),
@@ -120,7 +120,7 @@ SUITE( ShowMultipartTests )
             std::ios::in
         };
         test_multipart = make_multipart( content2, boundaryA );
-        auto iter2{ test_multipart.begin() };
+        auto iter2 = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{ { "Content-Type", { "text/plain" } } } ),
@@ -142,12 +142,12 @@ SUITE( ShowMultipartTests )
     
     TEST( MoveConstructIterator )
     {
-        auto make_begin_iterator{ []( show::multipart& m ){
+        auto make_begin_iterator = []( show::multipart& m ){
             return m.begin();
-        } };
-        auto make_end_iterator{ []( show::multipart& m ){
+        };
+        auto make_end_iterator = []( show::multipart& m ){
             return m.end();
-        } };
+        };
         
         std::stringbuf content{
             (
@@ -160,7 +160,7 @@ SUITE( ShowMultipartTests )
         };
         
         show::multipart test_multipart{ content, boundaryA };
-        auto iter{ make_begin_iterator( test_multipart ) };
+        auto iter = make_begin_iterator( test_multipart );
         
         CHECK_EQUAL(
             ( show::headers_type{} ),
@@ -174,7 +174,7 @@ SUITE( ShowMultipartTests )
             } )
         );
         ++iter;
-        auto end_iter{ make_end_iterator( test_multipart ) };
+        auto end_iter = make_end_iterator( test_multipart );
         CHECK_EQUAL(
             end_iter,
             test_multipart.end()
@@ -187,12 +187,12 @@ SUITE( ShowMultipartTests )
     
     TEST( MoveAssignIterator )
     {
-        auto make_begin_iterator{ []( show::multipart& m ){
+        auto make_begin_iterator = []( show::multipart& m ){
             return m.begin();
-        } };
-        auto make_end_iterator{ []( show::multipart& m ){
+        };
+        auto make_end_iterator = []( show::multipart& m ){
             return m.end();
-        } };
+        };
         
         std::stringbuf content1{
             (
@@ -217,7 +217,7 @@ SUITE( ShowMultipartTests )
         };
         show::multipart test_multipart2{ content2, boundaryA };
         
-        auto iter{ test_multipart1.begin() };
+        auto iter = test_multipart1.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{} ),
@@ -266,7 +266,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             test_multipart.end(),
@@ -289,7 +289,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             test_multipart.end(),
@@ -313,13 +313,13 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{} ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -342,7 +342,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -350,7 +350,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -375,7 +375,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -385,7 +385,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -407,7 +407,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{} ),
@@ -447,7 +447,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -456,7 +456,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -479,7 +479,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -487,7 +487,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -512,7 +512,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -522,7 +522,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -547,7 +547,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -557,7 +557,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
@@ -585,7 +585,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -596,7 +596,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -623,7 +623,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -634,7 +634,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -662,7 +662,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -673,7 +673,7 @@ SUITE( ShowMultipartTests )
             } ),
             iter -> headers()
         );
-        auto got_c{ iter -> sgetc() };
+        auto got_c = iter -> sgetc();
         CHECK(
             show::multipart::segment::traits_type::not_eof( got_c ) != got_c
         );
@@ -703,7 +703,7 @@ SUITE( ShowMultipartTests )
                     test_request,
                     boundaryA
                 };
-                auto iter{ test_multipart.begin() };
+                auto iter = test_multipart.begin();
                 
                 CHECK_EQUAL(
                     "Hello World!",
@@ -739,7 +739,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         CHECK_EQUAL(
             ( show::headers_type{
@@ -821,7 +821,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter_A{ test_multipart_A.begin() };
+        auto iter_A = test_multipart_A.begin();
         CHECK_EQUAL(
             ( show::headers_type{
                 { "Content-Disposition", {
@@ -852,7 +852,7 @@ SUITE( ShowMultipartTests )
                 *iter_A,
                 boundaryB
             };
-            auto iter_B{ test_multipart_B.begin() };
+            auto iter_B = test_multipart_B.begin();
             CHECK_EQUAL(
                 ( show::headers_type{
                     { "Content-Disposition", {
@@ -883,7 +883,7 @@ SUITE( ShowMultipartTests )
                     *iter_B,
                     boundaryC
                 };
-                auto iter_C{ test_multipart_C.begin() };
+                auto iter_C = test_multipart_C.begin();
                 CHECK_EQUAL(
                     ( show::headers_type{
                         { "Content-Disposition", {
@@ -939,7 +939,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         
         ++iter;
         
@@ -971,7 +971,7 @@ SUITE( ShowMultipartTests )
         };
         
         show::multipart test_multipart{ content, boundaryA };
-        auto iter{ test_multipart.begin() };
+        auto iter = test_multipart.begin();
         try
         {
             auto segment_content = std::string{
@@ -1086,7 +1086,7 @@ SUITE( ShowMultipartTests )
         };
         try
         {
-            auto iter{ test_multipart.begin() };
+            auto iter = test_multipart.begin();
             CHECK( false );
         }
         catch( const show::multipart_parse_error& e )
@@ -1118,7 +1118,7 @@ SUITE( ShowMultipartTests )
         };
         try
         {
-            auto iter{ test_multipart.begin() };
+            auto iter = test_multipart.begin();
             CHECK( false );
         }
         catch( const show::multipart_parse_error& e )
@@ -1149,7 +1149,7 @@ SUITE( ShowMultipartTests )
         };
         try
         {
-            auto iter{ test_multipart.begin() };
+            auto iter = test_multipart.begin();
             CHECK( false );
         }
         catch( const show::multipart_parse_error& e )
@@ -1180,7 +1180,7 @@ SUITE( ShowMultipartTests )
         };
         try
         {
-            auto iter{ test_multipart.begin() };
+            auto iter = test_multipart.begin();
             CHECK( false );
         }
         catch( const show::multipart_parse_error& e )
@@ -1211,7 +1211,7 @@ SUITE( ShowMultipartTests )
         };
         try
         {
-            auto iter{ test_multipart.begin() };
+            auto iter = test_multipart.begin();
             CHECK( false );
         }
         catch( const show::multipart_parse_error& e )
@@ -1239,11 +1239,11 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto iter1{ test_multipart.begin() };
+        auto iter1 = test_multipart.begin();
         
         try
         {
-            auto iter2{ test_multipart.begin() };
+            auto iter2 = test_multipart.begin();
             CHECK( false );
         }
         catch( const std::logic_error& e )
@@ -1271,7 +1271,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto end_iter{ test_multipart.end() };
+        auto end_iter = test_multipart.end();
         
         try
         {
@@ -1303,7 +1303,7 @@ SUITE( ShowMultipartTests )
             content,
             boundaryA
         };
-        auto end_iter{ test_multipart.end() };
+        auto end_iter = test_multipart.end();
         
         try
         {

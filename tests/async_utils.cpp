@@ -33,11 +33,11 @@ namespace
             )
         );
         
-        auto request_socket{ socket(
+        auto request_socket = socket(
             AF_INET6,
             SOCK_STREAM,
             getprotobyname( "TCP" ) -> p_proto
-        ) };
+        );
         REQUIRE CHECK( request_socket >= 0 );
         
         int connect_result = connect(
@@ -78,11 +78,11 @@ void write_to_socket(
     std::string::size_type pos{ 0 };
     while( pos < m.size() )
     {
-        auto written{ write(
+        auto written = write(
             s,
             m.c_str() + pos,
             m.size()
-        ) };
+        );
         REQUIRE CHECK( written >= 0 );
         pos += written;
     }
@@ -97,7 +97,7 @@ void handle_request(
     unsigned int port   { 9090 };
     show::server test_server{ address, port, 2 };
     
-    auto request_thread{ send_request_async(
+    auto request_thread = send_request_async(
         address,
         port,
         [ request ]( show::socket_fd request_socket ){
@@ -106,11 +106,11 @@ void handle_request(
                 request
             );
         }
-    ) };
+    );
     
     try
     {
-        auto test_connection{ test_server.serve() };
+        auto test_connection = test_server.serve();
         handler_callback( test_connection );
     }
     catch( ... )
@@ -225,7 +225,7 @@ void run_checks_against_response(
             try
             {
                 show::server test_server{ address, port, 2 };
-                auto test_connection{ test_server.serve() };
+                auto test_connection = test_server.serve();
                 server_callback( test_connection );
             }
             catch( const show::connection_timeout& e )

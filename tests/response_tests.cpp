@@ -17,17 +17,17 @@ SUITE( ShowResponseTests )
                 "\r\n"
             ),
             []( show::connection& test_connection ){
-                auto make_response{ []( show::connection& c ){
+                auto make_response = []( show::connection& c ){
                     return show::response{
                         c,
                         show::http_protocol::HTTP_1_0,
                         { 200, "OK" },
                         { { "Test-Header", { "foo" } } }
                     };
-                } };
+                };
                 
                 show::request test_request{ test_connection };
-                auto test_response{ make_response( test_connection ) };
+                auto test_response = make_response( test_connection );
             },
             (
                 "HTTP/1.0 200 OK\r\n"
@@ -39,7 +39,7 @@ SUITE( ShowResponseTests )
     
     TEST( MoveAssign )
     {
-        auto make_response{ []( show::connection& c ){
+        auto make_response = []( show::connection& c ){
             show::request r{ c };
             return show::response{
                 c,
@@ -47,7 +47,7 @@ SUITE( ShowResponseTests )
                 { 200, "OK" },
                 { { "Test-Header", { r.headers().at( "Test-Header" )[ 0 ] } } }
             };
-        } };
+        };
         
         std::string  address{ "::" };
         unsigned int port   { 9090 };
@@ -92,10 +92,10 @@ SUITE( ShowResponseTests )
             // Get the two connections before creating a response to either to
             // prevent one of the connections' destructors from running before
             // the response's.
-            auto test_connection1{ test_server.serve() };
-            auto test_connection2{ test_server.serve() };
+            auto test_connection1 = test_server.serve();
+            auto test_connection2 = test_server.serve();
             
-            auto test_response{ make_response( test_connection1 ) };
+            auto test_response = make_response( test_connection1 );
             test_response = make_response( test_connection2 );
         }
         catch( const show::connection_timeout& e )
@@ -426,7 +426,7 @@ SUITE( ShowResponseTests )
         unsigned int port   { 9090 };
         show::server test_server{ address, port, 1 };
         
-        auto request_thread{ send_request_async(
+        auto request_thread = send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -439,7 +439,7 @@ SUITE( ShowResponseTests )
                     "\r\n"
                 );
             }
-        ) };
+        );
         
         try
         {
