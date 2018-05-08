@@ -8,16 +8,18 @@
 
 namespace show
 {
-    static const char* base64_chars_standard =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    static const char* base64_chars_urlsafe  =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    static const char* base64_chars_standard{
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    };
+    static const char* base64_chars_urlsafe{
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    };
     
     
     std::string base64_encode(
         const std::string& o,
         const char* chars = base64_chars_standard
-    ) noexcept;
+    );
     std::string base64_decode(
         const std::string& o,
         const char* chars = base64_chars_standard
@@ -33,15 +35,15 @@ namespace show
     inline std::string base64_encode(
         const std::string& o,
         const char* chars
-    ) noexcept
+    )
     {
         unsigned char current_sextet;
         std::string encoded;
         
-        std::string::size_type b64_size = ( ( o.size() + 2 ) / 3 ) * 4;
+        auto b64_size{ ( ( o.size() + 2 ) / 3 ) * 4 };
         
         for(
-            std::string::size_type i = 0, j = 0;
+            std::string::size_type i{ 0 }, j{ 0 };
             i < b64_size;
             ++i
         )
@@ -107,11 +109,10 @@ namespace show
     {
         /*unsigned*/ char current_octet;
         std::string decoded;
-        
-        std::string::size_type unpadded_len = o.size();
+        auto unpadded_len{ o.size() };
         
         for(
-            std::string::const_reverse_iterator r_iter = o.rbegin();
+            auto r_iter{ o.rbegin() };
             r_iter != o.rend();
             ++r_iter
         )
@@ -122,7 +123,7 @@ namespace show
                 break;
         }
         
-        std::string::size_type b64_size = unpadded_len;
+        auto b64_size{ unpadded_len };
         
         if( b64_size % 4 )
             b64_size += 4 - ( b64_size % 4 );
@@ -130,37 +131,29 @@ namespace show
         if( b64_size > o.size() )
             // Missing required padding
             // TODO: add flag to explicitly ignore?
-            throw base64_decode_error( "missing required padding" );
+            throw base64_decode_error{ "missing required padding" };
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
-        for( /*unsigned*/ char i = 0; i < 64; ++i )
+        for( /*unsigned*/ char i{ 0 }; i < 64; ++i )
             reverse_lookup[ chars[ i ] ] = i;
         reverse_lookup[ '=' ] = 0;
         
-        for( std::string::size_type i = 0; i < b64_size; ++i )
+        for( std::string::size_type i{ 0 }; i < b64_size; ++i )
         {
-            if( o[ i ] == '=' )
-            {
-                if(
-                    i < unpadded_len
-                    && i >= unpadded_len - 2
-                )
-                    break;
-                else
-                    throw base64_decode_error( "premature padding" );
-            }
+            if( o[ i ] == '=' && i + 1 < b64_size && o[ i + 1 ] != '=' )
+                throw base64_decode_error{ "premature padding" };
             
             std::map< char, /*unsigned*/ char >::iterator first, second;
             
             first = reverse_lookup.find( o[ i ] );
             if( first == reverse_lookup.end() )
-                throw base64_decode_error( "invalid base64 character" );
+                throw base64_decode_error{ "invalid base64 character" };
             
             if( i + 1 < o.size() )
             {
                 second = reverse_lookup.find( o[ i + 1 ] );
                 if( second == reverse_lookup.end() )
-                    throw base64_decode_error( "invalid base64 character" );
+                    throw base64_decode_error{ "invalid base64 character" };
             }
             
             switch( i % 4 )
@@ -174,7 +167,6 @@ namespace show
                     current_octet |= (
                         second -> second >> 4
                     ) & 0x03 /* 00000011 */;
-                decoded += current_octet;
                 break;
             case 1:
                 //        i
@@ -185,7 +177,6 @@ namespace show
                     current_octet |= (
                         second -> second >> 2
                     ) & 0x0F /* 00001111 */;
-                decoded += current_octet;
                 break;
             case 2:
                 //               i
@@ -194,14 +185,20 @@ namespace show
                 current_octet = ( first -> second << 6 ) & 0xC0 /* 11000000 */;
                 if( i + 1 < o.size() )
                     current_octet |= second -> second & 0x3F /* 00111111 */;
-                decoded += current_octet;
                 break;
             case 3:
                 //                      i
                 // ****** ****** ****** ******
                 // -
-                break;
+                continue;
             }
+            
+            // Skip null bytes added by padding (but continue to next iteration
+            // to check for premature padding)
+            if( current_octet == 0x00 && o[ i + 1 ] == '=' )
+                continue;
+            
+            decoded += current_octet;
         }
         
         return decoded;

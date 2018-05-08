@@ -1,13 +1,13 @@
 #include <show.hpp>
 
 #include <iostream> // std::cout, std::cerr
-#include <thread>   // std::thread
 #include <list>     // std::list
 #include <memory>   // std::unique_ptr
+#include <thread>   // std::thread
 
 
 // Set a Server header to display the SHOW version
-const show::headers_type::value_type server_header = {
+const show::headers_type::value_type server_header{
     "Server",
     {
         show::version::name
@@ -17,13 +17,13 @@ const show::headers_type::value_type server_header = {
 };
 
 
-void handle_connection( std::shared_ptr< show::connection > connection )
+void handle_connection( std::unique_ptr< show::connection > connection )
 {
     try
     {
         connection -> timeout( 2 );
         
-        show::request request( *connection );
+        show::request request{ *connection };
         
         // See the HTTP/1.1 example for an explanation
         if( !request.unknown_content_length() )
@@ -35,12 +35,12 @@ void handle_connection( std::shared_ptr< show::connection > connection )
         // here using `std::this_thread::sleep_for()` to make it clearer that
         // multiple connections can be handled at the same time; see
         // http://en.cppreference.com/w/cpp/thread/sleep_for
-        show::response response(
+        show::response response{
             request.connection(),
             show::http_protocol::HTTP_1_0,
             { 501, "Not Implemented" },
             { server_header }
-        );
+        };
         
         // Make sure the response is entirely sent before closing the connection
         response.flush();
@@ -76,26 +76,26 @@ void handle_connection( std::shared_ptr< show::connection > connection )
 
 int main( int argc, char* argv[] )
 {
-    std::string  host    = "::";    // IPv6 'any IP' (0.0.0.0 in IPv4)
-    unsigned int port    = 9090;    // Some random higher port
-    int          timeout = 10;      // Connection timeout in seconds
-    std::string  message = "Hello World!";
+    std::string  host   { "::" };   // IPv6 'any IP' (0.0.0.0 in IPv4)
+    unsigned int port   { 9090 };   // Some random higher port
+    int          timeout{ 10   };   // Connection timeout in seconds
     
-    show::server test_server(
+    show::server test_server{
         host,
         port,
         timeout
-    );
+    };
     
     while( true )
         try
         {
-            std::thread worker(
+            std::thread worker{
                 handle_connection,
-                std::shared_ptr< show::connection >(
-                    new show::connection( test_server.serve() )
-                )
-            );
+                // In C++14 and later std::make_unique<>() should be preferred
+                std::unique_ptr< show::connection >{
+                    new show::connection{ test_server.serve() }
+                }
+            };
             worker.detach();
         }
         catch( const show::connection_timeout& ct )
