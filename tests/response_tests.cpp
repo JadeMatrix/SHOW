@@ -467,6 +467,7 @@ SUITE( ShowResponseTests )
     }
     */
     
+    #if 0
     TEST( GracefulClientDisconnectWhileCreating )
     {
         // IMPLEMENT: client disconnected while creating
@@ -560,6 +561,7 @@ SUITE( ShowResponseTests )
             show::connection_timeout
         );
     }
+    #endif
     
     TEST( FailReturnInvalidHeaderName )
     {
