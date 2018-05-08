@@ -5,8 +5,9 @@
 
 #include "../show.hpp"
 
+#include <functional>   // std::function<>
 #include <streambuf>
-#include <utility>  // std::forward<>()
+#include <utility>      // std::forward<>()
 #include <vector>
 
 
