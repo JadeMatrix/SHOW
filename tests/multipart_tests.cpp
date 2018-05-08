@@ -1275,7 +1275,7 @@ SUITE( ShowMultipartTests )
         
         try
         {
-            auto& segment{ *end_iter };
+            auto& segment = *end_iter;
             CHECK( false );
         }
         catch( const std::logic_error& e )
