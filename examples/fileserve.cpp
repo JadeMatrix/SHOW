@@ -217,11 +217,11 @@ void handle_GET_request(
         // Keep a seperate string `full_path_string` to represent the path on
         // the server's system; this path should never be send back to the
         // client -- use `path_string` instead.
-        auto full_path_string{ rel_dir + path_string };
+        auto full_path_string = rel_dir + path_string;
         
         if( is_directory( full_path_string ) )
         {
-            auto children{ scan_directory( full_path_string ) };
+            auto children = scan_directory( full_path_string );
             
             // Send back a directory listing as an HTML5 page
             std::stringstream content;

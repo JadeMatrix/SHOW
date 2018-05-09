@@ -24,9 +24,9 @@ SUITE( ShowRequestTests )
     
     TEST( MoveConstruct )
     {
-        auto make_request{ []( show::connection& test_connection ){
+        auto make_request = []( show::connection& test_connection ){
             return show::request{ test_connection };
-        } };
+        };
         
         std::string message{ "hello world" };
         
@@ -38,7 +38,7 @@ SUITE( ShowRequestTests )
                 + message
             ),
             [ make_request, & message ]( show::connection& test_connection ){
-                auto test_request{ make_request( test_connection ) };
+                auto test_request = make_request( test_connection );
                 CHECK_EQUAL(
                     message,
                     ( std::string{
@@ -52,9 +52,9 @@ SUITE( ShowRequestTests )
     
     TEST( MoveAssign )
     {
-        auto make_request{ []( show::connection& test_connection ){
+        auto make_request = []( show::connection& test_connection ){
             return show::request{ test_connection };
-        } };
+        };
         
         std::string message1{ "hello world" };
         std::string message2{ "foo bar"     };
@@ -75,7 +75,7 @@ SUITE( ShowRequestTests )
                 & message1,
                 & message2
             ]( show::connection& test_connection ){
-                auto test_request{ make_request( test_connection ) };
+                auto test_request = make_request( test_connection );
                 CHECK_EQUAL(
                     message1,
                     ( std::string{
@@ -1165,7 +1165,7 @@ SUITE( ShowRequestTests )
         unsigned int port   { 9090 };
         show::server test_server{ address, port, 1 };
         
-        auto request_thread{ send_request_async(
+        auto request_thread = send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -1177,11 +1177,11 @@ SUITE( ShowRequestTests )
                 );
                 std::this_thread::sleep_for( std::chrono::seconds{ 2 } );
             }
-        ) };
+        );
         
         try
         {
-            auto test_connection{ test_server.serve() };
+            auto test_connection = test_server.serve();
             CHECK_THROW(
                 ( show::request{ test_connection } ),
                 show::connection_timeout
@@ -1203,7 +1203,7 @@ SUITE( ShowRequestTests )
         unsigned int port   { 9090 };
         show::server test_server{ address, port, 1 };
         
-        auto request_thread{ send_request_async(
+        auto request_thread = send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -1214,11 +1214,11 @@ SUITE( ShowRequestTests )
                     "Content-Len"
                 );
             }
-        ) };
+        );
         
         try
         {
-            auto test_connection{ test_server.serve() };
+            auto test_connection = test_server.serve();
             CHECK_THROW(
                 ( show::request{ test_connection } ),
                 show::client_disconnected
@@ -1241,7 +1241,7 @@ SUITE( ShowRequestTests )
         unsigned int port   { 9090 };
         show::server test_server{ address, port, 1 };
         
-        auto request_thread{ send_request_async(
+        auto request_thread = send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -1255,11 +1255,11 @@ SUITE( ShowRequestTests )
                 );
                 std::this_thread::sleep_for( std::chrono::seconds{ 2 } );
             }
-        ) };
+        );
         
         try
         {
-            auto test_connection{ test_server.serve() };
+            auto test_connection = test_server.serve();
             show::request test_request{ test_connection };
             CHECK_THROW(
                 ( std::string{
@@ -1286,7 +1286,7 @@ SUITE( ShowRequestTests )
         unsigned int port   { 9090 };
         show::server test_server{ address, port, 1 };
         
-        auto request_thread{ send_request_async(
+        auto request_thread = send_request_async(
             address,
             port,
             []( show::socket_fd request_socket ){
@@ -1299,11 +1299,11 @@ SUITE( ShowRequestTests )
                     "Lorem ipsum dolor sit amet,"
                 );
             }
-        ) };
+        );
         
         try
         {
-            auto test_connection{ test_server.serve() };
+            auto test_connection = test_server.serve();
             show::request test_request{ test_connection };
             CHECK_THROW(
                 ( std::string{

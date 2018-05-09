@@ -173,7 +173,7 @@ namespace show
         
         while( reading )
         {
-            auto current_char{ traits_type::to_char_type( sbumpc() ) };
+            auto current_char = traits_type::to_char_type( sbumpc() );
             
             if( in_endline_seq )
             {
@@ -588,14 +588,14 @@ namespace show
         std::string::size_type next_boundary_char{ 0 };
         do
         {
-            auto got_i{ buffer.sgetc() };
+            auto got_i = buffer.sgetc();
             
             if( std::streambuf::traits_type::not_eof( got_i ) != got_i )
                 throw multipart_parse_error{
                     "premature end of multipart data"
                 };
             
-            auto got_c{ std::streambuf::traits_type::to_char_type( got_i ) };
+            auto got_c = std::streambuf::traits_type::to_char_type( got_i );
             
             if(
                 got_c == boundary_string[ next_boundary_char ]
@@ -624,10 +624,10 @@ namespace show
             
         } while( next_boundary_char < boundary_string.size() );
         
-        auto  int_1{ buffer.sbumpc()                                    };
-        auto  int_2{ buffer.sgetc ()                                    };
-        auto char_1{ std::streambuf::traits_type::to_char_type( int_1 ) };
-        auto char_2{ std::streambuf::traits_type::to_char_type( int_2 ) };
+        auto  int_1 = buffer.sbumpc();
+        auto  int_2 = buffer.sgetc ();
+        auto char_1 = std::streambuf::traits_type::to_char_type( int_1 );
+        auto char_2 = std::streambuf::traits_type::to_char_type( int_2 );
         
         if(
                std::streambuf::traits_type::not_eof( int_1 ) != int_1

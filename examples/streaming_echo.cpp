@@ -43,7 +43,7 @@ void handle_POST_request( show::request& request )
         // otherwise use the default MIME type recommended in the HTTP
         // specification, RFC 2616 §7.2.1:
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.2.1
-        auto content_type_header{ request.headers().find( "Content-Type" ) };
+        auto content_type_header = request.headers().find( "Content-Type" );
         if(
             content_type_header != request.headers().end()
             && content_type_header -> second.size() == 1

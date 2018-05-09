@@ -27,7 +27,7 @@ void handle_connection( show::connection& connection )
             if( !request.unknown_content_length() )
                 request.flush();
             
-            auto is_1p1{ request.protocol() == show::HTTP_1_1 };
+            auto is_1p1 = request.protocol() == show::HTTP_1_1;
             
             std::string message{
                 "HTTP/"
@@ -71,7 +71,7 @@ void handle_connection( show::connection& connection )
             // HTTP/1.0 "supports" persistent connections with the "Connection"
             // header; this example defers to this header's value (if it exists)
             // before checking the protocol version.
-            auto connection_header{ request.headers().find( "Connection" ) };
+            auto connection_header = request.headers().find( "Connection" );
             if(
                 connection_header != request.headers().end()
                 && connection_header -> second.size() == 1
