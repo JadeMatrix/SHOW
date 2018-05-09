@@ -5,8 +5,9 @@
 
 #include "../show.hpp"
 
+#include <functional>   // std::function<>
 #include <streambuf>
-#include <utility>  // std::forward<>()
+#include <utility>      // std::forward<>()
 #include <vector>
 
 
@@ -83,10 +84,9 @@ namespace show
             segment         _current_segment;
             
             iterator( multipart&, bool end = false );
-            iterator( const iterator& );
             
         public:
-            iterator( iterator&& ) = default;
+            iterator( iterator&& );
             
             iterator& operator  =( iterator&&      ) = default;
             reference operator  *(                 );
@@ -388,19 +388,19 @@ namespace show
     // Iterator ----------------------------------------------------------------
     
     inline multipart::iterator::iterator( multipart& p, bool end ) :
-        _parent         { &p    },
-        _is_end         { end   },
-        _locked         { false },
-        _segment_index  { 0     }
+        _parent       { &p    },
+        _is_end       { end   },
+        _locked       { false },
+        _segment_index{ 0     }
     {
         if( !end )
             _current_segment = { p };
     }
     
-    inline multipart::iterator::iterator( const iterator& o ) :
+    inline multipart::iterator::iterator( iterator&& o ) :
         _parent       { o._parent        },
         _is_end       { o._is_end        },
-        _locked       { true             },
+        _locked       { o._locked        },
         _segment_index{ o._segment_index }
     {}
     
@@ -455,7 +455,10 @@ namespace show
     
     inline multipart::iterator multipart::iterator::operator ++( int )
     {
-        auto copy = *this;
+        iterator copy{ *_parent, _is_end };
+        copy._locked        = true;
+        copy._segment_index = _segment_index;
+        
         ++( *this );
         return copy;
     }
