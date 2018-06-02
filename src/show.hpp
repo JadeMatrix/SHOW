@@ -520,7 +520,7 @@ namespace show
             return WRITE;
     }
     
-    // connection -----------------------------------------------------------------
+    // connection --------------------------------------------------------------
     
     inline connection::connection(
         socket_fd          fd,
@@ -788,12 +788,18 @@ namespace show
         _server_address{ std::move( o._server_address ) },
         _server_port   { std::move( o._server_port    ) }
     {
-        // See comment in `request::request(&&)` implementation
         setg(
             o.eback(),
-            o.gptr (),
+            o. gptr(),
             o.egptr()
         );
+        o.get_buffer = nullptr;
+        
+        setp(
+            o.pbase(),
+            o.epptr()
+        );
+        o.put_buffer = nullptr;
     }
     
     inline connection::~connection()
@@ -810,6 +816,31 @@ namespace show
         std::swap( _timeout       , o._timeout        );
         std::swap( _server_address, o._server_address );
         std::swap( _server_port   , o._server_port    );
+        
+        auto eback_temp = eback();
+        auto  gptr_temp =  gptr();
+        auto egptr_temp = egptr();
+        setg(
+            o.eback(),
+            o. gptr(),
+            o.egptr()
+        );
+        o.setg(
+            eback_temp,
+             gptr_temp,
+            egptr_temp
+        );
+        
+        auto pbase_temp = pbase();
+        auto epptr_temp = epptr();
+        setp(
+            o.pbase(),
+            o.epptr()
+        );
+        o.setp(
+            pbase_temp,
+            epptr_temp
+        );
         
         return *this;
     }
