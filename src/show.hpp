@@ -535,7 +535,6 @@ namespace show
         _server_address{ server_address                        },
         _server_port   { server_port                           },
         // `std::make_unique<>()` available in C++14
-        // TODO: Only allocate once needed
         get_buffer     { new std::array< char, BUFFER_SIZE >{} },
         put_buffer     { new std::array< char, BUFFER_SIZE >{} }
     {
