@@ -3,10 +3,12 @@
 #define SHOW_HPP
 
 
+#include <array>
 #include <cstring>
 #include <exception>
 #include <iomanip>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <stack>
 #include <streambuf>
@@ -189,11 +191,11 @@ namespace show
         static const char             ASCII_ACK  { '\x06' };
         
         _socket      _serve_socket;
-        char*        get_buffer;
-        char*        put_buffer;
         int          _timeout;
         std::string  _server_address;
         unsigned int _server_port;
+        std::unique_ptr< std::array< char, BUFFER_SIZE > > get_buffer;
+        std::unique_ptr< std::array< char, BUFFER_SIZE > > put_buffer;
         
         connection(
             socket_fd          fd,
@@ -233,7 +235,6 @@ namespace show
         const unsigned int server_port   () const { return _server_port         ; };
         
         connection( connection&& );
-        ~connection();
         
         connection& operator =( connection&& );
         
@@ -530,24 +531,23 @@ namespace show
         unsigned int       server_port,
         int                timeout
     ) :
-        _serve_socket  { fd, client_address, client_port },
-        _server_address{ server_address                  },
-        _server_port   { server_port                     },
-        get_buffer     { nullptr                         },
-        put_buffer     { nullptr                         }
-    {
+        _serve_socket  { fd, client_address, client_port       },
+        _server_address{ server_address                        },
+        _server_port   { server_port                           },
+        // `std::make_unique<>()` available in C++14
         // TODO: Only allocate once needed
-        get_buffer = new char[ BUFFER_SIZE ];
-        put_buffer = new char[ BUFFER_SIZE ];
+        get_buffer     { new std::array< char, BUFFER_SIZE >{} },
+        put_buffer     { new std::array< char, BUFFER_SIZE >{} }
+    {
         this -> timeout( timeout );
         setg(
-            get_buffer,
-            get_buffer,
-            get_buffer
+            reinterpret_cast< char* >( get_buffer.get() ),
+            reinterpret_cast< char* >( get_buffer.get() ),
+            reinterpret_cast< char* >( get_buffer.get() )
         );
         setp(
-            put_buffer,
-            put_buffer + BUFFER_SIZE
+            reinterpret_cast< char* >( put_buffer.get() ),
+            reinterpret_cast< char* >( put_buffer.get() ) + BUFFER_SIZE
         );
     }
     
@@ -793,19 +793,10 @@ namespace show
             o. gptr(),
             o.egptr()
         );
-        o.get_buffer = nullptr;
-        
         setp(
             o.pbase(),
             o.epptr()
         );
-        o.put_buffer = nullptr;
-    }
-    
-    inline connection::~connection()
-    {
-        if( get_buffer ) delete get_buffer;
-        if( put_buffer ) delete put_buffer;
     }
     
     inline connection& connection::operator =( connection&& o )
