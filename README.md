@@ -8,4 +8,4 @@ SHOW is an idiomatic library for standalone webserver applications written for m
 
 SHOW assumes a modern approach to application hosting, and is intended to be run behind a full reverse proxy such as [NGINX](https://nginx.org/).  As such, SHOW will not support HTTP/2 or TLS (HTTPS); instead, you should write your applications to serve local HTTP/1.0 and HTTP/1.1 requests.
 
-You can find SHOW's documentation, including a tutorial, on [ReadTheDocs.io](http://show-cpp.readthedocs.io/).  SHOW uses the [`zlib` license](LICENSE).  A C++11 compiler and a POSIX operating system are required.
+You can find SHOW's documentation, including a tutorial, on [ReadTheDocs.io](http://show-cpp.readthedocs.io/).  SHOW uses the [`zlib` license](LICENSE).  A C++11 compiler and a POSIX operating system (or POSIX compatibility layer) are required.
