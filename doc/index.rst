@@ -8,7 +8,7 @@ SHOW is designed to be an idiomatic library for standalone webserver application
 
 Both HTTP/1.0 and HTTP/1.1 are supported.  SHOW assumes a modern approach to application hosting, and is intended to be run behind a full reverse proxy such as `NGINX <https://nginx.org/>`_.  As such, SHOW will not support HTTP/2 or TLS (HTTPS).  Instead, you should write your applications to serve local HTTP/1.0 and HTTP/1.1 requests.
 
-SHOW uses the `zlib license <https://github.com/JadeMatrix/SHOW/blob/master/LICENSE>`_.  C++11 support and a POSIX operating system are required.
+SHOW is released under the `zlib license <https://github.com/JadeMatrix/SHOW/blob/master/LICENSE>`_.  C++11 support and a POSIX operating system (or POSIX compatibility layer) are required.
 
 .. toctree::
     :maxdepth: 2

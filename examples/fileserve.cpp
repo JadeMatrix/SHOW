@@ -217,11 +217,11 @@ void handle_GET_request(
         // Keep a seperate string `full_path_string` to represent the path on
         // the server's system; this path should never be send back to the
         // client -- use `path_string` instead.
-        auto full_path_string{ rel_dir + path_string };
+        auto full_path_string = rel_dir + path_string;
         
         if( is_directory( full_path_string ) )
         {
-            auto children{ scan_directory( full_path_string ) };
+            auto children = scan_directory( full_path_string );
             
             // Send back a directory listing as an HTML5 page
             std::stringstream content;
@@ -266,6 +266,17 @@ void handle_GET_request(
         }
         else
         {
+            bool download{ true };
+            auto found_download = request.query_args().find( "download" );
+            if( found_download != request.query_args().end() )
+            {
+                for( auto& val : found_download -> second )
+                    if( val == "false" )
+                        download = false;
+            }
+            else
+                download = false;
+            
             // Open the file in binary input mode, with the cursor starting at
             // the end so we can get the file size
             std::ifstream file{
@@ -291,6 +302,11 @@ void handle_GET_request(
                         { "Content-Type", { guess_mime_type( path_string ) } },
                         { "Content-Length", {
                             std::to_string( remaining )
+                        } },
+                        { "Content-Disposition", {
+                            std::string{ download ? "attachment" : "inline" }
+                            + "; filename*=UTF-8''"
+                            + show::url_encode( request.path().back(), false )
                         } }
                     }
                 };

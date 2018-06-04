@@ -2,7 +2,6 @@
 
 #include <iostream> // std::cout, std::cerr
 #include <list>     // std::list
-#include <memory>   // std::unique_ptr
 #include <thread>   // std::thread
 
 
@@ -17,13 +16,13 @@ const show::headers_type::value_type server_header{
 };
 
 
-void handle_connection( std::unique_ptr< show::connection > connection )
+void handle_connection( show::connection&& connection )
 {
     try
     {
-        connection -> timeout( 2 );
+        connection.timeout( 2 );
         
-        show::request request{ *connection };
+        show::request request{ connection };
         
         // See the HTTP/1.1 example for an explanation
         if( !request.unknown_content_length() )
@@ -49,7 +48,7 @@ void handle_connection( std::unique_ptr< show::connection > connection )
     {
         std::cout
             << "client "
-            << connection -> client_address()
+            << connection.client_address()
             << " disconnected or timed out, closing connection"
             << std::endl
         ;
@@ -91,10 +90,7 @@ int main( int argc, char* argv[] )
         {
             std::thread worker{
                 handle_connection,
-                // In C++14 and later std::make_unique<>() should be preferred
-                std::unique_ptr< show::connection >{
-                    new show::connection{ test_server.serve() }
-                }
+                test_server.serve()
             };
             worker.detach();
         }
