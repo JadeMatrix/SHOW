@@ -5,7 +5,7 @@ SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 PROJECT(
     "SHOW Tests & Examples"
-    VERSION 0.8.5
+    VERSION 0.8.6
     LANGUAGES CXX
 )
 
