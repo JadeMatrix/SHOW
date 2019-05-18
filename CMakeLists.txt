@@ -10,7 +10,7 @@ PROJECT(
     LANGUAGES CXX
 )
 
-ENABLE_TESTING()
+INCLUDE( CTest )
 
 
 ADD_LIBRARY( show INTERFACE )
@@ -33,7 +33,12 @@ INSTALL(
 )
 
 
-ADD_SUBDIRECTORY( "tests/" )
+# CTest sets `BUILD_TESTING` to "on" by default
+IF( BUILD_TESTING )
+    ADD_SUBDIRECTORY( "tests/" )
+ENDIF()
+
+# All examples are excluded from `ALL` but can be built manually
 ADD_SUBDIRECTORY( "examples/" )
 
 
