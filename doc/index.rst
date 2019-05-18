@@ -15,7 +15,7 @@ SHOW is released under the `zlib license <https://github.com/JadeMatrix/SHOW/blo
     :caption: Contents:
     
     Tutorial
-    Classes
+    Types
     Functions
     Constants
     Utilities

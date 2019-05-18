@@ -654,7 +654,7 @@ namespace show // `show::connection` implementation ////////////////////////////
         std::streamsize count
     )
     {
-        // TODO: copy in available chunks rather than ~i calls to `sbumpc()`?
+        // FIXME: copy in available chunks rather than ~i calls to `sbumpc()`
         
         std::streamsize i{ 0 };
         
@@ -1267,6 +1267,8 @@ namespace show // `show::request` implementation ///////////////////////////////
         std::streamsize count
     )
     {
+        // FIXME: copy in available chunks rather than ~i calls to `sbumpc()`
+        
         std::streamsize read;
         
         if( _unknown_content_length )

@@ -1,9 +1,9 @@
-===============
-Classes & Types
-===============
+=====
+Types
+=====
 
-Classes
-=======
+Main Types
+==========
 
 The public interfaces to the main SHOW classes are documented on the following pages:
 
@@ -15,14 +15,14 @@ The public interfaces to the main SHOW classes are documented on the following p
     Request
     Response
 
-Types
-=====
+Support Types
+=============
 
 .. cpp:namespace-push:: show
 
 .. cpp:enum:: http_protocol
     
-    Symbolizes the possibly HTTP protocols understood by SHOW.  The enum members are:
+    Symbolizes the HTTP protocols understood by SHOW.  The enum members are:
     
     +--------------+---------------------------------------------------------+
     | ``HTTP_1_0`` | HTTP/1.0                                                |
