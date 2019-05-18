@@ -11,6 +11,7 @@ PROJECT(
 )
 
 INCLUDE( CTest )
+INCLUDE( GNUInstallDirs )
 
 
 ADD_LIBRARY( show INTERFACE )
@@ -18,18 +19,18 @@ TARGET_INCLUDE_DIRECTORIES(
     show
     INTERFACE
         "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>"
-        "$<INSTALL_INTERFACE:include/>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 INSTALL(
     TARGETS show
     EXPORT "show-config"
-    RUNTIME DESTINATION "bin/"
-    LIBRARY DESTINATION "lib/"
-    ARCHIVE DESTINATION "lib/static/"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
 INSTALL(
     DIRECTORY "src/"
-    DESTINATION "include/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
 
@@ -49,13 +50,13 @@ WRITE_BASIC_PACKAGE_VERSION_FILE(
 )
 INSTALL(
     FILES "${CMAKE_BINARY_DIR}/show-config-version.cmake"
-    DESTINATION "lib/cmake/show/"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/show/"
 )
 
 INSTALL(
     EXPORT "show-config"
     NAMESPACE "SHOW::"
-    DESTINATION "lib/cmake/show/"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/show/"
 )
 
 EXPORT( EXPORT "show-config" FILE "show-config.cmake" )
