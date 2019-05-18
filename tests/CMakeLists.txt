@@ -1,12 +1,7 @@
-# Try to find by package first (UnitTest++ provides one), but fall back to
-# FIND_LIBRARY() if it's not installed (Homebrew for example does not)
-FIND_PACKAGE( UnitTest++ QUIET )
-IF( NOT UnitTest++ )
-    FIND_LIBRARY( UnitTest++ UnitTest++ )
-ENDIF()
+FIND_PACKAGE( UnitTest++ )
 
 
-IF( UnitTest++ )
+IF( TARGET UnitTest++ )
     # Unfortunately CMake doesn't supply a component-based package for cURL
     FIND_PACKAGE( CURL REQUIRED )
     
