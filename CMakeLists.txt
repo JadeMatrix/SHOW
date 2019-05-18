@@ -10,8 +10,15 @@ PROJECT(
     LANGUAGES CXX
 )
 
+LIST( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMakeModules/" )
+
 INCLUDE( CTest )
 INCLUDE( GNUInstallDirs )
+
+STRING( REPLACE "${PROJECT_NAME}" "show"
+    CMAKE_INSTALL_DOCDIR
+    "${CMAKE_INSTALL_DOCDIR}"
+)
 
 
 ADD_LIBRARY( show INTERFACE )
@@ -41,6 +48,8 @@ ENDIF()
 
 # All examples are excluded from `ALL` but can be built manually
 ADD_SUBDIRECTORY( "examples/" )
+
+ADD_SUBDIRECTORY( "doc/" )
 
 
 INCLUDE( CMakePackageConfigHelpers )
