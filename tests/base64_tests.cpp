@@ -67,7 +67,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "MTIz",
-            show::base64_encode( "123" )
+            show::base64::encode( "123" )
         );
     }
     
@@ -75,7 +75,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "MTIzNDU=",
-            show::base64_encode( "12345" )
+            show::base64::encode( "12345" )
         );
     }
     
@@ -83,7 +83,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "MTIzNA==",
-            show::base64_encode( "1234" )
+            show::base64::encode( "1234" )
         );
     }
     
@@ -91,9 +91,9 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
-            show::base64_encode(
+            show::base64::encode(
                 std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-                show::base64_chars_standard
+                show::base64::chars_standard
             )
         );
     }
@@ -102,9 +102,9 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
-            show::base64_encode(
+            show::base64::encode(
                 std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-                show::base64_chars_urlsafe
+                show::base64::chars_urlsafe
             )
         );
     }
@@ -113,7 +113,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "",
-            show::base64_encode( "" )
+            show::base64::encode( "" )
         );
     }
     
@@ -121,7 +121,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "AAAA",
-            show::base64_encode( std::string( "\0\0\0", 3 ) )
+            show::base64::encode( std::string( "\0\0\0", 3 ) )
         );
     }
     
@@ -129,7 +129,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "AAA=",
-            show::base64_encode( std::string( "\0\0", 2 ) )
+            show::base64::encode( std::string( "\0\0", 2 ) )
         );
     }
     
@@ -137,7 +137,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "AA==",
-            show::base64_encode( std::string( "\0", 1 ) )
+            show::base64::encode( std::string( "\0", 1 ) )
         );
     }
     
@@ -145,7 +145,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             long_message_base64_encoded,
-            show::base64_encode( long_message )
+            show::base64::encode( long_message )
         );
     }
     
@@ -160,7 +160,7 @@ SUITE( ShowBase64Tests )
         }
         CHECK_EQUAL(
             very_long_message_encoded,
-            show::base64_encode( very_long_message )
+            show::base64::encode( very_long_message )
         );
     }
     
@@ -168,7 +168,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "123",
-            show::base64_decode( "MTIz" )
+            show::base64::decode( "MTIz" )
         );
     }
     
@@ -176,7 +176,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "12345",
-            show::base64_decode( "MTIzNDU=" )
+            show::base64::decode( "MTIzNDU=" )
         );
     }
     
@@ -184,7 +184,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "1234",
-            show::base64_decode( "MTIzNA==" )
+            show::base64::decode( "MTIzNA==" )
         );
     }
     
@@ -192,9 +192,9 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-            show::base64_decode(
+            show::base64::decode(
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
-                show::base64_chars_standard
+                show::base64::chars_standard
             )
         );
     }
@@ -203,9 +203,9 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-            show::base64_decode(
+            show::base64::decode(
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
-                show::base64_chars_urlsafe
+                show::base64::chars_urlsafe
             )
         );
     }
@@ -214,7 +214,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "",
-            show::base64_decode( "" )
+            show::base64::decode( "" )
         );
     }
     
@@ -222,7 +222,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             long_message,
-            show::base64_decode( long_message_base64_encoded )
+            show::base64::decode( long_message_base64_encoded )
         );
     }
     
@@ -237,7 +237,7 @@ SUITE( ShowBase64Tests )
         }
         CHECK_EQUAL(
             very_long_message,
-            show::base64_decode( very_long_message_encoded )
+            show::base64::decode( very_long_message_encoded )
         );
     }
     
@@ -245,7 +245,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "123",
-            show::base64_decode( "MTIz==" )
+            show::base64::decode( "MTIz==" )
         );
     }
     
@@ -253,7 +253,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "123",
-            show::base64_decode( "MTIz=" )
+            show::base64::decode( "MTIz=" )
         );
     }
     
@@ -261,7 +261,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "123",
-            show::base64_decode( "MTIz==============" )
+            show::base64::decode( "MTIz==============" )
         );
     }
     
@@ -269,7 +269,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "",
-            show::base64_decode( "=" )
+            show::base64::decode( "=" )
         );
     }
     
@@ -277,16 +277,16 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             "",
-            show::base64_decode( "==" )
+            show::base64::decode( "==" )
         );
     }
     
     TEST( DecodeMissingPadding )
     {
-        auto s = show::base64_decode(
+        auto s = show::base64::decode(
             "SGVsbG8gV29ybGQ",
-            show::base64_chars_standard,
-            show::base64_ignore_padding
+            show::base64::chars_standard,
+            show::base64::ignore_padding
         );
         std::string hw{ "Hello World" };
         CHECK_EQUAL( hw, s );
@@ -294,10 +294,10 @@ SUITE( ShowBase64Tests )
     
     TEST( DecodeMissingPaddingNulls )
     {
-        auto s = show::base64_decode(
+        auto s = show::base64::decode(
             "AAA",
-            show::base64_chars_standard,
-            show::base64_ignore_padding
+            show::base64::chars_standard,
+            show::base64::ignore_padding
         );
         std::string hw( 2, '\0' );
         CHECK_EQUAL( hw, s );
@@ -307,10 +307,10 @@ SUITE( ShowBase64Tests )
     {
         try
         {
-            show::base64_decode( "SGVsbG8gV29ybGQ" );
+            show::base64::decode( "SGVsbG8gV29ybGQ" );
             CHECK( false );
         }
-        catch( const show::base64_decode_error& e )
+        catch( const show::base64::decode_error& e )
         {
             CHECK_EQUAL(
                 "missing required padding",
@@ -323,10 +323,10 @@ SUITE( ShowBase64Tests )
     {
         try
         {
-            show::base64_decode( "A=B=" );
+            show::base64::decode( "A=B=" );
             CHECK( false );
         }
-        catch( const show::base64_decode_error& e )
+        catch( const show::base64::decode_error& e )
         {
             CHECK_EQUAL(
                 "premature padding",
@@ -339,10 +339,10 @@ SUITE( ShowBase64Tests )
     {
         try
         {
-            show::base64_decode( "*GV$bG8g?29ybGQh" );
+            show::base64::decode( "*GV$bG8g?29ybGQh" );
             CHECK( false );
         }
-        catch( const show::base64_decode_error& e )
+        catch( const show::base64::decode_error& e )
         {
             CHECK_EQUAL(
                 "invalid base64 character",
@@ -355,10 +355,10 @@ SUITE( ShowBase64Tests )
     {
         try
         {
-            show::base64_decode( "SGV$bG8g?29ybGQh" );
+            show::base64::decode( "SGV$bG8g?29ybGQh" );
             CHECK( false );
         }
-        catch( const show::base64_decode_error& e )
+        catch( const show::base64::decode_error& e )
         {
             CHECK_EQUAL(
                 "invalid base64 character",
@@ -371,7 +371,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             std::string( "\0\0\0", 3 ),
-            show::base64_decode( "AAAA" )
+            show::base64::decode( "AAAA" )
         );
     }
     
@@ -379,7 +379,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             std::string( "\0\0", 2 ),
-            show::base64_decode( "AAA=" )
+            show::base64::decode( "AAA=" )
         );
     }
     
@@ -387,7 +387,7 @@ SUITE( ShowBase64Tests )
     {
         CHECK_EQUAL(
             std::string( "\0", 1 ),
-            show::base64_decode( "AA==" )
+            show::base64::decode( "AA==" )
         );
     }
 }

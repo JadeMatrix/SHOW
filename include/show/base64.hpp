@@ -6,38 +6,41 @@
 #include "../show.hpp"
 
 
-namespace show
+namespace show { namespace base64 // Declarations //////////////////////////////
 {
-    static const char* base64_chars_standard{
+    static const char* chars_standard{
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
     };
-    static const char* base64_chars_urlsafe{
+    static const char* chars_urlsafe{
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
     };
     
     
-    using base64_flags = unsigned char;
-    static const base64_flags base64_ignore_padding = 0x01;
+    using flags = unsigned char;
+    static const flags ignore_padding = 0x01;
     
     
-    std::string base64_encode(
+    std::string encode(
         const std::string& o,
-        const char* chars = base64_chars_standard
+        const char* chars = chars_standard
     );
-    std::string base64_decode(
+    std::string decode(
         const std::string& o,
-        const char* chars = base64_chars_standard,
-        base64_flags flags = 0x00
+        const char* chars = chars_standard,
+        flags flags = 0x00
     );
     
     
-    class base64_decode_error : public std::runtime_error
+    class decode_error : public std::runtime_error
     {
         using runtime_error::runtime_error;
     };
-    
-    
-    inline std::string base64_encode(
+} }
+
+
+namespace show { namespace base64 // Definitions ///////////////////////////////
+{
+    inline std::string encode(
         const std::string& o,
         const char* chars
     )
@@ -110,10 +113,10 @@ namespace show
         return encoded;
     }
     
-    inline std::string base64_decode(
+    inline std::string decode(
         const std::string& o,
         const char* chars,
-        base64_flags flags
+        flags flags
     )
     {
         auto unpadded_len = o.size();
@@ -133,8 +136,8 @@ namespace show
         if( b64_size % 4 )
             b64_size += 4 - ( b64_size % 4 );
         
-        if( !( flags & base64_ignore_padding ) && b64_size > o.size() )
-            throw base64_decode_error{ "missing required padding" };
+        if( !( flags & ignore_padding ) && b64_size > o.size() )
+            throw decode_error{ "missing required padding" };
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
         for( /*unsigned*/ char i{ 0 }; i < 64; ++i )
@@ -142,10 +145,10 @@ namespace show
         
         auto get_hextet = [ &reverse_lookup ]( /*unsigned*/ char c ){
             if( c == '=' )
-                throw base64_decode_error{ "premature padding" };
+                throw decode_error{ "premature padding" };
             auto found_hextet = reverse_lookup.find( c );
             if( found_hextet == reverse_lookup.end() )
-                throw base64_decode_error{ "invalid base64 character" };
+                throw decode_error{ "invalid base64 character" };
             return found_hextet -> second;
         };
         
@@ -201,7 +204,7 @@ namespace show
         
         return decoded;
     }
-}
+} }
 
 
 #endif
