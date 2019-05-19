@@ -141,7 +141,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
         for( /*unsigned*/ char i{ 0 }; i < 64; ++i )
-            reverse_lookup[ chars[ i ] ] = i;
+            reverse_lookup[ chars[ static_cast< std::size_t >( i ) ] ] = i;
         
         auto get_hextet = [ &reverse_lookup ]( /*unsigned*/ char c ){
             if( c == '=' )
@@ -167,7 +167,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                 // i
                 // ****** ****** ****** ******
                 // ^^^^^^ ^^
-                current_octet = (
+                current_octet = static_cast< char >(
                       ( first_hextet << 2 )
                     | ( ( second_hextet >> 4 ) & 0x03 ) /* 00000011 */
                 );
@@ -176,7 +176,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                 //        i
                 // ****** ****** ****** ******
                 //          ^^^^ ^^^^
-                current_octet = (
+                current_octet = static_cast< char >(
                       ( first_hextet << 4 )
                     | ( ( second_hextet >> 2 ) & 0x0F ) /* 00001111 */
                 );
@@ -185,7 +185,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                 //               i
                 // ****** ****** ****** ******
                 //                   ^^ ^^^^^^
-                current_octet = (
+                current_octet = static_cast< char >(
                       ( first_hextet << 6 )
                     | ( second_hextet & 0x3F ) /* 00111111 */
                 );

@@ -390,10 +390,22 @@ SUITE( ShowResponseTests )
                         { "Content-Type", { "text/plain" } }
                     }
                 };
-                test_response.sputn(
-                    content.c_str(),
-                    content.size()
+                // While it may be overly pessimistic, this will handle content
+                // length greather than max `std::streamsize` without resorting
+                // to throwing `std::overflow_error`, which wouldn't be correct
+                // anyways as we're writing to a destination with infinite size.
+                auto len = content.size();
+                auto sputn_max = static_cast< decltype( len ) >(
+                    std::numeric_limits< std::streamsize >::max()
                 );
+                do
+                {
+                    std::streamsize put_count = static_cast< std::streamsize >(
+                        std::min( len, sputn_max )
+                    );
+                    test_response.sputn( content.c_str(), put_count );
+                    len -= static_cast< decltype( len ) >( put_count );
+                } while( len > 0 );
             },
             (
                 "HTTP/1.0 200 OK\r\n"

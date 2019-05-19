@@ -6,12 +6,13 @@
 #include <algorithm>  // std::copy
 #include <array>
 #include <cstring>
-#include <exception>
 #include <iomanip>
+#include <limits>
 #include <map>
 #include <memory>
 #include <sstream>
 #include <stack>
+#include <stdexcept>
 #include <streambuf>
 #include <vector>
 #include <utility>  // std::swap
@@ -42,9 +43,9 @@ namespace show // Constants ////////////////////////////////////////////////////
 namespace show // Basic types //////////////////////////////////////////////////
 {
     using socket_fd = int;
-    // `int` instead of `std::streamsize` because this is a buffer for POSIX
+    // `ssize_t` instead of `std::streamsize` because this is for use with POSIX
     // `read()`
-    using buffer_size_type = int;
+    using buffer_size_type = ssize_t;
     
     enum http_protocol
     {
@@ -146,7 +147,7 @@ namespace show // Main classes /////////////////////////////////////////////////
         void setsockopt(
             int         optname,
             void*       value,
-            int         value_size,
+            socklen_t   value_size,
             std::string description
         );
     
@@ -203,30 +204,30 @@ namespace show // Main classes /////////////////////////////////////////////////
         void flush();
         
         // std::streambuf get functions
-        virtual std::streamsize showmanyc();
-        virtual int_type        underflow();
-        virtual std::streamsize xsgetn(
+        std::streamsize showmanyc() override;
+        int_type        underflow() override;
+        std::streamsize xsgetn(
             char_type* s,
             std::streamsize count
-        );
-        virtual int_type        pbackfail(
+        ) override;
+        int_type        pbackfail(
             int_type c = std::char_traits< char >::eof()
-        );
+        ) override;
         
         // std::streambuf put functions
-        virtual std::streamsize xsputn(
+        std::streamsize xsputn(
             const char_type* s,
             std::streamsize count
-        );
-        virtual int_type overflow(
-            int_type ch = std::char_traits< char >::eof()
-        );
+        ) override;
+        int_type overflow(
+            int_type c = std::char_traits< char >::eof()
+        ) override;
         
     public:
         const std::string& client_address() const { return _serve_socket.address; };
-        const unsigned int client_port   () const { return _serve_socket.port   ; };
+        unsigned int       client_port   () const { return _serve_socket.port   ; };
         const std::string& server_address() const { return _server_address      ; };
-        const unsigned int server_port   () const { return _server_port         ; };
+        unsigned int       server_port   () const { return _server_port         ; };
         
         connection( connection&& );
         
@@ -256,7 +257,7 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         show::connection                & connection            () const { return *_connection                   ; }
         const std::string               & client_address        () const { return _connection -> client_address(); }
-        const unsigned int                client_port           () const { return _connection -> client_port   (); }
+        unsigned int                      client_port           () const { return _connection -> client_port   (); }
         http_protocol                     protocol              () const { return _protocol                      ; }
         const std::string               & protocol_string       () const { return _protocol_string               ; }
         const std::string               & method                () const { return _method                        ; }
@@ -264,7 +265,7 @@ namespace show // Main classes /////////////////////////////////////////////////
         const query_args_type           & query_args            () const { return _query_args                    ; }
         const headers_type              & headers               () const { return _headers                       ; }
         content_length_flag               unknown_content_length() const { return _unknown_content_length        ; }
-        unsigned long long                content_length        () const { return _content_length                ; }
+        std::size_t                       content_length        () const { return _content_length                ; }
         
         bool eof() const;
         void flush();
@@ -279,20 +280,20 @@ namespace show // Main classes /////////////////////////////////////////////////
         query_args_type            _query_args;
         headers_type               _headers;
         content_length_flag        _unknown_content_length;
-        unsigned long long         _content_length;
+        std::size_t                _content_length;
         
-        unsigned long long read_content;
+        std::size_t read_content;
         
-        virtual std::streamsize showmanyc();
-        virtual int_type        underflow();
-        virtual int_type        uflow();
-        virtual std::streamsize xsgetn(
+        std::streamsize showmanyc() override;
+        int_type        underflow() override;
+        int_type        uflow() override;
+        std::streamsize xsgetn(
             char_type*,
             std::streamsize
-        );
-        virtual int_type        pbackfail(
+        ) override;
+        int_type        pbackfail(
             int_type c = std::char_traits< char >::eof()
-        );
+        ) override;
     };
     
     class response : public std::streambuf
@@ -314,13 +315,13 @@ namespace show // Main classes /////////////////////////////////////////////////
     protected:
         connection* _connection;
         
-        virtual std::streamsize xsputn(
+        std::streamsize xsputn(
             const char_type*,
             std::streamsize
-        );
-        virtual int_type overflow(
-            int_type ch = std::streambuf::traits_type::eof()
-        );
+        ) override;
+        int_type overflow(
+            int_type c = std::streambuf::traits_type::eof()
+        ) override;
     };
     
     class server
@@ -404,7 +405,7 @@ namespace show // `show::_socket` implementation ///////////////////////////////
     inline void _socket::setsockopt(
         int         optname,
         void*       value,
-        int         value_size,
+        socklen_t   value_size,
         std::string description
     )
     {
@@ -430,9 +431,9 @@ namespace show // `show::_socket` implementation ///////////////////////////////
     }
     
     inline _socket::_socket( _socket&& o ) :
+        descriptor{ o.descriptor },
         address   { o.address    },
-        port      { o.port       },
-        descriptor{ o.descriptor }
+        port      { o.port       }
     {
         // TODO: Redesign `_socket` class so `const_cast<>()`s aren't required
         const_cast< socket_fd& >( o.descriptor ) = 0;
@@ -552,8 +553,12 @@ namespace show // `show::connection` implementation ////////////////////////////
     {
         buffer_size_type send_offset{ 0 };
         
-        while( pptr() - ( pbase() + send_offset ) > 0 )
+        while( true )
         {
+            auto to_send = pptr() - ( pbase() + send_offset );
+            if( to_send <= 0 )
+                break;
+            
             if( _timeout != 0 )
                 _serve_socket.wait_for(
                     _socket::WRITE,
@@ -564,7 +569,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             auto bytes_sent = static_cast< buffer_size_type >( send(
                 _serve_socket.descriptor,
                 pbase() + send_offset,
-                pptr() - ( pbase() + send_offset ),
+                static_cast< std::size_t >( to_send ),
                 0
             ) );
             
@@ -691,7 +696,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             requested
         http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
         */
-        if( traits_type::not_eof( c ) == traits_type::to_int_type( c ) )
+        if( traits_type::not_eof( c ) == c )
         {
             if( gptr() > eback() )
                 setg(
@@ -765,7 +770,7 @@ namespace show // `show::connection` implementation ////////////////////////////
         return chars_written;
     }
     
-    inline connection::int_type connection::overflow( int_type ch )
+    inline connection::int_type connection::overflow( int_type c )
     {
         try
         {
@@ -776,11 +781,11 @@ namespace show // `show::connection` implementation ////////////////////////////
             return traits_type::eof();
         }
         
-        if( traits_type::not_eof( ch ) == traits_type::to_int_type( ch ) )
+        if( traits_type::not_eof( c ) == c )
         {
-            *( pptr() ) = traits_type::to_char_type( ch );
+            *( pptr() ) = traits_type::to_char_type( c );
             pbump( 1 );
-            return ch;
+            return c;
         }
         else
             return traits_type::to_int_type( static_cast< char >( ASCII_ACK ) );
@@ -788,11 +793,11 @@ namespace show // `show::connection` implementation ////////////////////////////
     
     inline connection::connection( connection&& o ) :
         _serve_socket  { std::move( o._serve_socket   ) },
-        get_buffer     { std::move( o.get_buffer      ) },
-        put_buffer     { std::move( o.put_buffer      ) },
         _timeout       { std::move( o._timeout        ) },
         _server_address{ std::move( o._server_address ) },
-        _server_port   { std::move( o._server_port    ) }
+        _server_port   { std::move( o._server_port    ) },
+        get_buffer     { std::move( o.get_buffer      ) },
+        put_buffer     { std::move( o.put_buffer      ) }
     {
         setg(
             o.eback(),
@@ -859,7 +864,6 @@ namespace show // `show::request` implementation ///////////////////////////////
 {
     inline request::request( request&& o ) :
         _connection            {            o._connection                },
-        read_content           { std::move( o.read_content             ) },
         _protocol              { std::move( o._protocol                ) },
         _protocol_string       { std::move( o._protocol_string         ) },
         _method                { std::move( o._method                  ) },
@@ -867,7 +871,8 @@ namespace show // `show::request` implementation ///////////////////////////////
         _query_args            { std::move( o._query_args              ) },
         _headers               { std::move( o._headers                 ) },
         _unknown_content_length{ std::move( o._unknown_content_length  ) },
-        _content_length        { std::move( o._content_length          ) }
+        _content_length        { std::move( o._content_length          ) },
+        read_content           { std::move( o.read_content             ) }
     {
         // `request` can use neither an implicit nor explicit default move
         // constructor, as that relies on the `std::streambuf` implementation to
@@ -896,7 +901,6 @@ namespace show // `show::request` implementation ///////////////////////////////
         _connection { &c },
         read_content{ 0  }
     {
-        int  bytes_read;
         bool reading                   { true  };
         int  seq_newlines              { 0     };
         bool in_endline_seq            { false };
@@ -1294,7 +1298,8 @@ namespace show // `show::request` implementation ///////////////////////////////
         else
             return 0;
         
-        read_content += read;
+        // `show::connection::xsgetn()` always returns >= 0
+        read_content += static_cast< std::size_t >( read );
         return read;
     }
     
@@ -1313,11 +1318,11 @@ namespace show // `show::request` implementation ///////////////////////////////
 namespace show // `show::response` implementation //////////////////////////////
 {
     inline response::response(
-        connection         & c,
+        connection         & parent,
         http_protocol        protocol,
         const response_code& code,
         const headers_type & headers
-    ) : _connection{ &c }
+    ) : _connection{ &parent }
     {
         std::stringstream headers_stream;
         
@@ -1391,10 +1396,22 @@ namespace show // `show::response` implementation //////////////////////////////
         }
         headers_stream << "\r\n";
         
-        sputn(
-            headers_stream.str().c_str(),
-            headers_stream.str().size()
+        // While it may be overly pessimistic, this will handle header string
+        // length greather than max `std::streamsize` without resorting to
+        // throwing `std::overflow_error`, which wouldn't be correct anyways as
+        // we're writing to a destination with infinite size.
+        auto len = headers_stream.str().size();
+        auto sputn_max = static_cast< decltype( len ) >(
+            std::numeric_limits< std::streamsize >::max()
         );
+        do
+        {
+            std::streamsize put_count = static_cast< std::streamsize >(
+                std::min( len, sputn_max )
+            );
+            sputn( headers_stream.str().c_str(), put_count );
+            len -= static_cast< decltype( len ) >( put_count );
+        } while( len > 0 );
     }
     
     inline response::response( response&& o ) :
@@ -1428,9 +1445,9 @@ namespace show // `show::response` implementation //////////////////////////////
         return _connection -> sputn( s, count );
     }
     
-    inline response::int_type response::overflow( int_type ch )
+    inline response::int_type response::overflow( int_type c )
     {
-        return _connection -> overflow( ch );
+        return _connection -> overflow( c );
     }
 }
 
@@ -1498,7 +1515,7 @@ namespace show // `show::server` implementation ////////////////////////////////
         
         if( bind(
             listen_socket -> descriptor,
-            ( sockaddr* )&socket_address,
+            reinterpret_cast< sockaddr* >( &socket_address ),
             sizeof( socket_address )
         ) == -1 )
             throw socket_error{

@@ -187,13 +187,6 @@ SUITE( ShowMultipartTests )
     
     TEST( MoveAssignIterator )
     {
-        auto make_begin_iterator = []( show::multipart& m ){
-            return m.begin();
-        };
-        auto make_end_iterator = []( show::multipart& m ){
-            return m.end();
-        };
-        
         std::stringbuf content1{
             (
                 "--" + boundaryA + "\r\n"
@@ -1276,6 +1269,7 @@ SUITE( ShowMultipartTests )
         try
         {
             auto& segment = *end_iter;
+            static_cast< void >( segment );
             CHECK( false );
         }
         catch( const std::logic_error& e )

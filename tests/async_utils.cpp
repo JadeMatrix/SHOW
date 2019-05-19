@@ -15,7 +15,7 @@
 
 namespace
 {
-    show::socket_fd get_client_socket( std::string address, int port )
+    show::socket_fd get_client_socket( std::string address, unsigned int port )
     {
         sockaddr_in6 server_address;
         std::memset( &server_address, 0, sizeof( server_address ) );
@@ -42,7 +42,7 @@ namespace
         
         int connect_result = connect(
             request_socket,
-            ( sockaddr* )&server_address,
+            reinterpret_cast< sockaddr* >( &server_address ),
             sizeof( server_address )
         );
         if( connect_result < 0 )
@@ -55,7 +55,7 @@ namespace
 
 std::thread send_request_async(
     std::string address,
-    int port,
+    unsigned int port,
     const std::function< void( show::socket_fd ) >& request_feeder
 )
 {
@@ -84,7 +84,7 @@ void write_to_socket(
             m.size()
         );
         REQUIRE CHECK( written >= 0 );
-        pos += written;
+        pos += static_cast< std::string::size_type >( written );
     }
 }
 
@@ -167,7 +167,7 @@ void check_response_to_request(
         FD_ZERO( &read_descriptors );
         FD_SET( client_socket, &read_descriptors );
         
-        int select_result = pselect(
+        auto select_result = pselect(
             client_socket + 1,
             &read_descriptors,
             NULL,
@@ -187,7 +187,7 @@ void check_response_to_request(
             break;
         
         char buffer[ 512 ];
-        int read_bytes = read(
+        auto read_bytes = read(
             client_socket,
             buffer,
             sizeof( buffer )
@@ -201,7 +201,10 @@ void check_response_to_request(
                 + std::string{ std::strerror( errno ) }
             };
         
-        got_response += std::string( buffer, read_bytes );
+        got_response += std::string(
+            buffer,
+            static_cast< std::string::size_type >( read_bytes )
+        );
     }
     
     // Check escaped strings so UnitTest++ will pretty-print them

@@ -513,12 +513,10 @@ namespace show // `show::multipart` implementation /////////////////////////////
                 // Non-cost std::string::data() only available in C++17
                 const_cast< char* >( got_boundary.data() ),
                 [](
-                    std::streambuf::char_type* gbeg,
-                    std::streambuf::char_type* gcurr,
-                    std::streambuf::char_type* gend
-                ){
-                    
-                },
+                    std::streambuf::char_type* /*gbeg*/,
+                    std::streambuf::char_type* /*gcurr*/,
+                    std::streambuf::char_type* /*gend*/
+                ){ /* Do nothing */ },
                 end_of_pre_content,
                 [ this ](){
                     this -> _state = state::FINISHED;

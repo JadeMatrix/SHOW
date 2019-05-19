@@ -11,7 +11,7 @@
 
 std::thread send_request_async(
     std::string address,
-    int port,
+    unsigned int port,
     const std::function< void( show::socket_fd ) >& request_feeder
 );
 void write_to_socket(

@@ -18,7 +18,7 @@ SUITE( ShowRequestTests )
                 "GET / HTTP/1.0\r\n"
                 "\r\n"
             ),
-            []( show::request& test_request ){}
+            []( show::request& /*test_request*/ ){}
         );
     }
     
@@ -152,7 +152,7 @@ SUITE( ShowRequestTests )
                 "GET / HTTP/1.0\n"
                 "\n"
             ),
-            []( show::request& test_request ){}
+            []( show::request& /*test_request*/ ){}
         );
     }
     
@@ -165,7 +165,7 @@ SUITE( ShowRequestTests )
                 "Host: example.com\n"
                 "\r\n"
             ),
-            []( show::request& test_request ){}
+            []( show::request& /*test_request*/ ){}
         );
     }
     

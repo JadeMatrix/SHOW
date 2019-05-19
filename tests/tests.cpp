@@ -115,9 +115,9 @@ std::ostream& operator<<( std::ostream& out, const show::headers_type& v )
 // Main ////////////////////////////////////////////////////////////////////////
 
 
-int main( int argc, char* argv[] )
+int main( int, char*[] )
 {
-    std::srand( std::time( nullptr ) );
+    std::srand( static_cast< unsigned int >( std::time( nullptr ) ) );
     curl_global_init( CURL_GLOBAL_ALL );
     auto failed = UnitTest::RunAllTests();
     curl_global_cleanup();
