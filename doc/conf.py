@@ -56,7 +56,7 @@ author = u'Joseph Durel'
 import os, re
 with open( os.path.join(
     os.path.dirname( os.path.dirname( __file__ ) ),
-    "src",
+    "include",
     "show.hpp"
 ) ) as show_hpp:
     for line in show_hpp:
