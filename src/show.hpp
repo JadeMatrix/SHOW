@@ -3,6 +3,7 @@
 #define SHOW_HPP
 
 
+#include <algorithm>  // std::copy
 #include <array>
 #include <cstring>
 #include <exception>
@@ -654,23 +655,32 @@ namespace show // `show::connection` implementation ////////////////////////////
         std::streamsize count
     )
     {
-        // FIXME: copy in available chunks rather than ~i calls to `sbumpc()`
-        
-        std::streamsize i{ 0 };
-        
-        while( i < count )
+        if( count == 0 )
+            return 0;
+
+        auto available = showmanyc();
+
+        if( available < 1 )
         {
-            int_type gotc = sbumpc();
-            
-            if( gotc == traits_type::not_eof( gotc ) )
-                s[ i ] = traits_type::to_char_type( gotc );
+            auto c = underflow();
+            if( c == traits_type::not_eof( c ) )
+                // Try again
+                return xsgetn( s, count );
             else
-                break;
-            
-            ++i;
+                return 0;
         }
-        
-        return i;
+        else if( count <= available )
+        {
+            std::copy( gptr(), egptr(), s );
+            setg(
+                eback(),
+                gptr() + count,
+                egptr()
+            );
+            return count;
+        }
+        else
+            return xsgetn( s, available );
     }
     
     inline connection::int_type connection::pbackfail( int_type c )
@@ -1267,8 +1277,6 @@ namespace show // `show::request` implementation ///////////////////////////////
         std::streamsize count
     )
     {
-        // FIXME: copy in available chunks rather than ~i calls to `sbumpc()`
-        
         std::streamsize read;
         
         if( _unknown_content_length )
