@@ -5,6 +5,46 @@ IF( TARGET UnitTest++ )
     # Unfortunately CMake doesn't supply a component-based package for cURL
     FIND_PACKAGE( CURL REQUIRED )
     
+    IF(
+           "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"
+        OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"
+        OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"
+        OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel"
+    )
+        SET( SHOW_COMPILE_OPTIONS
+            "-g"
+            "-Werror"
+            "-Wall"
+            "-Wextra"
+            "-Wshadow"
+            "-Wnon-virtual-dtor"
+            "-Wold-style-cast"
+            "-Wcast-align"
+            "-Wunused"
+            "-Woverloaded-virtual"
+            "-Wpedantic"
+            "-Wconversion"
+            "-Wsign-conversion"
+            "-Wnull-dereference"
+            "-Wdouble-promotion"
+            "-Wformat=2"
+        )
+        IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+            LIST( APPEND SHOW_COMPILE_OPTIONS
+                "-Wduplicated-cond"
+                "-Wduplicated-branches"
+                "-Wlogical-op"
+                "-Wuseless-cast"
+            )
+        ENDIF()
+    ELSEIF( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" )
+        SET( SHOW_COMPILE_OPTIONS
+            "/DEBUG"
+            "/WX"
+            "/Wall"
+        )
+    ENDIF()
+    
     ADD_CUSTOM_TARGET( tests ALL )
     
     ADD_LIBRARY( show_unit_test_utils STATIC )
