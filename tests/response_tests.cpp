@@ -479,6 +479,7 @@ SUITE( ShowResponseTests )
     }
     */
     
+#ifdef SHOW_BUILD_BROKEN_UNIT_TESTS
     TEST( GracefulClientDisconnectWhileCreating )
     {
         // IMPLEMENT: client disconnected while creating
@@ -572,6 +573,7 @@ SUITE( ShowResponseTests )
             show::connection_timeout
         );
     }
+#endif
     
     TEST( FailReturnInvalidHeaderName )
     {

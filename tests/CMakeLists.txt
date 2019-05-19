@@ -63,6 +63,12 @@ IF( TARGET UnitTest++ )
             ${CURL_LIBRARIES}
     )
     
+    IF( SHOW_BUILD_BROKEN_UNIT_TESTS )
+        TARGET_COMPILE_DEFINITIONS( show_unit_test_utils
+            PUBLIC "SHOW_BUILD_BROKEN_UNIT_TESTS"
+        )
+    ENDIF()
+    
     FOREACH( SUITE
         "base64"
         "connection"
