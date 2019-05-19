@@ -9,20 +9,23 @@ This shows the basic usage of SHOW; see the `examples <https://github.com/JadeMa
 Including & Compiling
 =====================
 
+The preferred method of including SHOW is via the `CMake <https://cmake.org/>`_ package.  Once installed somewhere CMake can find it, import and use SHOW in your *CMakeLists.txt* with::
+    
+    FIND_PACKAGE( SHOW REQUIRED COMPONENTS show )
+    ADD_EXECUTABLE( my_server my_server.cpp )
+    TARGET_LINK_LIBRARIES( my_server PRIVATE SHOW::show )
+
+You should also switch your compiler to C++11 mode with::
+    
+    SET( CMAKE_CXX_STANDARD 11 )
+    SET( CMAKE_CXX_STANDARD_REQUIRED ON )
+    SET( CMAKE_CXX_EXTENSIONS OFF )
+
 For GCC and Clang, you can either link `show.hpp` to one of your standard include search paths, or use the ``-I`` flag to tell the compiler where too find the header::
     
     clang++ -I "SHOW/src/" ...
 
 SHOW is entirely contained in a single header file, you have to do then is include SHOW using ``#include <show.hpp>``.  With either compiler you'll also need to specify C++11 support with ``-std=c++11``.
-
-If you use `CMake <https://cmake.org/>`_ and don't have SHOW linked to said include path, you'll need to include the following in your *CMakeLists.txt*::
-    
-    include_directories( "SHOW/src/" )
-
-replacing ``"SHOW/src/"`` with wherever you've cloned or installed SHOW.  Switch to C++11 mode with::
-    
-    set( CMAKE_CXX_STANDARD 11 )
-    set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 Creating a Server
 =================

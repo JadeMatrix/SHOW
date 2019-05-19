@@ -21,9 +21,11 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
         
         * :cpp:var:`base64_chars_urlsafe`
 
-.. cpp:function:: std::string base64_decode( const std::string& o, const char* chars = base64_chars_standard )
+.. cpp:function:: std::string base64_decode( const std::string& o, const char* chars = base64_chars_standard, show::base64_flags flags = 0x00 )
     
     Decode a base64-encoded string ``o`` using the character set ``chars``, which must point to a ``char`` array of length 64.  Throws a :cpp:class:`base64_decode_error` if the input is not encoded against ``chars`` or has incorrect padding.
+    
+    Incorrect padding can be ignored by passing ``show::base64_ignore_padding`` as the ``flags`` argument.
     
     .. seealso::
         

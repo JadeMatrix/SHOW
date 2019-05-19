@@ -281,6 +281,28 @@ SUITE( ShowBase64Tests )
         );
     }
     
+    TEST( DecodeMissingPadding )
+    {
+        auto s = show::base64_decode(
+            "SGVsbG8gV29ybGQ",
+            show::base64_chars_standard,
+            show::base64_ignore_padding
+        );
+        std::string hw{ "Hello World" };
+        CHECK_EQUAL( hw, s );
+    }
+    
+    TEST( DecodeMissingPaddingNulls )
+    {
+        auto s = show::base64_decode(
+            "AAA",
+            show::base64_chars_standard,
+            show::base64_ignore_padding
+        );
+        std::string hw( 2, '\0' );
+        CHECK_EQUAL( hw, s );
+    }
+    
     TEST( DecodeFailMissingPadding )
     {
         try

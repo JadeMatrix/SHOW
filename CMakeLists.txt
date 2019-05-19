@@ -1,76 +1,71 @@
 CMAKE_MINIMUM_REQUIRED( VERSION 3.6 )
 
-SET( CMAKE_CXX_STANDARD          11 )
-SET( CMAKE_CXX_STANDARD_REQUIRED ON )
+SET( CMAKE_CXX_STANDARD          11  )
+SET( CMAKE_CXX_STANDARD_REQUIRED ON  )
+SET( CMAKE_CXX_EXTENSIONS        OFF )
 
 PROJECT(
-    "SHOW Tests & Examples"
-    VERSION 0.8.5
+    "Simple Header-Only Webserver"
+    VERSION 0.8.6
     LANGUAGES CXX
 )
 
-FIND_LIBRARY( UNITTEST_LIBRARY UnitTest++ )
+LIST( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMakeModules/" )
 
-INCLUDE_DIRECTORIES(
-    src
+INCLUDE( CTest )
+INCLUDE( GNUInstallDirs )
+
+STRING( REPLACE "${PROJECT_NAME}" "show"
+    CMAKE_INSTALL_DOCDIR
+    "${CMAKE_INSTALL_DOCDIR}"
 )
-
-
-# Tests ########################################################################
-
-if( UNITTEST_LIBRARY )
-    FIND_LIBRARY( CURL_LIBRARY curl )
-    ADD_EXECUTABLE( tests
-        ../tests/async_utils.cpp
-        ../tests/base64_tests.cpp
-        ../tests/connection_tests.cpp
-        ../tests/multipart_tests.cpp
-        ../tests/request_tests.cpp
-        ../tests/response_tests.cpp
-        ../tests/server_tests.cpp
-        ../tests/tests.cpp
-        ../tests/type_tests.cpp
-        ../tests/url_encode_tests.cpp
-    )
-    TARGET_LINK_LIBRARIES( tests
-        ${UNITTEST_LIBRARY}
-        ${CURL_LIBRARY}
-    )
-endif( UNITTEST_LIBRARY )
 
 
-# Examples #####################################################################
-
-ADD_EXECUTABLE( echo
-    ../examples/echo.cpp
+ADD_LIBRARY( show INTERFACE )
+TARGET_INCLUDE_DIRECTORIES(
+    show
+    INTERFACE
+        "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
-ADD_EXECUTABLE( fileserve
-    ../examples/fileserve.cpp
+INSTALL(
+    TARGETS show
+    EXPORT "show-config"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
-ADD_EXECUTABLE( hello_world
-    ../examples/hello_world.cpp
-)
-ADD_EXECUTABLE( http_1_1
-    ../examples/http_1_1.cpp
-)
-ADD_EXECUTABLE(
-    multipart_form_handling
-    ../examples/multipart_form_handling.cpp
-)
-ADD_EXECUTABLE( multiple_clients
-    ../examples/multiple_clients.cpp
-)
-ADD_EXECUTABLE( streaming_echo
-    ../examples/streaming_echo.cpp
+INSTALL(
+    DIRECTORY "src/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
-ADD_CUSTOM_TARGET( examples )
-ADD_DEPENDENCIES( examples
-    echo
-    fileserve
-    hello_world
-    http_1_1
-    multipart_form_handling
-    multiple_clients
-    streaming_echo
+
+# CTest sets `BUILD_TESTING` to "on" by default
+IF( BUILD_TESTING )
+    ADD_SUBDIRECTORY( "tests/" )
+ENDIF()
+
+# All examples are excluded from `ALL` but can be built manually
+ADD_SUBDIRECTORY( "examples/" )
+
+ADD_SUBDIRECTORY( "doc/" )
+
+
+INCLUDE( CMakePackageConfigHelpers )
+WRITE_BASIC_PACKAGE_VERSION_FILE(
+    "${CMAKE_BINARY_DIR}/show-config-version.cmake"
+    COMPATIBILITY SameMinorVersion
 )
+INSTALL(
+    FILES "${CMAKE_BINARY_DIR}/show-config-version.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/show/"
+)
+
+INSTALL(
+    EXPORT "show-config"
+    NAMESPACE "SHOW::"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/show/"
+)
+
+EXPORT( EXPORT "show-config" FILE "show-config.cmake" )

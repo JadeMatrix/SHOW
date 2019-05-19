@@ -3,6 +3,7 @@
 #define SHOW_HPP
 
 
+#include <algorithm>  // std::copy
 #include <array>
 #include <cstring>
 #include <exception>
@@ -25,34 +26,21 @@
 #include <unistd.h>
 
 
-namespace show
+namespace show // Constants ////////////////////////////////////////////////////
 {
-    // Constants ///////////////////////////////////////////////////////////////
-    
-    
     namespace version
     {
         static const std::string name    { "SHOW"  };
         static const int         major   { 0       };
         static const int         minor   { 8       };
-        static const int         revision{ 5       };
-        static const std::string string  { "0.8.5" };
+        static const int         revision{ 6       };
+        static const std::string string  { "0.8.6" };
     }
-    
-    
-    // Forward declarations ////////////////////////////////////////////////////
-    
-    
-    class _socket;
-    class connection;
-    class server;
-    class request;
-    class response;
-    
-    
-    // Basic types /////////////////////////////////////////////////////////////
-    
-    
+}
+
+
+namespace show // Basic types //////////////////////////////////////////////////
+{
     using socket_fd = int;
     // `int` instead of `std::streamsize` because this is a buffer for POSIX
     // `read()`
@@ -132,10 +120,16 @@ namespace show
         std::vector< std::string >,
         _less_ignore_case_ASCII
     >;
-    
-    
-    // Classes /////////////////////////////////////////////////////////////////
-    
+}
+
+
+namespace show // Main classes /////////////////////////////////////////////////
+{
+    class _socket;
+    class connection;
+    class server;
+    class request;
+    class response;
     
     class _socket
     {
@@ -355,7 +349,11 @@ namespace show
         int timeout() const;
         int timeout( int );
     };
-    
+}
+
+
+namespace show // Throwables ///////////////////////////////////////////////////
+{
     // TODO: Add file descriptor to `socket_error` throws
     class            socket_error : public std::runtime_error { using runtime_error::runtime_error; };
     class     request_parse_error : public std::runtime_error { using runtime_error::runtime_error; };
@@ -370,23 +368,21 @@ namespace show
     };
     class connection_timeout  : public connection_interrupted {};
     class client_disconnected : public connection_interrupted {};
-    
-    
-    // Functions ///////////////////////////////////////////////////////////////
-    
-    
+}
+
+
+namespace show // URL-encoding /////////////////////////////////////////////////
+{
     std::string url_encode(
         const std::string& o,
         bool use_plus_space = true
     );
     std::string url_decode( const std::string& );
-    
-    
-    // Implementations /////////////////////////////////////////////////////////
-    
-    
-    // _socket -----------------------------------------------------------------
-    
+}
+
+
+namespace show // `show::_socket` implementation ///////////////////////////////
+{
     inline _socket::_socket(
         socket_fd          fd,
         const std::string& address,
@@ -520,9 +516,11 @@ namespace show
         else
             return WRITE;
     }
-    
-    // connection --------------------------------------------------------------
-    
+}
+
+
+namespace show // `show::connection` implementation ////////////////////////////
+{
     inline connection::connection(
         socket_fd          fd,
         const std::string& client_address,
@@ -657,23 +655,32 @@ namespace show
         std::streamsize count
     )
     {
-        // TODO: copy in available chunks rather than ~i calls to `sbumpc()`?
-        
-        std::streamsize i{ 0 };
-        
-        while( i < count )
+        if( count == 0 )
+            return 0;
+
+        auto available = showmanyc();
+
+        if( available < 1 )
         {
-            int_type gotc = sbumpc();
-            
-            if( gotc == traits_type::not_eof( gotc ) )
-                s[ i ] = traits_type::to_char_type( gotc );
+            auto c = underflow();
+            if( c == traits_type::not_eof( c ) )
+                // Try again
+                return xsgetn( s, count );
             else
-                break;
-            
-            ++i;
+                return 0;
         }
-        
-        return i;
+        else if( count <= available )
+        {
+            std::copy( gptr(), egptr(), s );
+            setg(
+                eback(),
+                gptr() + count,
+                egptr()
+            );
+            return count;
+        }
+        else
+            return xsgetn( s, available );
     }
     
     inline connection::int_type connection::pbackfail( int_type c )
@@ -845,9 +852,11 @@ namespace show
         _timeout = t;
         return _timeout;
     }
-    
-    // request -----------------------------------------------------------------
-    
+}
+
+
+namespace show // `show::request` implementation ///////////////////////////////
+{
     inline request::request( request&& o ) :
         _connection            {            o._connection                },
         read_content           { std::move( o.read_content             ) },
@@ -1298,9 +1307,11 @@ namespace show
         
         return result;
     }
-    
-    // response ----------------------------------------------------------------
-    
+}
+
+
+namespace show // `show::response` implementation //////////////////////////////
+{
     inline response::response(
         connection         & c,
         http_protocol        protocol,
@@ -1421,9 +1432,11 @@ namespace show
     {
         return _connection -> overflow( ch );
     }
-    
-    // server ------------------------------------------------------------------
-    
+}
+
+
+namespace show // `show::server` implementation ////////////////////////////////
+{
     inline server::server(
         const std::string& address,
         unsigned int       port,
@@ -1617,9 +1630,11 @@ namespace show
         _timeout = t;
         return _timeout;
     }
-    
-    // Functions ---------------------------------------------------------------
-    
+}
+
+
+namespace show // URL-encoding implementations /////////////////////////////////
+{
     inline std::string url_encode(
         const std::string& o,
         bool use_plus_space

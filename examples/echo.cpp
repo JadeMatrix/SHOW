@@ -54,7 +54,7 @@ void handle_POST_request( show::request& request )
             headers[ "Content-Type" ] = { "application/octet-stream" };
         
         // This is just the simplest way to read a whole streambuf into a
-        // string, not the most the fastest; see
+        // string, not the fastest; see
         // https://stackoverflow.com/questions/3203452/how-to-read-entire-stream-into-a-stdstring
         std::string message{ std::istreambuf_iterator< char >{ &request }, {} };
         

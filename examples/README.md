@@ -1,15 +1,16 @@
-There are two easy ways to build the examples in this directory.  If you have [`cmake`](https://cmake.org/) installed, there are build instructions in the supplied *CMakeLists.txt*.  To use it, first run 
+There are two easy ways to build the examples in this directory.  If you have [CMake](https://cmake.org/) installed, make a build directory somewhere and `cd` to it.  Then run
 
 ```sh
-mkdir -p make
-cd make
-cmake ..
+cmake $SHOW_REPO_DIR
 ```
 
-then either run `make examples` to build all examples, or `make $NAME` to build a specific example.  The other way to build any of the examples is manually with Clang (`clang++`) or GCC (`g++`).  Assuming you're running this in the "make" directory from above:
+where `$SHOW_REPO_DIR` is where you cloned SHOW.  Then either run `make examples` to build all examples, or `make $NAME` to build a specific example.  The other way to build any of the examples is manually with Clang (`clang++`) or GCC (`g++`):
 
 ```sh
-clang++ -std=c++11 -I ../src ../examples/$NAME.cpp -o $NAME
+clang++ -std=c++11 \
+    -I $SHOW_REPO_DIR/src \
+    $SHOW_REPO_DIR/examples/$NAME.cpp \
+    -o $NAME
 ```
 
 Each of these servers can be tested from a second terminal window.

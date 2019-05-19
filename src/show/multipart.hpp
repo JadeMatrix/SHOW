@@ -11,11 +11,8 @@
 #include <vector>
 
 
-namespace show
+namespace show // `show::multipart` class //////////////////////////////////////
 {
-    // Classes /////////////////////////////////////////////////////////////////
-    
-    
     class multipart
     {
     protected:
@@ -108,7 +105,11 @@ namespace show
         iterator begin();
         iterator   end();
     };
-    
+}
+
+
+namespace show // Utilities ////////////////////////////////////////////////////
+{
     class multipart_parse_error : public request_parse_error
     {
         using request_parse_error::request_parse_error;
@@ -127,13 +128,11 @@ namespace show
         bool                     & segment_boundary_reached,
         std::function< void() >    parent_finished_callback
     );
-    
-    
-    // Implementations /////////////////////////////////////////////////////////
-    
-    
-    // Segment -----------------------------------------------------------------
-    
+}
+
+
+namespace show // `show::multipart::segment` implementation ////////////////////
+{
     // Initializes an invalid `segment` for use with `multipart::iterator`'s
     // copy constructor
     inline multipart::segment::segment() :
@@ -384,9 +383,11 @@ namespace show
         else
             return traits_type::eof();
     }
-    
-    // Iterator ----------------------------------------------------------------
-    
+}
+
+
+namespace show // `show::multipart::iterator` implementation ///////////////////
+{
     inline multipart::iterator::iterator( multipart& p, bool end ) :
         _parent       { &p    },
         _is_end       { end   },
@@ -479,9 +480,11 @@ namespace show
     {
         return !( *this == o );
     }
-    
-    // Multipart ---------------------------------------------------------------
-    
+}
+
+
+namespace show // `show::multipart` implementation /////////////////////////////
+{
     template< class String > multipart::multipart(
         std::streambuf& b,
         String&& boundary
@@ -557,9 +560,11 @@ namespace show
     {
         return iterator{ *this, true };
     }
-    
-    // Helper functions --------------------------------------------------------
-    
+}
+
+
+namespace show // Utility functions implementation /////////////////////////////
+{
     inline std::streambuf::int_type _read_buffer_until_boundary(
         bool                       crlf_start,
         std::streambuf           & buffer,
