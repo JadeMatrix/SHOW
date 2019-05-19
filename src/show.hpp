@@ -32,9 +32,9 @@ namespace show // Constants ////////////////////////////////////////////////////
     {
         static const std::string name    { "SHOW"  };
         static const int         major   { 0       };
-        static const int         minor   { 8       };
-        static const int         revision{ 6       };
-        static const std::string string  { "0.8.6" };
+        static const int         minor   { 9       };
+        static const int         revision{ 0       };
+        static const std::string string  { "0.9.0" };
     }
 }
 
