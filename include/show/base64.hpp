@@ -5,15 +5,48 @@
 
 #include "../show.hpp"
 
+#include <array>
+
 
 namespace show { namespace base64 // Declarations //////////////////////////////
 {
-    static const char* dict_standard{
+    namespace internal
+    {
+        // Workaround for no multi-statement `constexpr` functions until C++14
+        // and no `constexpr std::copy` until C++20
+        
+        template< std::size_t N >
+        constexpr std::array< char, 64 > set_and_return_dict(
+            std::array< char, 64 >&& a,
+            char c
+        )
+        {
+            return ( std::get< N >( a ) = c, a );
+        }
+        
+        template< std::size_t N = 0 >
+        constexpr std::array< char, 64 > fill_dict( const char* str )
+        {
+            return set_and_return_dict< N >(
+                fill_dict< N + 1 >( str ),
+                str[ N ]
+            );
+        }
+        template<>
+        constexpr std::array< char, 64 > fill_dict< 64 >( const char* str )
+        {
+            return {};
+        }
+    }
+    
+    using dict_type = std::array< char, 64 >;
+    
+    static const dict_type dict_standard = internal::fill_dict(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-    };
-    static const char* dict_urlsafe{
+    );
+    static const dict_type dict_urlsafe = internal::fill_dict(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-    };
+    );
     
     
     using flags = unsigned char;
@@ -22,11 +55,11 @@ namespace show { namespace base64 // Declarations //////////////////////////////
     
     std::string encode(
         const std::string& o,
-        const char* dict = dict_standard
+        const dict_type& dict = dict_standard
     );
     std::string decode(
         const std::string& o,
-        const char* dict = dict_standard,
+        const dict_type& dict = dict_standard,
         flags flags = 0x00
     );
     
@@ -42,7 +75,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
 {
     inline std::string encode(
         const std::string& o,
-        const char* dict
+        const dict_type& dict
     )
     {
         unsigned char current_sextet;
@@ -115,7 +148,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
     
     inline std::string decode(
         const std::string& o,
-        const char* dict,
+        const dict_type& dict,
         flags flags
     )
     {
