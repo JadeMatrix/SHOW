@@ -1168,7 +1168,7 @@ SUITE( ShowRequestTests )
         auto request_thread = send_request_async(
             address,
             port,
-            []( show::socket_fd request_socket ){
+            []( show::internal::socket_fd request_socket ){
                 write_to_socket(
                     request_socket,
                     "GET / HTTP/1.0\r\n"
@@ -1206,7 +1206,7 @@ SUITE( ShowRequestTests )
         auto request_thread = send_request_async(
             address,
             port,
-            []( show::socket_fd request_socket ){
+            []( show::internal::socket_fd request_socket ){
                 write_to_socket(
                     request_socket,
                     "GET / HTTP/1.0\r\n"
@@ -1244,7 +1244,7 @@ SUITE( ShowRequestTests )
         auto request_thread = send_request_async(
             address,
             port,
-            []( show::socket_fd request_socket ){
+            []( show::internal::socket_fd request_socket ){
                 write_to_socket(
                     request_socket,
                     "GET / HTTP/1.0\r\n"
@@ -1289,7 +1289,7 @@ SUITE( ShowRequestTests )
         auto request_thread = send_request_async(
             address,
             port,
-            []( show::socket_fd request_socket ){
+            []( show::internal::socket_fd request_socket ){
                 write_to_socket(
                     request_socket,
                     "GET / HTTP/1.0\r\n"

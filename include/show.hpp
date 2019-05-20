@@ -42,10 +42,66 @@ namespace show // Constants ////////////////////////////////////////////////////
 
 namespace show // Basic types //////////////////////////////////////////////////
 {
-    using socket_fd = int;
-    // `ssize_t` instead of `std::streamsize` because this is for use with POSIX
-    // `read()`
-    using buffer_size_type = ssize_t;
+    namespace internal
+    {
+        using socket_fd = int;
+        // `ssize_t` instead of `std::streamsize` because this is for use with
+        // POSIX `read()`
+        using buffsize_type = ssize_t;
+        
+        // Locale-independent ASCII uppercase
+        inline char toupper_ASCII( char c )
+        {
+            if( c >= 'a' && c <= 'z' )
+                c &= ~0x20;
+            return c;
+        }
+        inline std::string toupper_ASCII( std::string s )
+        {
+            std::string out;
+            for(
+                std::string::size_type i{ 0 };
+                i < s.size();
+                ++i
+            )
+                out += toupper_ASCII( s[ i ] );
+            return out;
+        }
+        
+        struct less_ignore_case_ASCII
+        {
+            bool operator()(
+                const std::string& lhs,
+                const std::string& rhs
+            ) const
+            {
+                // This is probably faster than using a pair of
+                // `std::string::iterator`s
+                
+                std::string::size_type min_len{
+                    lhs.size() < rhs.size() ? lhs.size() : rhs.size()
+                };
+                
+                for(
+                    std::string::size_type i = 0;
+                    i < min_len;
+                    ++i
+                )
+                {
+                    auto lhc = toupper_ASCII( lhs[ i ] );
+                    auto rhc = toupper_ASCII( rhs[ i ] );
+                    
+                    if( lhc < rhc )
+                        return true;
+                    else if( lhc > rhc )
+                        return false;
+                    // else continue
+                }
+                
+                return lhs.size() < rhs.size();
+            }
+        };
+    }
     
     enum class protocol
     {
@@ -66,82 +122,32 @@ namespace show // Basic types //////////////////////////////////////////////////
         std::vector< std::string >
     >;
     
-    // Locale-independent ASCII uppercase
-    inline char _ASCII_upper( char c )
-    {
-        if( c >= 'a' && c <= 'z' )
-            c &= ~0x20;
-        return c;
-    }
-    inline std::string _ASCII_upper( std::string s )
-    {
-        std::string out;
-        for(
-            std::string::size_type i{ 0 };
-            i < s.size();
-            ++i
-        )
-            out += _ASCII_upper( s[ i ] );
-        return out;
-    }
-    
-    struct _less_ignore_case_ASCII
-    {
-        bool operator()( const std::string& lhs, const std::string& rhs ) const
-        {
-            // This is probably faster than using a pair of
-            // `std::string::iterator`s
-            
-            std::string::size_type min_len{
-                lhs.size() < rhs.size() ? lhs.size() : rhs.size()
-            };
-            
-            for(
-                std::string::size_type i = 0;
-                i < min_len;
-                ++i
-            )
-            {
-                auto lhc = _ASCII_upper( lhs[ i ] );
-                auto rhc = _ASCII_upper( rhs[ i ] );
-                
-                if( lhc < rhc )
-                    return true;
-                else if( lhc > rhc )
-                    return false;
-                // else continue
-            }
-            
-            return lhs.size() < rhs.size();
-        }
-    };
-    
     using headers_type = std::map<
         std::string,
         std::vector< std::string >,
-        _less_ignore_case_ASCII
+        internal::less_ignore_case_ASCII
     >;
 }
 
 
 namespace show // Main classes /////////////////////////////////////////////////
 {
-    class _socket;
+    namespace internal { class socket; }
     class connection;
     class server;
     class request;
     class response;
     
-    class _socket
+    class internal::socket
     {
-        friend class server;
-        friend class connection;
+        friend class show::server;
+        friend class show::connection;
         
     protected:
-        _socket(
-            socket_fd          fd,
-            const std::string& address,
-            unsigned int       port
+        socket(
+            internal::socket_fd fd,
+            const std::string&  address,
+            unsigned int        port
         );
         
         void setsockopt(
@@ -152,9 +158,9 @@ namespace show // Main classes /////////////////////////////////////////////////
         );
     
     public:
-        const socket_fd    descriptor;
-        const std::string  address;
-        const unsigned int port;
+        const internal::socket_fd descriptor;
+        const std::string         address;
+        const unsigned int        port;
         
         enum class wait_for_type
         {
@@ -163,10 +169,10 @@ namespace show // Main classes /////////////////////////////////////////////////
             READ_WRITE = 0x03
         };
         
-        _socket( _socket&& );
-        ~_socket();
+        socket( socket&& );
+        ~socket();
         
-        _socket& operator =( _socket&& );
+        socket& operator =( socket&& );
         
         wait_for_type wait_for(
             wait_for_type      wf,
@@ -182,23 +188,23 @@ namespace show // Main classes /////////////////////////////////////////////////
         friend class response;
         
     protected:
-        static const buffer_size_type BUFFER_SIZE{   1024 };
-        static const char             ASCII_ACK  { '\x06' };
+        static const internal::buffsize_type BUFFER_SIZE{   1024 };
+        static const char                    ASCII_ACK  { '\x06' };
         
-        _socket      _serve_socket;
-        int          _timeout;
-        std::string  _server_address;
-        unsigned int _server_port;
+        internal::socket _serve_socket;
+        int              _timeout;
+        std::string      _server_address;
+        unsigned int     _server_port;
         std::unique_ptr< std::array< char, BUFFER_SIZE > > get_buffer;
         std::unique_ptr< std::array< char, BUFFER_SIZE > > put_buffer;
         
         connection(
-            socket_fd          fd,
-            const std::string& client_address,
-            unsigned int       client_port,
-            const std::string& server_address,
-            unsigned int       server_port,
-            int                timeout
+            internal::socket_fd fd,
+            const std::string&  client_address,
+            unsigned int        client_port,
+            const std::string&  server_address,
+            unsigned int        server_port,
+            int                 timeout
         );
         
         void flush();
@@ -329,7 +335,7 @@ namespace show // Main classes /////////////////////////////////////////////////
     protected:
         int _timeout;
         
-        _socket* listen_socket;
+        internal::socket* listen_socket;
         
     public:
         server(
@@ -382,12 +388,12 @@ namespace show // URL-encoding /////////////////////////////////////////////////
 }
 
 
-namespace show // `show::_socket` implementation ///////////////////////////////
+namespace show // `show::internal::socket` implementation //////////////////////
 {
-    inline _socket::_socket(
-        socket_fd          fd,
-        const std::string& address,
-        unsigned int       port
+    inline internal::socket::socket(
+        internal::socket_fd fd,
+        const std::string&  address,
+        unsigned int        port
     ) :
         descriptor{ fd      },
         address   { address },
@@ -402,7 +408,7 @@ namespace show // `show::_socket` implementation ///////////////////////////////
         );
     }
     
-    inline void _socket::setsockopt(
+    inline void internal::socket::setsockopt(
         int         optname,
         void*       value,
         socklen_t   value_size,
@@ -424,32 +430,32 @@ namespace show // `show::_socket` implementation ///////////////////////////////
             };
     }
     
-    inline _socket::~_socket()
+    inline internal::socket::~socket()
     {
         if( descriptor )
             close( descriptor );
     }
     
-    inline _socket::_socket( _socket&& o ) :
+    inline internal::socket::socket( socket&& o ) :
         descriptor{ o.descriptor },
         address   { o.address    },
         port      { o.port       }
     {
-        // TODO: Redesign `_socket` class so `const_cast<>()`s aren't required
-        const_cast< socket_fd& >( o.descriptor ) = 0;
+        // TODO: Redesign `socket` class so `const_cast<>()`s aren't required
+        const_cast< internal::socket_fd& >( o.descriptor ) = 0;
     }
     
-    inline _socket& _socket::operator =( _socket&& o )
+    inline internal::socket& internal::socket::operator =( socket&& o )
     {
-        // TODO: Redesign `_socket` class so `const_cast<>()`s aren't required
-        std::swap( const_cast< std::string & >( address    ), const_cast< std::string & >( o.address    ) );
-        std::swap( const_cast< unsigned int& >( port       ), const_cast< unsigned int& >( o.port       ) );
-        std::swap( const_cast< socket_fd   & >( descriptor ), const_cast< socket_fd   & >( o.descriptor ) );
+        // TODO: Redesign `socket` class so `const_cast<>()`s aren't required
+        std::swap( const_cast< std::string        & >( address    ), const_cast< std::string        & >( o.address    ) );
+        std::swap( const_cast< unsigned int       & >( port       ), const_cast< unsigned int       & >( o.port       ) );
+        std::swap( const_cast< internal::socket_fd& >( descriptor ), const_cast< internal::socket_fd& >( o.descriptor ) );
         
         return *this;
     }
     
-    inline _socket::wait_for_type _socket::wait_for(
+    inline internal::socket::wait_for_type internal::socket::wait_for(
         wait_for_type      wf,
         int                timeout,
         const std::string& purpose
@@ -523,12 +529,12 @@ namespace show // `show::_socket` implementation ///////////////////////////////
 namespace show // `show::connection` implementation ////////////////////////////
 {
     inline connection::connection(
-        socket_fd          fd,
-        const std::string& client_address,
-        unsigned int       client_port,
-        const std::string& server_address,
-        unsigned int       server_port,
-        int                timeout
+        internal::socket_fd fd,
+        const std::string&  client_address,
+        unsigned int        client_port,
+        const std::string&  server_address,
+        unsigned int        server_port,
+        int                 timeout
     ) :
         _serve_socket  { fd, client_address, client_port       },
         _server_address{ server_address                        },
@@ -551,7 +557,7 @@ namespace show // `show::connection` implementation ////////////////////////////
     
     inline void connection::flush()
     {
-        buffer_size_type send_offset{ 0 };
+        internal::buffsize_type send_offset{ 0 };
         
         while( true )
         {
@@ -561,12 +567,12 @@ namespace show // `show::connection` implementation ////////////////////////////
             
             if( _timeout != 0 )
                 _serve_socket.wait_for(
-                    _socket::wait_for_type::WRITE,
+                    internal::socket::wait_for_type::WRITE,
                     _timeout,
                     "response send"
                 );
             
-            auto bytes_sent = static_cast< buffer_size_type >( send(
+            auto bytes_sent = static_cast< internal::buffsize_type >( send(
                 _serve_socket.descriptor,
                 pbase() + send_offset,
                 static_cast< std::size_t >( to_send ),
@@ -608,13 +614,13 @@ namespace show // `show::connection` implementation ////////////////////////////
     {
         if( showmanyc() <= 0 )
         {
-            buffer_size_type bytes_read{ 0 };
+            internal::buffsize_type bytes_read{ 0 };
             
             while( bytes_read < 1 )
             {
                 if( _timeout != 0 )
                     _serve_socket.wait_for(
-                        _socket::wait_for_type::READ,
+                        internal::socket::wait_for_type::READ,
                         _timeout,
                         "request read"
                     );
@@ -957,7 +963,7 @@ namespace show // `show::request` implementation ///////////////////////////////
                         parse_state = READING_PATH;
                         break;
                     default:
-                        _method += _ASCII_upper( current_char );
+                        _method += internal::toupper_ASCII( current_char );
                         break;
                     }
                 }
@@ -1183,7 +1189,9 @@ namespace show // `show::request` implementation ///////////////////////////////
             }
         }
         
-        std::string protocol_string_upper{ _ASCII_upper( _protocol_string ) };
+        std::string protocol_string_upper{
+            internal::toupper_ASCII( _protocol_string )
+        };
         
         if( protocol_string_upper == "HTTP/1.0" )
             _protocol = protocol::HTTP_1_0;
@@ -1472,7 +1480,7 @@ namespace show // `show::server` implementation ////////////////////////////////
                 + std::string{ std::strerror( errno ) }
             };
         
-        listen_socket = new _socket{
+        listen_socket = new internal::socket{
             listen_socket_fd,
             address,
             port
@@ -1554,7 +1562,7 @@ namespace show // `show::server` implementation ////////////////////////////////
     {
         if( _timeout != 0 )
             listen_socket -> wait_for(
-                _socket::wait_for_type::READ,
+                internal::socket::wait_for_type::READ,
                 _timeout,
                 "listen"
             );

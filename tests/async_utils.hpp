@@ -12,10 +12,10 @@
 std::thread send_request_async(
     std::string address,
     unsigned int port,
-    const std::function< void( show::socket_fd ) >& request_feeder
+    const std::function< void( show::internal::socket_fd ) >& request_feeder
 );
 void write_to_socket(
-    show::socket_fd s,
+    show::internal::socket_fd s,
     const std::string m
 );
 void handle_request(

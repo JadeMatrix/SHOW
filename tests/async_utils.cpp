@@ -15,7 +15,10 @@
 
 namespace
 {
-    show::socket_fd get_client_socket( std::string address, unsigned int port )
+    show::internal::socket_fd get_client_socket(
+        std::string address,
+        unsigned int port
+    )
     {
         sockaddr_in6 server_address;
         std::memset( &server_address, 0, sizeof( server_address ) );
@@ -56,7 +59,7 @@ namespace
 std::thread send_request_async(
     std::string address,
     unsigned int port,
-    const std::function< void( show::socket_fd ) >& request_feeder
+    const std::function< void( show::internal::socket_fd ) >& request_feeder
 )
 {
     return std::thread{ [
@@ -71,7 +74,7 @@ std::thread send_request_async(
 }
 
 void write_to_socket(
-    show::socket_fd s,
+    show::internal::socket_fd s,
     const std::string m
 )
 {
@@ -100,7 +103,7 @@ void handle_request(
     auto request_thread = send_request_async(
         address,
         port,
-        [ request ]( show::socket_fd request_socket ){
+        [ request ]( show::internal::socket_fd request_socket ){
             write_to_socket(
                 request_socket,
                 request

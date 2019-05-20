@@ -115,19 +115,22 @@ namespace show // Utilities ////////////////////////////////////////////////////
         using request_parse_error::request_parse_error;
     };
     
-    std::streambuf::int_type _read_buffer_until_boundary(
-        bool                       crlf_start,
-        std::streambuf           & buffer,
-        const std::string        & boundary,
-        std::streambuf::char_type* get_buffer,
-        std::function< void(
-            std::streambuf::char_type*,
-            std::streambuf::char_type*,
-            std::streambuf::char_type*
-        ) >                        setg_callback,
-        bool                     & segment_boundary_reached,
-        std::function< void() >    parent_finished_callback
-    );
+    namespace internal
+    {
+        std::streambuf::int_type read_buffer_until_boundary(
+            bool                       crlf_start,
+            std::streambuf           & buffer,
+            const std::string        & boundary,
+            std::streambuf::char_type* get_buffer,
+            std::function< void(
+                std::streambuf::char_type*,
+                std::streambuf::char_type*,
+                std::streambuf::char_type*
+            ) >                        setg_callback,
+            bool                     & segment_boundary_reached,
+            std::function< void() >    parent_finished_callback
+        );
+    }
 }
 
 
@@ -343,7 +346,7 @@ namespace show // `show::multipart::segment` implementation ////////////////////
         if( _finished )
             return traits_type::eof();
         
-        return _read_buffer_until_boundary(
+        return internal::read_buffer_until_boundary(
             true,
             *( _parent -> _buffer ),
             _parent -> boundary(),
@@ -506,7 +509,7 @@ namespace show // `show::multipart` implementation /////////////////////////////
         bool         crlf_start{ false };
         do
         {
-            got_c = _read_buffer_until_boundary(
+            got_c = internal::read_buffer_until_boundary(
                 crlf_start,
                 *_buffer,
                 _boundary,
@@ -563,7 +566,7 @@ namespace show // `show::multipart` implementation /////////////////////////////
 
 namespace show // Utility functions implementation /////////////////////////////
 {
-    inline std::streambuf::int_type _read_buffer_until_boundary(
+    inline std::streambuf::int_type internal::read_buffer_until_boundary(
         bool                       crlf_start,
         std::streambuf           & buffer,
         const std::string        & boundary,

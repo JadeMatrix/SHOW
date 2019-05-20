@@ -24,7 +24,7 @@ SUITE( ShowTypeTests )
     {
         CHECK_EQUAL(
             "HELLO WORLD",
-            show::_ASCII_upper( "Hello World" )
+            show::internal::toupper_ASCII( "Hello World" )
         );
     }
     

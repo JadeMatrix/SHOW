@@ -69,7 +69,7 @@ Support Types
 
 .. cpp:class:: headers_type
     
-    An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string >, show::_less_ignore_case_ASCII >`, where :cpp:class:`show::_less_ignore_case_ASCII` is a case-insensitive `compare <http://en.cppreference.com/w/cpp/container/map>`_ for :cpp:class:`std::map`.
+    An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string >, show::internal::less_ignore_case_ASCII >`, where :cpp:class:`show::internal::less_ignore_case_ASCII` is a case-insensitive `compare <http://en.cppreference.com/w/cpp/container/map>`_ for :cpp:class:`std::map`.
     
     While HTTP header names are typically given in ``Dashed-Title-Case``, they are technically case-insensitive.  Additionally, in general a given header name may appear more than once in a request or response.  This type satisfies both these constraints.
     
