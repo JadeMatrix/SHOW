@@ -93,7 +93,7 @@ SUITE( ShowBase64Tests )
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
             show::base64::encode(
                 std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-                show::base64::chars_standard
+                show::base64::dict_standard
             )
         );
     }
@@ -104,7 +104,7 @@ SUITE( ShowBase64Tests )
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
             show::base64::encode(
                 std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-                show::base64::chars_urlsafe
+                show::base64::dict_urlsafe
             )
         );
     }
@@ -194,7 +194,7 @@ SUITE( ShowBase64Tests )
             std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
             show::base64::decode(
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
-                show::base64::chars_standard
+                show::base64::dict_standard
             )
         );
     }
@@ -205,7 +205,7 @@ SUITE( ShowBase64Tests )
             std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
             show::base64::decode(
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
-                show::base64::chars_urlsafe
+                show::base64::dict_urlsafe
             )
         );
     }
@@ -285,7 +285,7 @@ SUITE( ShowBase64Tests )
     {
         auto s = show::base64::decode(
             "SGVsbG8gV29ybGQ",
-            show::base64::chars_standard,
+            show::base64::dict_standard,
             show::base64::ignore_padding
         );
         std::string hw{ "Hello World" };
@@ -296,7 +296,7 @@ SUITE( ShowBase64Tests )
     {
         auto s = show::base64::decode(
             "AAA",
-            show::base64::chars_standard,
+            show::base64::dict_standard,
             show::base64::ignore_padding
         );
         std::string hw( 2, '\0' );

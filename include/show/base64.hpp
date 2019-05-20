@@ -8,10 +8,10 @@
 
 namespace show { namespace base64 // Declarations //////////////////////////////
 {
-    static const char* chars_standard{
+    static const char* dict_standard{
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
     };
-    static const char* chars_urlsafe{
+    static const char* dict_urlsafe{
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
     };
     
@@ -22,11 +22,11 @@ namespace show { namespace base64 // Declarations //////////////////////////////
     
     std::string encode(
         const std::string& o,
-        const char* chars = chars_standard
+        const char* dict = dict_standard
     );
     std::string decode(
         const std::string& o,
-        const char* chars = chars_standard,
+        const char* dict = dict_standard,
         flags flags = 0x00
     );
     
@@ -42,7 +42,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
 {
     inline std::string encode(
         const std::string& o,
-        const char* chars
+        const char* dict
     )
     {
         unsigned char current_sextet;
@@ -64,7 +64,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                 // ^^^^^^
                 // i
                 current_sextet = ( o[ j ] >> 2 ) & 0x3F /* 00111111 */;
-                encoded += chars[ current_sextet ];
+                encoded += dict[ current_sextet ];
                 break;
             case 1:
                 // j        j++
@@ -75,7 +75,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                 ++j;
                 if( j < o.size() )
                     current_sextet |= ( o[ j ] >> 4 ) & 0x0F /* 00001111 */;
-                encoded += chars[ current_sextet ];
+                encoded += dict[ current_sextet ];
                 break;
             case 2:
                 //          j        j++
@@ -88,7 +88,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                     ++j;
                     if( j < o.size() )
                         current_sextet |= ( o[ j ] >> 6 ) & 0x03 /* 00000011 */;
-                    encoded += chars[ current_sextet ];
+                    encoded += dict[ current_sextet ];
                 }
                 else
                     encoded += '=';
@@ -102,7 +102,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                 {
                     current_sextet = o[ j ] & 0x3F /* 00111111 */;
                     ++j;
-                    encoded += chars[ current_sextet ];
+                    encoded += dict[ current_sextet ];
                 }
                 else
                     encoded += '=';
@@ -115,7 +115,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
     
     inline std::string decode(
         const std::string& o,
-        const char* chars,
+        const char* dict,
         flags flags
     )
     {
@@ -141,7 +141,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
         for( /*unsigned*/ char i{ 0 }; i < 64; ++i )
-            reverse_lookup[ chars[ static_cast< std::size_t >( i ) ] ] = i;
+            reverse_lookup[ dict[ static_cast< std::size_t >( i ) ] ] = i;
         
         auto get_hextet = [ &reverse_lookup ]( /*unsigned*/ char c ){
             if( c == '=' )

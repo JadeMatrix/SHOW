@@ -11,27 +11,27 @@ Base-64 Encoding
 
 These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`_-encoded strings, very commonly used for transporting binary data in web applications.  They are included in *show/base64.hpp*.
 
-.. cpp:function:: string base64::encode( const std::string& o, const char* chars = base64::chars_standard )
+.. cpp:function:: string base64::encode( const std::string& o, const char* dict = base64::dict_standard )
     
-    Base64-encode a string ``o`` using the character set ``chars``, which must point to a ``char`` array of length 64.
+    Base64-encode a string ``o`` using the character set ``dict``, which must point to a ``char`` array of length 64.
     
     .. seealso::
         
-        * :cpp:var:`base64::chars_standard`
+        * :cpp:var:`base64::dict_standard`
         
-        * :cpp:var:`base64::chars_urlsafe`
+        * :cpp:var:`base64::dict_urlsafe`
 
-.. cpp:function:: std::string base64::decode( const std::string& o, const char* chars = base64::chars_standard, show::base64::flags flags = 0x00 )
+.. cpp:function:: std::string base64::decode( const std::string& o, const char* dict = base64::dict_standard, show::base64::flags flags = 0x00 )
     
-    Decode a base64-encoded string ``o`` using the character set ``chars``, which must point to a ``char`` array of length 64.  Throws a :cpp:class:`base64::decode_error` if the input is not encoded against ``chars`` or has incorrect padding.
+    Decode a base64-encoded string ``o`` using the character set ``dict``, which must point to a ``char`` array of length 64.  Throws a :cpp:class:`base64::decode_error` if the input is not encoded against ``dict`` or has incorrect padding.
     
     Incorrect padding can be ignored by passing ``show::base64::ignore_padding`` as the ``flags`` argument.
     
     .. seealso::
         
-        * :cpp:var:`base64::chars_standard`
+        * :cpp:var:`base64::dict_standard`
         
-        * :cpp:var:`base64::chars_urlsafe`
+        * :cpp:var:`base64::dict_urlsafe`
 
 .. cpp:class:: base64::decode_error : public std::runtime_error
     
@@ -40,11 +40,11 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
     .. note::
         :cpp:func:`base64::encode()` shouldn't throw an exception, as any string can be converted to base-64.
 
-.. cpp:var:: char* base64::chars_standard
+.. cpp:var:: char* base64::dict_standard
     
     The standard set of base64 characters for use with :cpp:func:`base64::encode()` and :cpp:func:`base64::decode()`
 
-.. cpp:var:: char* base64::chars_urlsafe
+.. cpp:var:: char* base64::dict_urlsafe
     
     The URL_safe set of base64 characters for use with :cpp:func:`base64::encode()` and :cpp:func:`base64::decode()`, making the following replacements:
     
