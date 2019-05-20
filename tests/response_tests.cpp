@@ -20,7 +20,7 @@ SUITE( ShowResponseTests )
                 auto make_response = []( show::connection& c ){
                     return show::response{
                         c,
-                        show::http_protocol::HTTP_1_0,
+                        show::protocol::HTTP_1_0,
                         { 200, "OK" },
                         { { "Test-Header", { "foo" } } }
                     };
@@ -43,7 +43,7 @@ SUITE( ShowResponseTests )
             show::request r{ c };
             return show::response{
                 c,
-                show::http_protocol::HTTP_1_0,
+                show::protocol::HTTP_1_0,
                 { 200, "OK" },
                 { { "Test-Header", { r.headers().at( "Test-Header" )[ 0 ] } } }
             };
@@ -125,7 +125,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::HTTP_1_0,
+                    show::protocol::HTTP_1_0,
                     { 200, "OK" },
                     {}
                 };
@@ -148,7 +148,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::HTTP_1_1,
+                    show::protocol::HTTP_1_1,
                     { 200, "OK" },
                     {}
                 };
@@ -171,7 +171,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::NONE,
+                    show::protocol::NONE,
                     { 200, "OK" },
                     {}
                 };
@@ -194,7 +194,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     { 200, "OK" },
                     {}
                 };
@@ -217,7 +217,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     { 451, "Unavailable For Legal Reasons" },
                     {}
                 };
@@ -240,7 +240,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     { 790, "Custom Response Code" },
                     {}
                 };
@@ -263,7 +263,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     { 3920, "Custom Long Response Code" },
                     {}
                 };
@@ -286,7 +286,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     { 200, "OK" },
                     {
                         { "HeaderOne", { "foo" } },
@@ -314,7 +314,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     { 200, "OK" },
                     {
                         { "Header1", { "foo\nbar" } },
@@ -343,7 +343,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     { 200, "OK" },
                     {
                         { "Header1", { "\nfoo\nbar" } },
@@ -381,7 +381,7 @@ SUITE( ShowResponseTests )
                 show::request test_request{ test_connection };
                 show::response test_response{
                     test_connection,
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     { 200, "OK" },
                     {
                         { "Content-Length", {
@@ -462,7 +462,7 @@ SUITE( ShowResponseTests )
             CHECK_THROW(
                 ( show::response{
                     test_connection,
-                    show::HTTP_1_0,
+                    show::protocol::HTTP_1_0,
                     { 200, "OK" },
                     {}
                 } ).flush(),
@@ -590,7 +590,7 @@ SUITE( ShowResponseTests )
                 {
                     show::response test_response{
                         test_connection,
-                        show::HTTP_1_0,
+                        show::protocol::HTTP_1_0,
                         { 200, "OK" },
                         { { "Invalid header n*me", { "asdf" } } }
                     };
@@ -622,7 +622,7 @@ SUITE( ShowResponseTests )
                 {
                     show::response test_response{
                         test_connection,
-                        show::HTTP_1_0,
+                        show::protocol::HTTP_1_0,
                         { 200, "OK" },
                         { { "", { "asdf" } } }
                     };
@@ -654,7 +654,7 @@ SUITE( ShowResponseTests )
                 {
                     show::response test_response{
                         test_connection,
-                        show::HTTP_1_0,
+                        show::protocol::HTTP_1_0,
                         { 200, "OK" },
                         { { "Empty-Header", { "" } } }
                     };

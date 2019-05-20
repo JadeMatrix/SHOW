@@ -27,7 +27,7 @@ void handle_connection( show::connection& connection )
             if( !request.unknown_content_length() )
                 request.flush();
             
-            auto is_1p1 = request.protocol() == show::HTTP_1_1;
+            auto is_1p1 = request.protocol() == show::protocol::HTTP_1_1;
             
             std::string message{
                 "HTTP/"
@@ -61,7 +61,7 @@ void handle_connection( show::connection& connection )
             
             show::response response{
                 request.connection(),
-                is_1p1 ? show::HTTP_1_1 : show::HTTP_1_0,
+                is_1p1 ? show::protocol::HTTP_1_1 : show::protocol::HTTP_1_0,
                 { 200, "OK" },
                 headers
             };
@@ -90,7 +90,7 @@ void handle_connection( show::connection& connection )
                 //   >= HTTP/1.1 : keep connection open
             }
             
-            if( request.protocol() <= show::HTTP_1_0 )
+            if( request.protocol() <= show::protocol::HTTP_1_0 )
                 break;
             // else continue (HTTP/1.1+ defaults to keep-alive)
         }

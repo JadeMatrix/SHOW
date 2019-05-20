@@ -64,7 +64,7 @@ Request
         
         Flushes the request contents from the buffer, putting it in a state where the next request can be extracted.  It is only safe to call this function if :cpp:func:`unknown_content_length()` evaluates to ``false``.
     
-    .. cpp:function:: http_protocol protocol() const
+    .. cpp:function:: protocol protocol() const
         
         The HTTP protocol used by the request.  If ``NONE``, it's usually safe to assume HTTP/1.0.  If ``UNKNOWN``, typically either a *400 Bad Request* should be returned, just assume HTTP/1.0 to be permissive, or try to interpret something from :cpp:func:`protocol_string`.
     

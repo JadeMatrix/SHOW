@@ -47,7 +47,7 @@ namespace show // Basic types //////////////////////////////////////////////////
     // `read()`
     using buffer_size_type = ssize_t;
     
-    enum http_protocol
+    enum class protocol
     {
         NONE     =  0,
         UNKNOWN  =  1,
@@ -258,7 +258,7 @@ namespace show // Main classes /////////////////////////////////////////////////
         show::connection                & connection            () const { return *_connection                   ; }
         const std::string               & client_address        () const { return _connection -> client_address(); }
         unsigned int                      client_port           () const { return _connection -> client_port   (); }
-        http_protocol                     protocol              () const { return _protocol                      ; }
+        protocol                          protocol              () const { return _protocol                      ; }
         const std::string               & protocol_string       () const { return _protocol_string               ; }
         const std::string               & method                () const { return _method                        ; }
         const std::vector< std::string >& path                  () const { return _path                          ; }
@@ -273,7 +273,7 @@ namespace show // Main classes /////////////////////////////////////////////////
     protected:
         class connection* _connection;
         
-        http_protocol              _protocol;
+        enum protocol              _protocol;
         std::string                _protocol_string;
         std::string                _method;
         std::vector< std::string > _path;
@@ -301,7 +301,7 @@ namespace show // Main classes /////////////////////////////////////////////////
     public:
         response(
             connection         &,
-            http_protocol       ,
+            protocol            ,
             const response_code&,
             const headers_type &
         );
@@ -1186,13 +1186,13 @@ namespace show // `show::request` implementation ///////////////////////////////
         std::string protocol_string_upper{ _ASCII_upper( _protocol_string ) };
         
         if( protocol_string_upper == "HTTP/1.0" )
-            _protocol = HTTP_1_0;
+            _protocol = protocol::HTTP_1_0;
         else if( protocol_string_upper == "HTTP/1.1" )
-            _protocol = HTTP_1_1;
+            _protocol = protocol::HTTP_1_1;
         else if( protocol_string_upper == "" )
-            _protocol = NONE;
+            _protocol = protocol::NONE;
         else
-            _protocol = UNKNOWN;
+            _protocol = protocol::UNKNOWN;
         
         auto content_length_header = _headers.find( "Content-Length" );
         
@@ -1319,14 +1319,14 @@ namespace show // `show::response` implementation //////////////////////////////
 {
     inline response::response(
         connection         & parent,
-        http_protocol        protocol,
+        protocol             protocol,
         const response_code& code,
         const headers_type & headers
     ) : _connection{ &parent }
     {
         std::stringstream headers_stream;
         
-        if( protocol == HTTP_1_1 )
+        if( protocol == protocol::HTTP_1_1 )
             headers_stream << "HTTP/1.1 ";
         else
             headers_stream << "HTTP/1.0 ";

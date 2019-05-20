@@ -246,7 +246,7 @@ void handle_GET_request(
             
             show::response response{
                 request.connection(),
-                show::http_protocol::HTTP_1_0,
+                show::protocol::HTTP_1_0,
                 { 200, "OK" },
                 {
                     server_header,
@@ -295,7 +295,7 @@ void handle_GET_request(
             
                 show::response response{
                     request.connection(),
-                    show::http_protocol::HTTP_1_0,
+                    show::protocol::HTTP_1_0,
                     { 200, "OK" },
                     {
                         server_header,
@@ -326,7 +326,7 @@ void handle_GET_request(
         // Return a 404 for any file- or path-related errors
         show::response response{
             request.connection(),
-            show::http_protocol::HTTP_1_0,
+            show::protocol::HTTP_1_0,
             { 404, "Not Found" },
             {
                 server_header,
@@ -373,7 +373,7 @@ int main( int argc, char* argv[] )
                 {
                     show::response response{
                         request.connection(),
-                        show::http_protocol::HTTP_1_0,
+                        show::protocol::HTTP_1_0,
                         { 501, "Not Implemented" },
                         { server_header }
                     };

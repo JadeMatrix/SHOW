@@ -25,7 +25,7 @@ void handle_POST_request( show::request& request )
     if( request.unknown_content_length() )
         show::response response{
             request.connection(),
-            show::http_protocol::HTTP_1_0,
+            show::protocol::HTTP_1_0,
             { 400, "Bad Request" },
             { server_header }
         };
@@ -55,7 +55,7 @@ void handle_POST_request( show::request& request )
         // Start a response before we read any data
         show::response response{
             request.connection(),
-            show::http_protocol::HTTP_1_0,
+            show::protocol::HTTP_1_0,
             { 200, "OK" },
             headers
         };
@@ -136,7 +136,7 @@ int main( int argc, char* argv[] )
                 {
                     show::response response{
                         request.connection(),
-                        show::http_protocol::HTTP_1_0,
+                        show::protocol::HTTP_1_0,
                         { 501, "Not Implemented" },
                         { server_header }
                     };

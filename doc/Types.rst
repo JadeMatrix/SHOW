@@ -20,9 +20,9 @@ Support Types
 
 .. cpp:namespace-push:: show
 
-.. cpp:enum:: http_protocol
+.. cpp:enum-class:: protocol
     
-    Symbolizes the HTTP protocols understood by SHOW.  The enum members are:
+    Symbolizes the HTTP protocols understood by SHOW.  Possible enum values are:
     
     +--------------+---------------------------------------------------------+
     | ``HTTP_1_0`` | HTTP/1.0                                                |

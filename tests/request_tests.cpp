@@ -178,7 +178,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::NONE,
+                    show::protocol::NONE,
                     test_request.protocol()
                 );
             }
@@ -194,7 +194,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     test_request.protocol()
                 );
             }
@@ -210,7 +210,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::HTTP_1_0,
+                    show::protocol::HTTP_1_0,
                     test_request.protocol()
                 );
             }
@@ -226,7 +226,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::HTTP_1_1,
+                    show::protocol::HTTP_1_1,
                     test_request.protocol()
                 );
             }
@@ -242,7 +242,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::HTTP_1_0,
+                    show::protocol::HTTP_1_0,
                     test_request.protocol()
                 );
             }
@@ -258,7 +258,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::UNKNOWN,
+                    show::protocol::UNKNOWN,
                     test_request.protocol()
                 );
                 CHECK_EQUAL(

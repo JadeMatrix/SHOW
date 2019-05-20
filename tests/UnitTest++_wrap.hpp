@@ -14,7 +14,7 @@ std::string escape_seq( const std::string& s );
 
 // Stream format operators for ues with UnitTest++ must be declared before
 // including UnitTest++.h
-std::ostream& operator<<( std::ostream& out, const show::http_protocol& v );
+std::ostream& operator<<( std::ostream& out, const show::protocol& v );
 std::ostream& operator<<(
     std::ostream& out,
     const show::request::content_length_flag& v

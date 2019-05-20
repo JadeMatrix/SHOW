@@ -26,7 +26,7 @@ void handle_POST_request( show::request& request )
         // Length header
         show::response response{
             request.connection(),
-            show::http_protocol::HTTP_1_0,
+            show::protocol::HTTP_1_0,
             { 400, "Bad Request" },
             headers
         };
@@ -62,7 +62,7 @@ void handle_POST_request( show::request& request )
             request.connection(),
             // Just handling one request per connection in this example, so
             // respond with HTTP/1.0
-            show::http_protocol::HTTP_1_0,
+            show::protocol::HTTP_1_0,
             { 200, "OK" },
             headers
         };
@@ -98,7 +98,7 @@ int main( int argc, char* argv[] )
                 else
                     show::response response{
                         request.connection(),
-                        show::http_protocol::HTTP_1_0,
+                        show::protocol::HTTP_1_0,
                         { 405, "Method Not Allowed" },
                         { server_header }
                     };

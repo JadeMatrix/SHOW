@@ -40,14 +40,14 @@ std::string escape_seq( const std::string& s )
     return escaped.str();
 }
 
-std::ostream& operator<<( std::ostream& out, const show::http_protocol& v )
+std::ostream& operator<<( std::ostream& out, const show::protocol& v )
 {
     switch( v )
     {
-    case show::NONE:     out << "NONE"    ; break;
-    case show::UNKNOWN:  out << "UNKNOWN" ; break;
-    case show::HTTP_1_0: out << "HTTP_1_0"; break;
-    case show::HTTP_1_1: out << "HTTP_1_1"; break;
+    case show::protocol::NONE:     out << "NONE"    ; break;
+    case show::protocol::UNKNOWN:  out << "UNKNOWN" ; break;
+    case show::protocol::HTTP_1_0: out << "HTTP_1_0"; break;
+    case show::protocol::HTTP_1_1: out << "HTTP_1_1"; break;
     }
     return out;
 }

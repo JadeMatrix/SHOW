@@ -155,7 +155,7 @@ Create a response like this::
     
     show::response response{
         connection,
-        show::http_protocol::HTTP_1_0,
+        show::protocol::HTTP_1_0,
         code,
         headers
     };
