@@ -156,11 +156,11 @@ namespace show // Main classes /////////////////////////////////////////////////
         const std::string  address;
         const unsigned int port;
         
-        enum wait_for_type
+        enum class wait_for_type
         {
-            READ       = 1,
-            WRITE      = 2,
-            READ_WRITE = 3
+            READ       = 0x01,
+            WRITE      = 0x02,
+            READ_WRITE = 0x03
         };
         
         _socket( _socket&& );
@@ -511,11 +511,11 @@ namespace show // `show::_socket` implementation ///////////////////////////////
         
         // At least one of these must be true
         if( w && r )
-            return READ_WRITE;
+            return wait_for_type::READ_WRITE;
         else if( r )
-            return READ;
+            return wait_for_type::READ;
         else
-            return WRITE;
+            return wait_for_type::WRITE;
     }
 }
 
@@ -561,7 +561,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             
             if( _timeout != 0 )
                 _serve_socket.wait_for(
-                    _socket::WRITE,
+                    _socket::wait_for_type::WRITE,
                     _timeout,
                     "response send"
                 );
@@ -614,7 +614,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             {
                 if( _timeout != 0 )
                     _serve_socket.wait_for(
-                        _socket::READ,
+                        _socket::wait_for_type::READ,
                         _timeout,
                         "request read"
                     );
