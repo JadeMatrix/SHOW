@@ -30,8 +30,9 @@ SUITE( ShowServerTests )
         std::string  address{ "::" };
         unsigned int port   { 9090 };
         show::server test_server{ address, port };
+        // SHOW will report IPv4-compatible addresses as IPv4 strings
         CHECK_EQUAL(
-            address,
+            "0.0.0.0",
             test_server.address()
         );
         CHECK_EQUAL(
@@ -313,8 +314,9 @@ SUITE( ShowServerTests )
         unsigned int port   { 9090 };
         auto test_server = make_server( address, port );
         
+        // SHOW will report IPv4-compatible addresses as IPv4 strings
         CHECK_EQUAL(
-            address,
+            "0.0.0.0",
             test_server.address()
         );
         CHECK_EQUAL(
@@ -346,8 +348,9 @@ SUITE( ShowServerTests )
         unsigned int port2   { 9595 };
         test_server = make_server( address2, port2 );
         
+        // SHOW will report IPv4-compatible addresses as IPv4 strings
         CHECK_EQUAL(
-            address2,
+            "0.0.0.0",
             test_server.address()
         );
         CHECK_EQUAL(

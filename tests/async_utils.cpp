@@ -13,53 +13,10 @@
 #include <chrono>       // std::chrono::milliseconds
 
 
-namespace
-{
-    show::internal::socket_fd get_client_socket(
-        std::string address,
-        unsigned int port
-    )
-    {
-        sockaddr_in6 server_address;
-        std::memset( &server_address, 0, sizeof( server_address ) );
-        server_address.sin6_family = AF_INET6;
-        server_address.sin6_port   = htons( port );
-        CHECK(
-            inet_pton(
-                AF_INET6,
-                address.c_str(),
-                server_address.sin6_addr.s6_addr
-            ) || inet_pton(
-                AF_INET,
-                address.c_str(),
-                server_address.sin6_addr.s6_addr
-            )
-        );
-        
-        auto request_socket = socket(
-            AF_INET6,
-            SOCK_STREAM,
-            getprotobyname( "TCP" ) -> p_proto
-        );
-        REQUIRE CHECK( request_socket >= 0 );
-        
-        int connect_result = connect(
-            request_socket,
-            reinterpret_cast< sockaddr* >( &server_address ),
-            sizeof( server_address )
-        );
-        if( connect_result < 0 )
-            close( request_socket );
-        REQUIRE CHECK( connect_result >= 0 );
-        return request_socket;
-    }
-}
-
-
 std::thread send_request_async(
     std::string address,
     unsigned int port,
-    const std::function< void( show::internal::socket_fd ) >& request_feeder
+    const std::function< void( show::internal::socket& ) >& request_feeder
 )
 {
     return std::thread{ [
@@ -67,14 +24,16 @@ std::thread send_request_async(
         port,
         request_feeder
     ]{
-        auto client_socket = get_client_socket( address, port );
+        auto client_socket = show::internal::socket::make_client(
+            address,
+            port
+        );
         request_feeder( client_socket );
-        close( client_socket );
     } };
 }
 
 void write_to_socket(
-    show::internal::socket_fd s,
+    show::internal::socket& s,
     const std::string m
 )
 {
@@ -82,7 +41,7 @@ void write_to_socket(
     while( pos < m.size() )
     {
         auto written = write(
-            s,
+            s.descriptor(),
             m.c_str() + pos,
             m.size()
         );
@@ -103,11 +62,8 @@ void handle_request(
     auto request_thread = send_request_async(
         address,
         port,
-        [ request ]( show::internal::socket_fd request_socket ){
-            write_to_socket(
-                request_socket,
-                request
-            );
+        [ request ]( show::internal::socket& request_socket ){
+            write_to_socket( request_socket, request );
         }
     );
     
@@ -146,19 +102,9 @@ void check_response_to_request(
     const std::string& response
 )
 {
-    auto client_socket = get_client_socket( address, port );
+    auto client_socket = show::internal::socket::make_client( address, port );
     
-    write_to_socket(
-        client_socket,
-        request
-    );
-    
-    // Set nonblocking
-    fcntl(
-        client_socket,
-        F_SETFL,
-        fcntl( client_socket, F_GETFL, 0 ) | O_NONBLOCK
-    );
+    write_to_socket( client_socket, request );
     
     timespec timeout_spec{ 2, 0 };
     fd_set read_descriptors;
@@ -168,10 +114,10 @@ void check_response_to_request(
     while( true )
     {
         FD_ZERO( &read_descriptors );
-        FD_SET( client_socket, &read_descriptors );
+        FD_SET( client_socket.descriptor(), &read_descriptors );
         
         auto select_result = pselect(
-            client_socket + 1,
+            client_socket.descriptor() + 1,
             &read_descriptors,
             NULL,
             NULL,
@@ -191,7 +137,7 @@ void check_response_to_request(
         
         char buffer[ 512 ];
         auto read_bytes = read(
-            client_socket,
+            client_socket.descriptor(),
             buffer,
             sizeof( buffer )
         );

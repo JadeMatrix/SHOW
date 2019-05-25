@@ -44,7 +44,6 @@ namespace show // Basic types //////////////////////////////////////////////////
 {
     namespace internal
     {
-        using socket_fd = int;
         // `ssize_t` instead of `std::streamsize` because this is for use with
         // POSIX `read()`
         using buffsize_type = ssize_t;
@@ -143,24 +142,8 @@ namespace show // Main classes /////////////////////////////////////////////////
         friend class show::server;
         friend class show::connection;
         
-    protected:
-        socket(
-            internal::socket_fd fd,
-            const std::string&  address,
-            unsigned int        port
-        );
-        
-        void setsockopt(
-            int         optname,
-            void*       value,
-            socklen_t   value_size,
-            std::string description
-        );
-    
     public:
-        const internal::socket_fd descriptor;
-        const std::string         address;
-        const unsigned int        port;
+        using fd_type = int;
         
         enum class wait_for_type
         {
@@ -169,10 +152,67 @@ namespace show // Main classes /////////////////////////////////////////////////
             READ_WRITE = 0x03
         };
         
+    protected:
+        fd_type      _descriptor;
+        std::string  _local_address;
+        unsigned int _local_port;
+        std::string  _remote_address;
+        unsigned int _remote_port;
+        
+        // Make an uninitialized socket
+        socket();
+        
+        // Make an initialized socket with all basic settings applied
+        static socket make_basic();
+        
+        static ::sockaddr_in6 make_sockaddr( const std::string&, unsigned int );
+        
+        enum class info_type
+        {
+            LOCAL  = 0x01,
+            REMOTE = 0x02,
+            BOTH   = 0x03
+        };
+        
+        void set_info( info_type = info_type::BOTH );
+        void set_reuse();
+        void set_nonblocking();
+        template< typename T > void set_sockopt(
+            int optname,
+            T   value,
+            const std::string& description
+        );
+    
+    public:
         socket( socket&& );
+        
+        // Make socket for listening on an address & port
+        static socket make_server(
+            std::string  address,
+            unsigned int port
+        );
+        
+        // Make socket for sending to an address & port with an optional local
+        // port
+        static socket make_client(
+            const std::string& server_address,
+            unsigned int       server_port,
+            unsigned int       client_port = 0
+        );
+        
+        // Make a socket for serving an incoming request
+        socket accept();
+        
         ~socket();
         
         socket& operator =( socket&& );
+        
+        // `descriptor()` can be `constexpr` in C++14
+        fd_type                      descriptor    ()       { return _descriptor    ; }
+        constexpr const std::string& local_address () const { return _local_address ; }
+        constexpr unsigned int       local_port    () const { return _local_port    ; }
+        constexpr const std::string& remote_address() const { return _remote_address; }
+        constexpr unsigned int       remote_port   () const { return _remote_port   ; }
         
         wait_for_type wait_for(
             wait_for_type      wf,
@@ -193,19 +233,10 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         internal::socket _serve_socket;
         int              _timeout;
-        std::string      _server_address;
-        unsigned int     _server_port;
         std::unique_ptr< std::array< char, BUFFER_SIZE > > get_buffer;
         std::unique_ptr< std::array< char, BUFFER_SIZE > > put_buffer;
         
-        connection(
-            internal::socket_fd fd,
-            const std::string&  client_address,
-            unsigned int        client_port,
-            const std::string&  server_address,
-            unsigned int        server_port,
-            int                 timeout
-        );
+        connection( internal::socket&& serve_socket, int timeout );
         
         void flush();
         
@@ -230,10 +261,10 @@ namespace show // Main classes /////////////////////////////////////////////////
         ) override;
         
     public:
-        const std::string& client_address() const { return _serve_socket.address; };
-        unsigned int       client_port   () const { return _serve_socket.port   ; };
-        const std::string& server_address() const { return _server_address      ; };
-        unsigned int       server_port   () const { return _server_port         ; };
+        const std::string& client_address() const { return _serve_socket.remote_address(); };
+        unsigned int       client_port   () const { return _serve_socket.remote_port   (); };
+        const std::string& server_address() const { return _serve_socket. local_address(); };
+        unsigned int       server_port   () const { return _serve_socket. local_port   (); };
         
         connection( connection&& );
         
@@ -333,9 +364,8 @@ namespace show // Main classes /////////////////////////////////////////////////
     class server
     {
     protected:
+        internal::socket listen_socket;
         int _timeout;
-        
-        internal::socket* listen_socket;
         
     public:
         server(
@@ -344,7 +374,6 @@ namespace show // Main classes /////////////////////////////////////////////////
             int                timeout = -1
         );
         server( server&& );
-        ~server();
         
         server& operator =( server&& );
         
@@ -390,67 +419,282 @@ namespace show // URL-encoding /////////////////////////////////////////////////
 
 namespace show // `show::internal::socket` implementation //////////////////////
 {
-    inline internal::socket::socket(
-        internal::socket_fd fd,
-        const std::string&  address,
-        unsigned int        port
-    ) :
-        descriptor{ fd      },
-        address   { address },
-        port      { port    }
+    inline internal::socket::socket() :
+        _descriptor { 0 },
+        _local_port { 0 },
+        _remote_port{ 0 }
+    {}
+    
+    inline internal::socket internal::socket::make_basic()
+    {
+        socket s;
+        
+        s._descriptor = ::socket(
+            AF_INET6,
+            SOCK_STREAM,
+            ::getprotobyname( "TCP" ) -> p_proto
+        );
+        if( s._descriptor == 0 )
+            throw socket_error{
+                "failed to create socket: "
+                + std::string{ std::strerror( errno ) }
+            };
+        
+        return s;
+    }
+    
+    inline ::sockaddr_in6 internal::socket::make_sockaddr(
+        const std::string& address,
+        unsigned int port
+    )
+    {
+        ::sockaddr_in6 info;
+        std::memset( &info, 0, sizeof( info ) );
+        
+        info.sin6_family = AF_INET6;
+        info.sin6_port   = htons( port );
+        
+        if(
+               !::inet_pton( AF_INET6, address.c_str(), info.sin6_addr.s6_addr )
+            && !::inet_pton( AF_INET , address.c_str(), info.sin6_addr.s6_addr )
+        )
+            throw socket_error{ address + " is not a valid IP address" };
+        
+        return info;
+    }
+    
+    inline void internal::socket::set_info( info_type t )
+    {
+        auto _set_info = [ this ](
+            std::function< int(
+                internal::socket::fd_type,
+                ::sockaddr*,
+                ::socklen_t*
+            ) > getter,
+            std::string & address,
+            unsigned int& port,
+            const char  * name
+        ){
+            ::sockaddr_in6 info;
+            ::socklen_t info_len = sizeof( info );
+            char address_buffer[ INET6_ADDRSTRLEN ];
+            
+            if(
+                getter(
+                    this -> _descriptor,
+                    reinterpret_cast< sockaddr* >( &info ),
+                    &info_len
+                ) == -1
+                || (
+                    // Report IPv4-compatible addresses as IPv4, fail over to
+                    // IPv6
+                    ::inet_ntop(
+                        AF_INET,
+                        &info.sin6_addr,
+                        address_buffer,
+                        info_len
+                    ) ==  NULL
+                    && ::inet_ntop(
+                        AF_INET6,
+                        &info.sin6_addr,
+                        address_buffer,
+                        info_len
+                    ) ==  NULL
+                )
+            )
+                throw socket_error{
+                    "could not get "
+                    + std::string{ name }
+                    + " information from socket: "
+                    + std::string{ std::strerror( errno ) }
+                };
+            
+            address = address_buffer;
+            port    = ntohs( info.sin6_port );
+        };
+        
+        bool l{ static_cast< bool >(
+              static_cast< unsigned >( t                 )
+            & static_cast< unsigned >( info_type::LOCAL  )
+        ) };
+        bool r{ static_cast< bool >(
+              static_cast< unsigned >( t                 )
+            & static_cast< unsigned >( info_type::REMOTE )
+        ) };
+        
+        if( l )
+            _set_info( ::getsockname,  _local_address,  _local_port,  "local" );
+        if( r )
+            _set_info( ::getpeername, _remote_address, _remote_port, "remote" );
+    }
+    
+    inline void internal::socket::set_reuse()
+    {
+        // Certain POSIX implementations don't support OR-ing option names
+        // together
+        set_sockopt< int >( SO_REUSEADDR, 1, "address reuse" );
+        set_sockopt< int >( SO_REUSEPORT, 1, "port reuse"    );
+    }
+    
+    inline void internal::socket::set_nonblocking()
     {
         // Because we want non-blocking behavior on 0-second timeouts, all
         // sockets are set to `O_NONBLOCK` even though `pselect()` is used.
-        fcntl(
-            descriptor,
+        ::fcntl(
+            _descriptor,
             F_SETFL,
-            fcntl( descriptor, F_GETFL, 0 ) | O_NONBLOCK
+            ::fcntl( _descriptor, F_GETFL, 0 ) | O_NONBLOCK
         );
     }
     
-    inline void internal::socket::setsockopt(
-        int         optname,
-        void*       value,
-        socklen_t   value_size,
-        std::string description
+    template< typename T > void internal::socket::set_sockopt(
+        int optname,
+        T   value,
+        const std::string& description
     )
     {
+        auto value_ptr  = &value;
+        auto value_size = sizeof( T );
+        
         if( ::setsockopt(
-            descriptor,
+            _descriptor,
             SOL_SOCKET,
             optname,
-            value,
+            value_ptr,
             value_size
         ) == -1 )
             throw socket_error{
-                "failed to set listen socket "
+                "failed to set socket "
                 + description
                 + ": "
                 + std::string{ std::strerror( errno ) }
             };
     }
     
-    inline internal::socket::~socket()
+    inline internal::socket::socket( socket&& o ) :
+        _descriptor    {            o._descriptor       },
+        _local_address { std::move( o._local_address  ) },
+        _local_port    { std::move( o._local_port     ) },
+        _remote_address{ std::move( o._remote_address ) },
+        _remote_port   { std::move( o._remote_port    ) }
     {
-        if( descriptor )
-            close( descriptor );
+        o._descriptor = 0;
     }
     
-    inline internal::socket::socket( socket&& o ) :
-        descriptor{ o.descriptor },
-        address   { o.address    },
-        port      { o.port       }
+    inline internal::socket internal::socket::make_server(
+        std::string  address,
+        unsigned int port
+    )
     {
-        // TODO: Redesign `socket` class so `const_cast<>()`s aren't required
-        const_cast< internal::socket_fd& >( o.descriptor ) = 0;
+        auto s = make_basic();
+        s.set_reuse();
+        s.set_nonblocking();
+        
+        auto info = make_sockaddr( address, port );
+        
+        if( ::bind(
+            s._descriptor,
+            reinterpret_cast< sockaddr* >( &info ),
+            sizeof( info )
+        ) == -1 )
+            throw socket_error{
+                "failed to bind listen socket: "
+                + std::string{ std::strerror( errno ) }
+            };
+        
+        s.set_info( info_type::LOCAL );
+        
+        if( listen( s._descriptor, 3 ) == -1 )
+            throw socket_error{
+                "could not listen on socket: "
+                + std::string{ std::strerror( errno ) }
+            };
+        
+        return s;
+    }
+    
+    inline internal::socket internal::socket::make_client(
+        const std::string& server_address,
+        unsigned int       server_port,
+        unsigned int       client_port
+    )
+    {
+        auto s = make_basic();
+        s.set_reuse();
+        
+        auto info = make_sockaddr( "::", client_port );
+        
+        if( ::bind(
+            s._descriptor,
+            reinterpret_cast< sockaddr* >( &info ),
+            sizeof( info )
+        ) == -1 )
+            throw socket_error{
+                "failed to bind client socket: "
+                + std::string{ std::strerror( errno ) }
+            };
+        
+        info = make_sockaddr( server_address, server_port );
+        
+        if( ::connect(
+            s._descriptor,
+            reinterpret_cast< sockaddr* >( &info ),
+            sizeof( info )
+        ) < 0 )
+            throw socket_error{
+                "could not connect on client socket: "
+                + std::string{ std::strerror( errno ) }
+            };
+        
+        s.set_info();
+        // s.set_nonblocking();
+        
+        return s;
+    }
+    
+    inline internal::socket internal::socket::accept()
+    {
+        socket s;
+        
+        ::sockaddr_in6 info;
+        ::socklen_t info_len = sizeof( info );
+        
+        s._descriptor = ::accept(
+            _descriptor,
+            reinterpret_cast< sockaddr* >( &info ),
+            &info_len
+        );
+        
+        if( s._descriptor == -1 )
+        {
+            if( errno == EAGAIN || errno == EWOULDBLOCK )
+                throw connection_timeout{};
+            else
+                throw socket_error{
+                    "could not accept client socket: "
+                    + std::string{ std::strerror( errno ) }
+                };
+        }
+        
+        s.set_info();
+        s.set_nonblocking();
+        
+        return s;
+    }
+    
+    inline internal::socket::~socket()
+    {
+        if( _descriptor > 0 )
+            ::close( _descriptor );
     }
     
     inline internal::socket& internal::socket::operator =( socket&& o )
     {
-        // TODO: Redesign `socket` class so `const_cast<>()`s aren't required
-        std::swap( const_cast< std::string        & >( address    ), const_cast< std::string        & >( o.address    ) );
-        std::swap( const_cast< unsigned int       & >( port       ), const_cast< unsigned int       & >( o.port       ) );
-        std::swap( const_cast< internal::socket_fd& >( descriptor ), const_cast< internal::socket_fd& >( o.descriptor ) );
+        std::swap( _descriptor    , o._descriptor     );
+        std::swap( _local_address , o._local_address  );
+        std::swap( _local_port    , o._local_port     );
+        std::swap( _remote_address, o._remote_address );
+        std::swap( _remote_port   , o._remote_port    );
         
         return *this;
     }
@@ -483,16 +727,16 @@ namespace show // `show::internal::socket` implementation //////////////////////
         if( r )
         {
             FD_ZERO( &read_descriptors );
-            FD_SET( descriptor, &read_descriptors );
+            FD_SET( _descriptor, &read_descriptors );
         }
         if( w )
         {
             FD_ZERO( &write_descriptors );
-            FD_SET( descriptor, &write_descriptors );
+            FD_SET( _descriptor, &write_descriptors );
         }
         
         auto select_result = pselect(
-            descriptor + 1,
+            _descriptor + 1,
             r ? &read_descriptors  : NULL,
             w ? &write_descriptors : NULL,
             NULL,
@@ -511,9 +755,9 @@ namespace show // `show::internal::socket` implementation //////////////////////
             throw connection_timeout{};
         
         if( r )
-            r = FD_ISSET( descriptor, &read_descriptors );
+            r = FD_ISSET( _descriptor, &read_descriptors );
         if( w )
-            w = FD_ISSET( descriptor, &write_descriptors );
+            w = FD_ISSET( _descriptor, &write_descriptors );
         
         // At least one of these must be true
         if( w && r )
@@ -529,16 +773,10 @@ namespace show // `show::internal::socket` implementation //////////////////////
 namespace show // `show::connection` implementation ////////////////////////////
 {
     inline connection::connection(
-        internal::socket_fd fd,
-        const std::string&  client_address,
-        unsigned int        client_port,
-        const std::string&  server_address,
-        unsigned int        server_port,
-        int                 timeout
+        internal::socket&& serve_socket,
+        int                timeout
     ) :
-        _serve_socket  { fd, client_address, client_port       },
-        _server_address{ server_address                        },
-        _server_port   { server_port                           },
+        _serve_socket  { std::move( serve_socket )             },
         // `std::make_unique<>()` available in C++14
         get_buffer     { new std::array< char, BUFFER_SIZE >{} },
         put_buffer     { new std::array< char, BUFFER_SIZE >{} }
@@ -573,7 +811,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                 );
             
             auto bytes_sent = static_cast< internal::buffsize_type >( send(
-                _serve_socket.descriptor,
+                _serve_socket.descriptor(),
                 pbase() + send_offset,
                 static_cast< std::size_t >( to_send ),
                 0
@@ -626,7 +864,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                     );
                 
                 bytes_read = read(
-                    _serve_socket.descriptor,
+                    _serve_socket.descriptor(),
                     eback(),
                     BUFFER_SIZE
                 );
@@ -800,8 +1038,6 @@ namespace show // `show::connection` implementation ////////////////////////////
     inline connection::connection( connection&& o ) :
         _serve_socket  { std::move( o._serve_socket   ) },
         _timeout       { std::move( o._timeout        ) },
-        _server_address{ std::move( o._server_address ) },
-        _server_port   { std::move( o._server_port    ) },
         get_buffer     { std::move( o.get_buffer      ) },
         put_buffer     { std::move( o.put_buffer      ) }
     {
@@ -822,8 +1058,6 @@ namespace show // `show::connection` implementation ////////////////////////////
         std::swap( get_buffer     , o.get_buffer      );
         std::swap( put_buffer     , o.put_buffer      );
         std::swap( _timeout       , o._timeout        );
-        std::swap( _server_address, o._server_address );
-        std::swap( _server_port   , o._server_port    );
         
         auto eback_temp = eback();
         auto  gptr_temp =  gptr();
@@ -1466,90 +1700,15 @@ namespace show // `show::server` implementation ////////////////////////////////
         const std::string& address,
         unsigned int       port,
         int                timeout
-    )
-    {
-        auto listen_socket_fd = socket(
-            AF_INET6,
-            SOCK_STREAM,
-            getprotobyname( "TCP" ) -> p_proto
-        );
-        
-        if( listen_socket_fd == 0 )
-            throw socket_error{
-                "failed to create listen socket: "
-                + std::string{ std::strerror( errno ) }
-            };
-        
-        listen_socket = new internal::socket{
-            listen_socket_fd,
-            address,
-            port
-        };
-        
-        int opt_reuse{ 1 };
-        
-        // Certain POSIX implementations don't support OR-ing option names
-        // together
-        listen_socket -> setsockopt(
-            SO_REUSEADDR,
-            &opt_reuse,
-            sizeof( opt_reuse ),
-            "address reuse"
-        );
-        listen_socket -> setsockopt(
-            SO_REUSEPORT,
-            &opt_reuse,
-            sizeof( opt_reuse ),
-            "port reuse"
-        );
-        this -> timeout( timeout );
-        
-        sockaddr_in6 socket_address;
-        std::memset( &socket_address, 0, sizeof( socket_address ) );
-        socket_address.sin6_family = AF_INET6;
-        socket_address.sin6_port   = htons( port );
-        if(
-            !inet_pton(
-                AF_INET6,
-                address.c_str(),
-                socket_address.sin6_addr.s6_addr
-            ) && !inet_pton(
-                AF_INET,
-                address.c_str(),
-                socket_address.sin6_addr.s6_addr
-            )
-        )
-            throw socket_error{ address + " is not a valid IP address" };
-        
-        if( bind(
-            listen_socket -> descriptor,
-            reinterpret_cast< sockaddr* >( &socket_address ),
-            sizeof( socket_address )
-        ) == -1 )
-            throw socket_error{
-                "failed to bind listen socket: "
-                + std::string{ std::strerror( errno ) }
-            };
-        
-        if( listen( listen_socket -> descriptor, 3 ) == -1 )
-            throw socket_error{
-                "could not listen on socket: "
-                + std::string{ std::strerror( errno ) }
-            };
-    }
+    ) :
+        listen_socket{ internal::socket::make_server( address, port ) },
+        _timeout{ timeout }
+    {}
     
     inline server::server( server&& o ) :
-        _timeout     { o._timeout      },
-        listen_socket{ o.listen_socket }
-    {
-        o.listen_socket = nullptr;
-    }
-    
-    inline server::~server()
-    {
-        if( listen_socket )
-            delete listen_socket;
-    }
+        _timeout     { o._timeout                   },
+        listen_socket{ std::move( o.listen_socket ) }
+    {}
     
     inline server& server::operator =( server&& o )
     {
@@ -1561,88 +1720,23 @@ namespace show // `show::server` implementation ////////////////////////////////
     inline connection server::serve()
     {
         if( _timeout != 0 )
-            listen_socket -> wait_for(
+            listen_socket.wait_for(
                 internal::socket::wait_for_type::READ,
                 _timeout,
                 "listen"
             );
         
-        sockaddr_in6 address_info;
-        socklen_t address_info_len = sizeof( address_info );
-        
-        char address_buffer[ INET6_ADDRSTRLEN ];
-        
-        auto serve_socket = accept(
-            listen_socket -> descriptor,
-            reinterpret_cast< sockaddr* >( &address_info ),
-            &address_info_len
-        );
-        
-        if(
-            serve_socket == -1
-            || (
-                inet_ntop(
-                    AF_INET,
-                    &address_info.sin6_addr,
-                    address_buffer,
-                    address_info_len
-                ) ==  NULL
-                && inet_ntop(
-                    AF_INET6,
-                    &address_info.sin6_addr,
-                    address_buffer,
-                    address_info_len
-                ) ==  NULL
-            )
-        )
-        {
-            auto errno_copy = errno;
-            
-            if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
-                throw connection_timeout{};
-            else
-                throw socket_error{
-                    "could not create serve socket: "
-                    + std::string{ std::strerror( errno_copy ) }
-                };
-        }
-        
-        std::string  client_address{ address_buffer                  };
-        unsigned int client_port   { ntohs( address_info.sin6_port ) };
-        
-        if(
-            getsockname(
-                serve_socket,
-                reinterpret_cast< sockaddr* >( &address_info ),
-                &address_info_len
-            ) == -1
-        )
-        {
-            auto errno_copy = errno;
-            throw socket_error{
-                "could not get port information from socket: "
-                + std::string{ std::strerror( errno_copy ) }
-            };
-        }
-        
-        return connection{
-            serve_socket,
-            client_address,
-            client_port,
-            listen_socket -> address,
-            ntohs( address_info.sin6_port ),
-            timeout()
-        };
+        return connection{ listen_socket.accept(), timeout() };
     }
     
     inline const std::string& server::address() const
     {
-        return listen_socket -> address;
+        return listen_socket.local_address();
     }
     
     inline unsigned int server::port() const
     {
-        return listen_socket -> port;
+        return listen_socket.local_port();
     }
     
     inline int server::timeout() const
