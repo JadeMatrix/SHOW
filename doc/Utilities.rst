@@ -21,11 +21,11 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
         
         * :cpp:var:`base64::dict_urlsafe`
 
-.. cpp:function:: std::string base64::decode( const std::string& o, const base64::dict_type& dict = base64::dict_standard, show::base64::flags flags = 0x00 )
+.. cpp:function:: std::string base64::decode( const std::string& o, const base64::dict_type& dict = base64::dict_standard, show::internal::flags< base64::flags > f = {} )
     
     Decode a base64-encoded string ``o`` using the character set ``dict``, which must point to a ``char`` array of length 64.  Throws a :cpp:class:`base64::decode_error` if the input is not encoded against ``dict`` or has incorrect padding.
     
-    Incorrect padding can be ignored by passing ``show::base64::ignore_padding`` as the ``flags`` argument.
+    Incorrect padding can be ignored by passing ``show::base64::flags::IGNORE_PADDING`` as the ``flags`` argument.
     
     .. seealso::
         
@@ -58,6 +58,14 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
     
     * ``+`` → ``-``
     * ``/`` → ``_``
+
+.. cpp:enum-class:: base64::flags
+    
+    Options that can be passed to :cpp:func:`base64::decode`.  Possible enum values are:
+    
+    +--------------------+-------------------------------------------------------------+
+    | ``IGNORE_PADDING`` | Ignore missing padding on the end of base64-encoded strings |
+    +--------------------+-------------------------------------------------------------+
 
 Multipart Content Support
 =========================

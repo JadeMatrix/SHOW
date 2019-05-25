@@ -49,8 +49,7 @@ namespace show { namespace base64 // Declarations //////////////////////////////
     );
     
     
-    using flags = unsigned char;
-    static const flags ignore_padding = 0x01;
+    enum class flags { IGNORE_PADDING };
     
     
     std::string encode(
@@ -60,7 +59,7 @@ namespace show { namespace base64 // Declarations //////////////////////////////
     std::string decode(
         const std::string& o,
         const dict_type& dict = dict_standard,
-        flags flags = 0x00
+        show::internal::flags< flags > flags = {}
     );
     
     
@@ -149,7 +148,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
     inline std::string decode(
         const std::string& o,
         const dict_type& dict,
-        flags flags
+        show::internal::flags< flags > f
     )
     {
         auto unpadded_len = o.size();
@@ -169,7 +168,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
         if( b64_size % 4 )
             b64_size += 4 - ( b64_size % 4 );
         
-        if( !( flags & ignore_padding ) && b64_size > o.size() )
+        if( !( f & flags::IGNORE_PADDING ) && b64_size > o.size() )
             throw decode_error{ "missing required padding" };
         
         std::map< char, /*unsigned*/ char > reverse_lookup;

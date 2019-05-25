@@ -306,7 +306,7 @@ void handle_GET_request(
                         { "Content-Disposition", {
                             std::string{ download ? "attachment" : "inline" }
                             + "; filename*=UTF-8''"
-                            + show::url_encode( request.path().back(), false )
+                            + show::url_encode( request.path().back(), {} )
                         } }
                     }
                 };

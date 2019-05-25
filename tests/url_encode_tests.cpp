@@ -28,7 +28,7 @@ SUITE( ShowURLEncodeTests )
     {
         CHECK_EQUAL(
             "hello%20world%200123",
-            show::url_encode( "hello world 0123", false )
+            show::url_encode( "hello world 0123", {} )
         );
     }
     
@@ -76,7 +76,7 @@ SUITE( ShowURLEncodeTests )
     {
         CHECK_EQUAL(
             long_message_url_encoded,
-            show::url_encode( long_message, false )
+            show::url_encode( long_message, {} )
         );
     }
     
@@ -91,7 +91,7 @@ SUITE( ShowURLEncodeTests )
         }
         CHECK_EQUAL(
             very_long_message_encoded,
-            show::url_encode( very_long_message, false )
+            show::url_encode( very_long_message, {} )
         );
     }
     

@@ -3,7 +3,7 @@
 #define SHOW_HPP
 
 
-#include <algorithm>  // std::copy
+#include <algorithm>    // std::copy
 #include <array>
 #include <cstring>
 #include <iomanip>
@@ -14,8 +14,9 @@
 #include <stack>
 #include <stdexcept>
 #include <streambuf>
+#include <type_traits>  // std::enable_if, std::is_enum
 #include <vector>
-#include <utility>  // std::swap
+#include <utility>      // std::swap
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -100,6 +101,63 @@ namespace show // Basic types //////////////////////////////////////////////////
                 return lhs.size() < rhs.size();
             }
         };
+        
+        template< typename E, typename = void > class flags;
+        
+        // This is designe for use with SHOW flag-like enum classes and does not
+        // safely support enum values with initializers
+        template< typename E > class flags<
+            E,
+            typename std::enable_if< std::is_enum< E >::value >::type
+        >
+        {
+        public:
+            using value_type = typename std::underlying_type< E >::type;
+            
+        protected:
+            value_type _value;
+            
+            constexpr flags( value_type v ) : _value{ v } {}
+            
+        public:
+            constexpr flags() : _value{ 0x00 } {}
+            constexpr flags( E e )
+                : _value{ 0x01 << static_cast< value_type >( e ) }
+            {}
+            
+            constexpr operator bool() const { return _value; }
+            
+            constexpr flags operator |( flags o ) const
+            {
+                return _value | static_cast< value_type >( o._value );
+            }
+            /*constexpr*/ flags& operator |=( flags o )
+            {
+                _value |= static_cast< value_type >( o._value );
+                return *this;
+            }
+            constexpr flags operator &( flags o ) const
+            {
+                return _value & static_cast< value_type >( o._value );
+            }
+            /*constexpr*/ flags& operator &=( flags o )
+            {
+                _value &= static_cast< value_type >( o._value );
+                return *this;
+            }
+            
+            void clear() { _value = 0x00; }
+            constexpr value_type raw_value() const { return _value; }
+        };
+        
+        template< typename E > flags< E > operator |( E lhs, E rhs )
+        {
+            return flags< E >{ lhs } | rhs;
+        }
+        template< typename E > flags< E > operator &( E lhs, E rhs )
+        {
+            return flags< E >{ lhs } & rhs;
+        }
     }
     
     enum class protocol
@@ -145,12 +203,7 @@ namespace show // Main classes /////////////////////////////////////////////////
     public:
         using fd_type = int;
         
-        enum class wait_for_type
-        {
-            READ       = 0x01,
-            WRITE      = 0x02,
-            READ_WRITE = 0x03
-        };
+        enum class wait_for_type { READ, WRITE };
         
     protected:
         fd_type      _descriptor;
@@ -167,14 +220,11 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         static ::sockaddr_in6 make_sockaddr( const std::string&, unsigned int );
         
-        enum class info_type
-        {
-            LOCAL  = 0x01,
-            REMOTE = 0x02,
-            BOTH   = 0x03
-        };
+        enum class info_type { LOCAL, REMOTE };
         
-        void set_info( info_type = info_type::BOTH );
+        void set_info( flags< info_type > = (
+            info_type::LOCAL | info_type::REMOTE
+        ) );
         void set_reuse();
         void set_nonblocking();
         template< typename T > void set_sockopt(
@@ -214,10 +264,10 @@ namespace show // Main classes /////////////////////////////////////////////////
         constexpr const std::string& remote_address() const { return _remote_address; }
         constexpr unsigned int       remote_port   () const { return _remote_port   ; }
         
-        wait_for_type wait_for(
-            wait_for_type      wf,
-            int                timeout,
-            const std::string& purpose
+        flags< wait_for_type > wait_for(
+            flags< wait_for_type > wf,
+            int                    timeout,
+            const std::string&     purpose
         );
     };
     
@@ -409,9 +459,11 @@ namespace show // Throwables ///////////////////////////////////////////////////
 
 namespace show // URL-encoding /////////////////////////////////////////////////
 {
+    enum class url_flags { USE_PLUS_SPACE };
+    
     std::string url_encode(
-        const std::string& o,
-        bool use_plus_space = true
+        const std::string&,
+        internal::flags< url_flags > = url_flags::USE_PLUS_SPACE
     );
     std::string url_decode( const std::string& );
 }
@@ -463,7 +515,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         return info;
     }
     
-    inline void internal::socket::set_info( info_type t )
+    inline void internal::socket::set_info( flags< info_type > t )
     {
         auto _set_info = [ this ](
             std::function< int(
@@ -513,18 +565,9 @@ namespace show // `show::internal::socket` implementation //////////////////////
             port    = ntohs( info.sin6_port );
         };
         
-        bool l{ static_cast< bool >(
-              static_cast< unsigned >( t                 )
-            & static_cast< unsigned >( info_type::LOCAL  )
-        ) };
-        bool r{ static_cast< bool >(
-              static_cast< unsigned >( t                 )
-            & static_cast< unsigned >( info_type::REMOTE )
-        ) };
-        
-        if( l )
+        if( t & info_type::LOCAL )
             _set_info( ::getsockname,  _local_address,  _local_port,  "local" );
-        if( r )
+        if( t & info_type::REMOTE )
             _set_info( ::getpeername, _remote_address, _remote_port, "remote" );
     }
     
@@ -699,10 +742,11 @@ namespace show // `show::internal::socket` implementation //////////////////////
         return *this;
     }
     
-    inline internal::socket::wait_for_type internal::socket::wait_for(
-        wait_for_type      wf,
-        int                timeout,
-        const std::string& purpose
+    inline internal::flags< internal::socket::wait_for_type >
+    internal::socket::wait_for(
+        flags< wait_for_type > wf,
+        int                    timeout,
+        const std::string&     purpose
     )
     {
         if( timeout == 0 )
@@ -715,14 +759,8 @@ namespace show // `show::internal::socket` implementation //////////////////////
         fd_set read_descriptors, write_descriptors;
         timespec timeout_spec{ timeout, 0 };
         
-        bool r{ static_cast< bool >(
-              static_cast< unsigned >( wf                   )
-            & static_cast< unsigned >( wait_for_type::READ  )
-        ) };
-        bool w{ static_cast< bool >(
-              static_cast< unsigned >( wf                   )
-            & static_cast< unsigned >( wait_for_type::WRITE )
-        ) };
+        bool r = wf & wait_for_type::READ;
+        bool w = wf & wait_for_type::WRITE;
         
         if( r )
         {
@@ -761,7 +799,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         
         // At least one of these must be true
         if( w && r )
-            return wait_for_type::READ_WRITE;
+            return wait_for_type::READ | wait_for_type::WRITE;
         else if( r )
             return wait_for_type::READ;
         else
@@ -1756,13 +1794,13 @@ namespace show // URL-encoding implementations /////////////////////////////////
 {
     inline std::string url_encode(
         const std::string& o,
-        bool use_plus_space
+        internal::flags< url_flags > f
     )
     {
         std::stringstream encoded;
         encoded << std::hex;
         
-        std::string space{ use_plus_space ? "+" : "%20" };
+        std::string space{ f & url_flags::USE_PLUS_SPACE ? "+" : "%20" };
         
         for( auto c : o )
         {

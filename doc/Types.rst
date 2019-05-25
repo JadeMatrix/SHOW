@@ -89,6 +89,14 @@ Support Types
         
         * :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
+.. cpp:enum-class:: url_flags
+    
+    Options that can be passed to :cpp:func:`url_encode`.  Possible enum values are:
+    
+    +--------------------+--------------------------------------------+
+    | ``USE_PLUS_SPACE`` | Encode spaces as ``+`` rather than ``%20`` |
+    +--------------------+--------------------------------------------+
+
 Throwables
 ==========
 
