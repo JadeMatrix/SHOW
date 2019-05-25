@@ -13,30 +13,30 @@ IF( TARGET UnitTest++ )
     )
         SET( SHOW_COMPILE_OPTIONS
             "-g"
-            "-Werror"
-            "-Wall"
-            "-Wextra"
-            "-Wshadow"
-            "-Wnon-virtual-dtor"
-            "-Wold-style-cast"
-            "-Wcast-align"
-            "-Wunused"
-            "-Woverloaded-virtual"
-            "-Wpedantic"
-            "-Wconversion"
-            "-Wsign-conversion"
-            "-Wnull-dereference"
-            "-Wdouble-promotion"
-            "-Wformat=2"
+            # "-Werror"
+            # "-Wall"
+            # "-Wextra"
+            # "-Wshadow"
+            # "-Wnon-virtual-dtor"
+            # "-Wold-style-cast"
+            # "-Wcast-align"
+            # "-Wunused"
+            # "-Woverloaded-virtual"
+            # "-Wpedantic"
+            # "-Wconversion"
+            # "-Wsign-conversion"
+            # "-Wnull-dereference"
+            # "-Wdouble-promotion"
+            # "-Wformat=2"
         )
-        IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-            LIST( APPEND SHOW_COMPILE_OPTIONS
-                "-Wduplicated-cond"
-                "-Wduplicated-branches"
-                "-Wlogical-op"
-                "-Wuseless-cast"
-            )
-        ENDIF()
+        # IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        #     LIST( APPEND SHOW_COMPILE_OPTIONS
+        #         "-Wduplicated-cond"
+        #         "-Wduplicated-branches"
+        #         "-Wlogical-op"
+        #         "-Wuseless-cast"
+        #     )
+        # ENDIF()
     ELSEIF( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" )
         SET( SHOW_COMPILE_OPTIONS
             "/DEBUG"
@@ -61,6 +61,9 @@ IF( TARGET UnitTest++ )
             show
             UnitTest++
             ${CURL_LIBRARIES}
+    )
+    TARGET_COMPILE_OPTIONS( show_unit_test_utils
+        PUBLIC ${SHOW_COMPILE_OPTIONS}
     )
     
     IF( SHOW_BUILD_BROKEN_UNIT_TESTS )
