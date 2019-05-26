@@ -29,7 +29,7 @@ namespace show // `show::multipart` class //////////////////////////////////////
         public:
             segment( const segment& ) = delete;
             
-            const headers_type& headers();
+            constexpr const headers_type& headers() const { return _headers; }
             
             // std::streambuf get functions
             virtual std::streamsize showmanyc();
@@ -88,8 +88,8 @@ namespace show // `show::multipart` class //////////////////////////////////////
             String&& boundary
         );
         
-        const std::streambuf&   buffer();
-        const std::string   & boundary();
+        constexpr const std::streambuf&   buffer() const { return _buffer  ; }
+        constexpr const std::string   & boundary() const { return _boundary; }
         
         iterator begin();
         iterator   end();
@@ -135,11 +135,6 @@ namespace show // Utilities ////////////////////////////////////////////////////
 
 namespace show // `show::multipart::segment` implementation ////////////////////
 {
-    inline const headers_type& multipart::segment::headers()
-    {
-        return _headers;
-    }
-    
     inline std::streamsize multipart::segment::showmanyc()
     {
         // No standard content length information, so this is only ever either
@@ -527,16 +522,6 @@ namespace show // `show::multipart` implementation /////////////////////////////
             crlf_start = true;
         }
         while( !end_of_pre_content );
-    }
-    
-    inline const std::streambuf& multipart::buffer()
-    {
-        return _buffer;
-    }
-    
-    inline const std::string& multipart::boundary()
-    {
-        return _boundary;
     }
     
     inline multipart::iterator multipart::begin()

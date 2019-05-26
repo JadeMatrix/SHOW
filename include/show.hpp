@@ -227,8 +227,7 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         socket& operator =( socket&& );
         
-        // `descriptor()` can be `constexpr` in C++14
-        fd_type                      descriptor    ()       { return _descriptor    ; }
+        /*constexpr*/ fd_type        descriptor    ()       { return _descriptor    ; }
         constexpr const std::string& local_address () const { return _local_address ; }
         constexpr unsigned int       local_port    () const { return _local_port    ; }
         constexpr const std::string& remote_address() const { return _remote_address; }
@@ -285,8 +284,8 @@ namespace show // Main classes /////////////////////////////////////////////////
         const std::string& server_address() const { return _serve_socket. local_address(); };
         unsigned int       server_port   () const { return _serve_socket. local_port   (); };
         
-        int timeout() const;
-        int timeout( int );
+        constexpr     int timeout() const  { return _timeout    ; }
+        /*constexpr*/ int timeout( int t ) { return _timeout = t; }
         
     protected:
         static const internal::buffsize_type BUFFER_SIZE{   1024 };
@@ -340,17 +339,17 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         request& operator =( request&& );
         
-        show::connection                & connection            () const { return *_connection                   ; }
-        const std::string               & client_address        () const { return _connection -> client_address(); }
-        unsigned int                      client_port           () const { return _connection -> client_port   (); }
-        protocol                          protocol              () const { return _protocol                      ; }
-        const std::string               & protocol_string       () const { return _protocol_string               ; }
-        const std::string               & method                () const { return _method                        ; }
-        const std::vector< std::string >& path                  () const { return _path                          ; }
-        const query_args_type           & query_args            () const { return _query_args                    ; }
-        const headers_type              & headers               () const { return _headers                       ; }
-        content_length_flag               unknown_content_length() const { return _unknown_content_length        ; }
-        std::size_t                       content_length        () const { return _content_length                ; }
+        constexpr show::connection                & connection            () const { return *_connection                   ; }
+        constexpr const std::string               & client_address        () const { return _connection -> client_address(); }
+        constexpr unsigned int                      client_port           () const { return _connection -> client_port   (); }
+        constexpr protocol                          protocol              () const { return _protocol                      ; }
+        constexpr const std::string               & protocol_string       () const { return _protocol_string               ; }
+        constexpr const std::string               & method                () const { return _method                        ; }
+        constexpr const std::vector< std::string >& path                  () const { return _path                          ; }
+        constexpr const query_args_type           & query_args            () const { return _query_args                    ; }
+        constexpr const headers_type              & headers               () const { return _headers                       ; }
+        constexpr content_length_flag               unknown_content_length() const { return _unknown_content_length        ; }
+        constexpr std::size_t                       content_length        () const { return _content_length                ; }
         
         bool eof() const;
         void flush();
@@ -422,11 +421,11 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         connection serve();
         
-        const std::string& address() const;
-        unsigned int       port()    const;
+        constexpr const std::string& address() const { return _listen_socket.local_address(); }
+        constexpr unsigned int       port()    const { return _listen_socket.local_port   (); }
         
-        int timeout() const;
-        int timeout( int );
+        constexpr     int timeout() const  { return _timeout    ; }
+        /*constexpr*/ int timeout( int t ) { return _timeout = t; }
         
     protected:
         internal::socket _listen_socket;
@@ -857,17 +856,6 @@ namespace show // `show::connection` implementation ////////////////////////////
         );
         
         return *this;
-    }
-    
-    inline int connection::timeout() const
-    {
-        return _timeout;
-    }
-    
-    inline int connection::timeout( int t )
-    {
-        _timeout = t;
-        return _timeout;
     }
     
     inline connection::connection(
@@ -1762,27 +1750,6 @@ namespace show // `show::server` implementation ////////////////////////////////
             );
         
         return connection{ _listen_socket.accept(), timeout() };
-    }
-    
-    inline const std::string& server::address() const
-    {
-        return _listen_socket.local_address();
-    }
-    
-    inline unsigned int server::port() const
-    {
-        return _listen_socket.local_port();
-    }
-    
-    inline int server::timeout() const
-    {
-        return _timeout;
-    }
-    
-    inline int server::timeout( int t )
-    {
-        _timeout = t;
-        return _timeout;
     }
 }
 
