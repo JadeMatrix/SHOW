@@ -345,7 +345,7 @@ SUITE( ShowBase64Tests )
         catch( const show::base64::decode_error& e )
         {
             CHECK_EQUAL(
-                "invalid base64 character",
+                "character not in dictionary",
                 e.what()
             );
         }
@@ -361,7 +361,7 @@ SUITE( ShowBase64Tests )
         catch( const show::base64::decode_error& e )
         {
             CHECK_EQUAL(
-                "invalid base64 character",
+                "character not in dictionary",
                 e.what()
             );
         }

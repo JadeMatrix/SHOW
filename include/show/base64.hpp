@@ -180,7 +180,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                 throw decode_error{ "premature padding" };
             auto found_hextet = reverse_lookup.find( c );
             if( found_hextet == reverse_lookup.end() )
-                throw decode_error{ "invalid base64 character" };
+                throw decode_error{ "character not in dictionary" };
             return found_hextet -> second;
         };
         
