@@ -5,7 +5,7 @@
 
 #include "../show.hpp"
 
-#include <functional>   // std::function<>
+#include <functional>   // std::function<>, std::reference_wrapper<>
 #include <streambuf>
 #include <utility>      // std::forward<>()
 #include <vector>
@@ -95,8 +95,8 @@ namespace show // `show::multipart` class //////////////////////////////////////
         iterator   end();
         
     protected:
-        std::streambuf* _buffer;
-        std::string     _boundary;
+        std::reference_wrapper< std::streambuf > _buffer;
+        std::string _boundary;
         enum class state
         {
             READY,
@@ -145,7 +145,7 @@ namespace show // `show::multipart::segment` implementation ////////////////////
         // No standard content length information, so this is only ever either
         // "none" (-1) or "indeterminate" (0) (this is only called if the count
         // cannot be derived from `gptr()` and `egptr()`)
-        if( _finished || _parent -> _buffer -> in_avail() == -1 )
+        if( _finished || _parent -> _buffer.get().in_avail() == -1 )
             return -1;
         else
             return 0;
@@ -158,7 +158,7 @@ namespace show // `show::multipart::segment` implementation ////////////////////
         
         return internal::read_buffer_until_boundary(
             true,
-            *( _parent -> _buffer ),
+            _parent -> _buffer,
             _parent -> boundary(),
             // Non-cost std::string::data() only available in C++17
             const_cast< char* >( _buffer.data() ),
@@ -458,7 +458,7 @@ namespace show // `show::multipart::iterator` implementation ///////////////////
     
     inline bool multipart::iterator::operator ==( const iterator& o ) const
     {
-        if( _parent -> _buffer != o._parent -> _buffer )
+        if( &( _parent -> _buffer ) != &( o._parent -> _buffer ) )
             return false;
         else if( _is_end && o._is_end )
             return true;
@@ -491,7 +491,7 @@ namespace show // `show::multipart` implementation /////////////////////////////
         std::streambuf& b,
         String&& boundary
     ) :
-        _buffer  { &b                                 },
+        _buffer  { b                                  },
         _boundary{ std::forward< String >( boundary ) },
         _state   { state::READY                       }
     {
@@ -510,7 +510,7 @@ namespace show // `show::multipart` implementation /////////////////////////////
         {
             got_c = internal::read_buffer_until_boundary(
                 crlf_start,
-                *_buffer,
+                _buffer,
                 _boundary,
                 // Non-cost std::string::data() only available in C++17
                 const_cast< char* >( got_boundary.data() ),
@@ -531,7 +531,7 @@ namespace show // `show::multipart` implementation /////////////////////////////
     
     inline const std::streambuf& multipart::buffer()
     {
-        return *_buffer;
+        return _buffer;
     }
     
     inline const std::string& multipart::boundary()
