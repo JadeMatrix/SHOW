@@ -294,8 +294,8 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         internal::socket _serve_socket;
         int              _timeout;
-        std::unique_ptr< std::array< char, BUFFER_SIZE > > get_buffer;
-        std::unique_ptr< std::array< char, BUFFER_SIZE > > put_buffer;
+        std::unique_ptr< std::array< char, BUFFER_SIZE > > _get_buffer;
+        std::unique_ptr< std::array< char, BUFFER_SIZE > > _put_buffer;
         
         connection( internal::socket&& serve_socket, int timeout );
         
@@ -366,8 +366,7 @@ namespace show // Main classes /////////////////////////////////////////////////
         headers_type               _headers;
         content_length_flag        _unknown_content_length;
         std::size_t                _content_length;
-        
-        std::size_t read_content;
+        std::size_t                _read_content;
         
         std::streamsize showmanyc() override;
         int_type        underflow() override;
@@ -430,7 +429,7 @@ namespace show // Main classes /////////////////////////////////////////////////
         int timeout( int );
         
     protected:
-        internal::socket listen_socket;
+        internal::socket _listen_socket;
         int _timeout;
     };
 }
@@ -809,10 +808,10 @@ namespace show // `show::internal::socket` implementation //////////////////////
 namespace show // `show::connection` implementation ////////////////////////////
 {
     inline connection::connection( connection&& o ) :
-        _serve_socket  { std::move( o._serve_socket   ) },
-        _timeout       { std::move( o._timeout        ) },
-        get_buffer     { std::move( o.get_buffer      ) },
-        put_buffer     { std::move( o.put_buffer      ) }
+        _serve_socket { std::move( o._serve_socket ) },
+        _timeout      { std::move( o._timeout      ) },
+        _get_buffer   { std::move( o._get_buffer   ) },
+        _put_buffer   { std::move( o._put_buffer   ) }
     {
         setg(
             o.eback(),
@@ -827,10 +826,10 @@ namespace show // `show::connection` implementation ////////////////////////////
     
     inline connection& connection::operator =( connection&& o )
     {
-        std::swap( _serve_socket  , o._serve_socket   );
-        std::swap( get_buffer     , o.get_buffer      );
-        std::swap( put_buffer     , o.put_buffer      );
-        std::swap( _timeout       , o._timeout        );
+        std::swap( _serve_socket, o._serve_socket );
+        std::swap( _get_buffer  , o._get_buffer   );
+        std::swap( _put_buffer  , o._put_buffer   );
+        std::swap( _timeout     , o._timeout      );
         
         auto eback_temp = eback();
         auto  gptr_temp =  gptr();
@@ -877,18 +876,18 @@ namespace show // `show::connection` implementation ////////////////////////////
     ) :
         _serve_socket  { std::move( serve_socket )             },
         // `std::make_unique<>()` available in C++14
-        get_buffer     { new std::array< char, BUFFER_SIZE >{} },
-        put_buffer     { new std::array< char, BUFFER_SIZE >{} }
+        _get_buffer    { new std::array< char, BUFFER_SIZE >{} },
+        _put_buffer    { new std::array< char, BUFFER_SIZE >{} }
     {
         this -> timeout( timeout );
         setg(
-            reinterpret_cast< char* >( get_buffer.get() ),
-            reinterpret_cast< char* >( get_buffer.get() ),
-            reinterpret_cast< char* >( get_buffer.get() )
+            reinterpret_cast< char* >( _get_buffer.get() ),
+            reinterpret_cast< char* >( _get_buffer.get() ),
+            reinterpret_cast< char* >( _get_buffer.get() )
         );
         setp(
-            reinterpret_cast< char* >( put_buffer.get() ),
-            reinterpret_cast< char* >( put_buffer.get() ) + BUFFER_SIZE
+            reinterpret_cast< char* >( _put_buffer.get() ),
+            reinterpret_cast< char* >( _put_buffer.get() ) + BUFFER_SIZE
         );
     }
     
@@ -1139,8 +1138,8 @@ namespace show // `show::connection` implementation ////////////////////////////
 namespace show // `show::request` implementation ///////////////////////////////
 {
     inline request::request( class connection& c ) :
-        _connection { &c },
-        read_content{ 0  }
+        _connection  { &c },
+        _read_content{ 0  }
     {
         bool reading                   { true  };
         int  seq_newlines              { 0     };
@@ -1479,7 +1478,7 @@ namespace show // `show::request` implementation ///////////////////////////////
         _headers               { std::move( o._headers                 ) },
         _unknown_content_length{ std::move( o._unknown_content_length  ) },
         _content_length        { std::move( o._content_length          ) },
-        read_content           { std::move( o.read_content             ) }
+        _read_content          { std::move( o._read_content            ) }
     {
         // `request` can use neither an implicit nor explicit default move
         // constructor, as that relies on the `std::streambuf` implementation to
@@ -1491,7 +1490,7 @@ namespace show // `show::request` implementation ///////////////////////////////
     inline request& request::operator =( request&& o )
     {
         std::swap( _connection            , o._connection              );
-        std::swap( read_content           , o.read_content             );
+        std::swap( _read_content          , o._read_content            );
         std::swap( _protocol              , o._protocol                );
         std::swap( _protocol_string       , o._protocol_string         );
         std::swap( _method                , o._method                  );
@@ -1506,7 +1505,7 @@ namespace show // `show::request` implementation ///////////////////////////////
     
     inline bool request::eof() const
     {
-        return !_unknown_content_length && read_content >= _content_length;
+        return !_unknown_content_length && _read_content >= _content_length;
     }
     
     inline void request::flush()
@@ -1523,7 +1522,7 @@ namespace show // `show::request` implementation ///////////////////////////////
             // Don't just return `remaining` as that may cause reading to hang
             // on unresponsive clients (trying to read bytes we don't have yet)
             auto remaining = static_cast< std::streamsize >(
-                _content_length - read_content
+                _content_length - _read_content
             );
             auto in_connection = _connection -> showmanyc();
             return in_connection < remaining ? in_connection : remaining;
@@ -1550,7 +1549,7 @@ namespace show // `show::request` implementation ///////////////////////////////
         auto c = _connection -> uflow();
         if( traits_type::not_eof( c ) != c )
             throw client_disconnected{};
-        ++read_content;
+        ++_read_content;
         return c;
     }
     
@@ -1566,7 +1565,7 @@ namespace show // `show::request` implementation ///////////////////////////////
         else if( !eof() )
         {
             auto remaining = static_cast< std::streamsize >(
-                _content_length - read_content
+                _content_length - _read_content
             );
             read = _connection -> sgetn(
                 s,
@@ -1577,7 +1576,7 @@ namespace show // `show::request` implementation ///////////////////////////////
             return 0;
         
         // `show::connection::xsgetn()` always returns >= 0
-        read_content += static_cast< std::size_t >( read );
+        _read_content += static_cast< std::size_t >( read );
         return read;
     }
     
@@ -1586,7 +1585,7 @@ namespace show // `show::request` implementation ///////////////////////////////
         auto result = _connection -> pbackfail( c );
         
         if( traits_type::not_eof( result ) == result )
-            --read_content;
+            --_read_content;
         
         return result;
     }
@@ -1737,18 +1736,18 @@ namespace show // `show::server` implementation ////////////////////////////////
         unsigned int       port,
         int                timeout
     ) :
-        listen_socket{ internal::socket::make_server( address, port ) },
+        _listen_socket{ internal::socket::make_server( address, port ) },
         _timeout{ timeout }
     {}
     
     inline server::server( server&& o ) :
-        _timeout     { o._timeout                   },
-        listen_socket{ std::move( o.listen_socket ) }
+        _timeout      { o._timeout                    },
+        _listen_socket{ std::move( o._listen_socket ) }
     {}
     
     inline server& server::operator =( server&& o )
     {
-        std::swap( listen_socket, o.listen_socket );
+        std::swap( _listen_socket, o._listen_socket );
         _timeout = o._timeout;
         return *this;
     }
@@ -1756,23 +1755,23 @@ namespace show // `show::server` implementation ////////////////////////////////
     inline connection server::serve()
     {
         if( _timeout != 0 )
-            listen_socket.wait_for(
+            _listen_socket.wait_for(
                 internal::socket::wait_for_type::READ,
                 _timeout,
                 "listen"
             );
         
-        return connection{ listen_socket.accept(), timeout() };
+        return connection{ _listen_socket.accept(), timeout() };
     }
     
     inline const std::string& server::address() const
     {
-        return listen_socket.local_address();
+        return _listen_socket.local_address();
     }
     
     inline unsigned int server::port() const
     {
-        return listen_socket.local_port();
+        return _listen_socket.local_port();
     }
     
     inline int server::timeout() const
