@@ -15,16 +15,6 @@ namespace show // `show::multipart` class //////////////////////////////////////
 {
     class multipart
     {
-    protected:
-        std::streambuf* _buffer;
-        std::string     _boundary;
-        enum class state
-        {
-            READY,
-            BEGUN,
-            FINISHED
-        } _state;
-        
     public:
         class segment;
         class iterator;
@@ -35,6 +25,18 @@ namespace show // `show::multipart` class //////////////////////////////////////
         class segment : public std::streambuf
         {
             friend class iterator;
+            
+        public:
+            segment( const segment& ) = delete;
+            
+            const headers_type& headers();
+            
+            // std::streambuf get functions
+            virtual std::streamsize showmanyc();
+            virtual int_type        underflow();
+            virtual int_type        pbackfail(
+                int_type c = std::char_traits< char >::eof()
+            );
             
         protected:
             multipart*   _parent;
@@ -49,18 +51,6 @@ namespace show // `show::multipart` class //////////////////////////////////////
             segment(   segment&& ) = default;
             
             segment& operator =( segment&& );
-            
-        public:
-            segment( const segment& ) = delete;
-            
-            const headers_type& headers();
-            
-            // std::streambuf get functions
-            virtual std::streamsize showmanyc();
-            virtual int_type        underflow();
-            virtual int_type        pbackfail(
-                int_type c = std::char_traits< char >::eof()
-            );
         };
         
         class iterator
@@ -73,16 +63,6 @@ namespace show // `show::multipart` class //////////////////////////////////////
             using reference         = segment&;
             using iterator_category = std::input_iterator_tag;
             
-        protected:
-            multipart*      _parent;
-            bool            _is_end;
-            bool            _locked;
-            std::streamsize _segment_index;
-            segment         _current_segment;
-            
-            iterator( multipart&, bool end = false );
-            
-        public:
             iterator( iterator&& );
             
             iterator& operator  =( iterator&&      ) = default;
@@ -92,6 +72,15 @@ namespace show // `show::multipart` class //////////////////////////////////////
             iterator  operator ++( int             );
             bool      operator ==( const iterator& ) const;
             bool      operator !=( const iterator& ) const;
+            
+        protected:
+            multipart*      _parent;
+            bool            _is_end;
+            bool            _locked;
+            std::streamsize _segment_index;
+            segment         _current_segment;
+            
+            iterator( multipart&, bool end = false );
         };
         
         template< class String > multipart(
@@ -104,6 +93,16 @@ namespace show // `show::multipart` class //////////////////////////////////////
         
         iterator begin();
         iterator   end();
+        
+    protected:
+        std::streambuf* _buffer;
+        std::string     _boundary;
+        enum class state
+        {
+            READY,
+            BEGUN,
+            FINISHED
+        } _state;
     };
 }
 
@@ -136,6 +135,68 @@ namespace show // Utilities ////////////////////////////////////////////////////
 
 namespace show // `show::multipart::segment` implementation ////////////////////
 {
+    inline const headers_type& multipart::segment::headers()
+    {
+        return _headers;
+    }
+    
+    inline std::streamsize multipart::segment::showmanyc()
+    {
+        // No standard content length information, so this is only ever either
+        // "none" (-1) or "indeterminate" (0) (this is only called if the count
+        // cannot be derived from `gptr()` and `egptr()`)
+        if( _finished || _parent -> _buffer -> in_avail() == -1 )
+            return -1;
+        else
+            return 0;
+    }
+    
+    inline multipart::segment::int_type multipart::segment::underflow()
+    {
+        if( _finished )
+            return traits_type::eof();
+        
+        return internal::read_buffer_until_boundary(
+            true,
+            *( _parent -> _buffer ),
+            _parent -> boundary(),
+            // Non-cost std::string::data() only available in C++17
+            const_cast< char* >( _buffer.data() ),
+            [ this ](
+                char_type* gbeg,
+                char_type* gcurr,
+                char_type* gend
+            ){
+                this -> setg( gbeg, gcurr, gend );
+            },
+            _finished,
+            [ this ](){
+                this -> _parent -> _state = state::FINISHED;
+            }
+        );
+    }
+    
+    inline multipart::segment::int_type multipart::segment::pbackfail(
+        multipart::segment::int_type c
+    )
+    {
+        if( gptr() - eback() )
+        {
+            setg(
+                eback(),
+                gptr () - 1,
+                egptr()
+            );
+            
+            if( traits_type::not_eof( c ) == c )
+                *gptr() = traits_type::to_char_type( c );
+            
+            return traits_type::to_int_type( static_cast< char >( ASCII_ACK ) );
+        }
+        else
+            return traits_type::eof();
+    }
+    
     // Initializes an invalid `segment` for use with `multipart::iterator`'s
     // copy constructor
     inline multipart::segment::segment() :
@@ -324,83 +385,11 @@ namespace show // `show::multipart::segment` implementation ////////////////////
         
         return *this;
     }
-    
-    inline const headers_type& multipart::segment::headers()
-    {
-        return _headers;
-    }
-    
-    inline std::streamsize multipart::segment::showmanyc()
-    {
-        // No standard content length information, so this is only ever either
-        // "none" (-1) or "indeterminate" (0) (this is only called if the count
-        // cannot be derived from `gptr()` and `egptr()`)
-        if( _finished || _parent -> _buffer -> in_avail() == -1 )
-            return -1;
-        else
-            return 0;
-    }
-    
-    inline multipart::segment::int_type multipart::segment::underflow()
-    {
-        if( _finished )
-            return traits_type::eof();
-        
-        return internal::read_buffer_until_boundary(
-            true,
-            *( _parent -> _buffer ),
-            _parent -> boundary(),
-            // Non-cost std::string::data() only available in C++17
-            const_cast< char* >( _buffer.data() ),
-            [ this ](
-                char_type* gbeg,
-                char_type* gcurr,
-                char_type* gend
-            ){
-                this -> setg( gbeg, gcurr, gend );
-            },
-            _finished,
-            [ this ](){
-                this -> _parent -> _state = state::FINISHED;
-            }
-        );
-    }
-    
-    inline multipart::segment::int_type multipart::segment::pbackfail(
-        multipart::segment::int_type c
-    )
-    {
-        if( gptr() - eback() )
-        {
-            setg(
-                eback(),
-                gptr () - 1,
-                egptr()
-            );
-            
-            if( traits_type::not_eof( c ) == c )
-                *gptr() = traits_type::to_char_type( c );
-            
-            return traits_type::to_int_type( static_cast< char >( ASCII_ACK ) );
-        }
-        else
-            return traits_type::eof();
-    }
 }
 
 
 namespace show // `show::multipart::iterator` implementation ///////////////////
 {
-    inline multipart::iterator::iterator( multipart& p, bool end ) :
-        _parent       { &p    },
-        _is_end       { end   },
-        _locked       { false },
-        _segment_index{ 0     }
-    {
-        if( !end )
-            _current_segment = { p };
-    }
-    
     inline multipart::iterator::iterator( iterator&& o ) :
         _parent       { o._parent        },
         _is_end       { o._is_end        },
@@ -482,6 +471,16 @@ namespace show // `show::multipart::iterator` implementation ///////////////////
     inline bool multipart::iterator::operator !=( const iterator& o ) const
     {
         return !( *this == o );
+    }
+    
+    inline multipart::iterator::iterator( multipart& p, bool end ) :
+        _parent       { &p    },
+        _is_end       { end   },
+        _locked       { false },
+        _segment_index{ 0     }
+    {
+        if( !end )
+            _current_segment = { p };
     }
 }
 

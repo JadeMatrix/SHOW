@@ -114,12 +114,6 @@ namespace show // Basic types //////////////////////////////////////////////////
         public:
             using value_type = typename std::underlying_type< E >::type;
             
-        protected:
-            value_type _value;
-            
-            constexpr flags( value_type v ) : _value{ v } {}
-            
-        public:
             constexpr flags() : _value{ 0x00 } {}
             constexpr flags( E e )
                 : _value{ 0x01 << static_cast< value_type >( e ) }
@@ -148,6 +142,11 @@ namespace show // Basic types //////////////////////////////////////////////////
             
             void clear() { _value = 0x00; }
             constexpr value_type raw_value() const { return _value; }
+            
+        protected:
+            value_type _value;
+            
+            constexpr flags( value_type v ) : _value{ v } {}
         };
         
         template< typename E > flags< E > operator |( E lhs, E rhs )
@@ -205,35 +204,6 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         enum class wait_for_type { READ, WRITE };
         
-    protected:
-        fd_type      _descriptor;
-        std::string  _local_address;
-        unsigned int _local_port;
-        std::string  _remote_address;
-        unsigned int _remote_port;
-        
-        // Make an uninitialized socket
-        socket();
-        
-        // Make an initialized socket with all basic settings applied
-        static socket make_basic();
-        
-        static ::sockaddr_in6 make_sockaddr( const std::string&, unsigned int );
-        
-        enum class info_type { LOCAL, REMOTE };
-        
-        void set_info( flags< info_type > = (
-            info_type::LOCAL | info_type::REMOTE
-        ) );
-        void set_reuse();
-        void set_nonblocking();
-        template< typename T > void set_sockopt(
-            int optname,
-            T   value,
-            const std::string& description
-        );
-    
-    public:
         socket( socket&& );
         
         // Make socket for listening on an address & port
@@ -269,6 +239,34 @@ namespace show // Main classes /////////////////////////////////////////////////
             int                    timeout,
             const std::string&     purpose
         );
+        
+    protected:
+        fd_type      _descriptor;
+        std::string  _local_address;
+        unsigned int _local_port;
+        std::string  _remote_address;
+        unsigned int _remote_port;
+        
+        // Make an uninitialized socket
+        socket();
+        
+        // Make an initialized socket with all basic settings applied
+        static socket make_basic();
+        
+        static ::sockaddr_in6 make_sockaddr( const std::string&, unsigned int );
+        
+        enum class info_type { LOCAL, REMOTE };
+        
+        void set_info( flags< info_type > = (
+            info_type::LOCAL | info_type::REMOTE
+        ) );
+        void set_reuse();
+        void set_nonblocking();
+        template< typename T > void set_sockopt(
+            int optname,
+            T   value,
+            const std::string& description
+        );
     };
     
     class connection : public std::streambuf
@@ -276,6 +274,19 @@ namespace show // Main classes /////////////////////////////////////////////////
         friend class server;
         friend class request;
         friend class response;
+        
+    public:
+        connection( connection&& );
+        
+        connection& operator =( connection&& );
+        
+        const std::string& client_address() const { return _serve_socket.remote_address(); };
+        unsigned int       client_port   () const { return _serve_socket.remote_port   (); };
+        const std::string& server_address() const { return _serve_socket. local_address(); };
+        unsigned int       server_port   () const { return _serve_socket. local_port   (); };
+        
+        int timeout() const;
+        int timeout( int );
         
     protected:
         static const internal::buffsize_type BUFFER_SIZE{   1024 };
@@ -309,19 +320,6 @@ namespace show // Main classes /////////////////////////////////////////////////
         int_type overflow(
             int_type c = std::char_traits< char >::eof()
         ) override;
-        
-    public:
-        const std::string& client_address() const { return _serve_socket.remote_address(); };
-        unsigned int       client_port   () const { return _serve_socket.remote_port   (); };
-        const std::string& server_address() const { return _serve_socket. local_address(); };
-        unsigned int       server_port   () const { return _serve_socket. local_port   (); };
-        
-        connection( connection&& );
-        
-        connection& operator =( connection&& );
-        
-        int timeout() const;
-        int timeout( int );
     };
     
     class request : public std::streambuf
@@ -413,10 +411,6 @@ namespace show // Main classes /////////////////////////////////////////////////
     
     class server
     {
-    protected:
-        internal::socket listen_socket;
-        int _timeout;
-        
     public:
         server(
             const std::string& address,
@@ -434,6 +428,10 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         int timeout() const;
         int timeout( int );
+        
+    protected:
+        internal::socket listen_socket;
+        int _timeout;
     };
 }
 
@@ -471,149 +469,6 @@ namespace show // URL-encoding /////////////////////////////////////////////////
 
 namespace show // `show::internal::socket` implementation //////////////////////
 {
-    inline internal::socket::socket() :
-        _descriptor { 0 },
-        _local_port { 0 },
-        _remote_port{ 0 }
-    {}
-    
-    inline internal::socket internal::socket::make_basic()
-    {
-        socket s;
-        
-        s._descriptor = ::socket(
-            AF_INET6,
-            SOCK_STREAM,
-            ::getprotobyname( "TCP" ) -> p_proto
-        );
-        if( s._descriptor == 0 )
-            throw socket_error{
-                "failed to create socket: "
-                + std::string{ std::strerror( errno ) }
-            };
-        
-        return s;
-    }
-    
-    inline ::sockaddr_in6 internal::socket::make_sockaddr(
-        const std::string& address,
-        unsigned int port
-    )
-    {
-        ::sockaddr_in6 info;
-        std::memset( &info, 0, sizeof( info ) );
-        
-        info.sin6_family = AF_INET6;
-        info.sin6_port   = htons( port );
-        
-        if(
-               !::inet_pton( AF_INET6, address.c_str(), info.sin6_addr.s6_addr )
-            && !::inet_pton( AF_INET , address.c_str(), info.sin6_addr.s6_addr )
-        )
-            throw socket_error{ address + " is not a valid IP address" };
-        
-        return info;
-    }
-    
-    inline void internal::socket::set_info( flags< info_type > t )
-    {
-        auto _set_info = [ this ](
-            std::function< int(
-                internal::socket::fd_type,
-                ::sockaddr*,
-                ::socklen_t*
-            ) > getter,
-            std::string & address,
-            unsigned int& port,
-            const char  * name
-        ){
-            ::sockaddr_in6 info;
-            ::socklen_t info_len = sizeof( info );
-            char address_buffer[ INET6_ADDRSTRLEN ];
-            
-            if(
-                getter(
-                    this -> _descriptor,
-                    reinterpret_cast< sockaddr* >( &info ),
-                    &info_len
-                ) == -1
-                || (
-                    // Report IPv4-compatible addresses as IPv4, fail over to
-                    // IPv6
-                    ::inet_ntop(
-                        AF_INET,
-                        &info.sin6_addr,
-                        address_buffer,
-                        info_len
-                    ) ==  NULL
-                    && ::inet_ntop(
-                        AF_INET6,
-                        &info.sin6_addr,
-                        address_buffer,
-                        info_len
-                    ) ==  NULL
-                )
-            )
-                throw socket_error{
-                    "could not get "
-                    + std::string{ name }
-                    + " information from socket: "
-                    + std::string{ std::strerror( errno ) }
-                };
-            
-            address = address_buffer;
-            port    = ntohs( info.sin6_port );
-        };
-        
-        if( t & info_type::LOCAL )
-            _set_info( ::getsockname,  _local_address,  _local_port,  "local" );
-        if( t & info_type::REMOTE )
-            _set_info( ::getpeername, _remote_address, _remote_port, "remote" );
-    }
-    
-    inline void internal::socket::set_reuse()
-    {
-        // Certain POSIX implementations don't support OR-ing option names
-        // together
-        set_sockopt< int >( SO_REUSEADDR, 1, "address reuse" );
-        set_sockopt< int >( SO_REUSEPORT, 1, "port reuse"    );
-    }
-    
-    inline void internal::socket::set_nonblocking()
-    {
-        // Because we want non-blocking behavior on 0-second timeouts, all
-        // sockets are set to `O_NONBLOCK` even though `pselect()` is used.
-        ::fcntl(
-            _descriptor,
-            F_SETFL,
-            ::fcntl( _descriptor, F_GETFL, 0 ) | O_NONBLOCK
-        );
-    }
-    
-    template< typename T > void internal::socket::set_sockopt(
-        int optname,
-        T   value,
-        const std::string& description
-    )
-    {
-        auto value_ptr  = &value;
-        auto value_size = sizeof( T );
-        
-        if( ::setsockopt(
-            _descriptor,
-            SOL_SOCKET,
-            optname,
-            value_ptr,
-            value_size
-        ) == -1 )
-            throw socket_error{
-                "failed to set socket "
-                + description
-                + ": "
-                + std::string{ std::strerror( errno ) }
-            };
-    }
-    
     inline internal::socket::socket( socket&& o ) :
         _descriptor    {            o._descriptor       },
         _local_address { std::move( o._local_address  ) },
@@ -805,11 +660,217 @@ namespace show // `show::internal::socket` implementation //////////////////////
         else
             return wait_for_type::WRITE;
     }
+    
+    inline internal::socket::socket() :
+        _descriptor { 0 },
+        _local_port { 0 },
+        _remote_port{ 0 }
+    {}
+    
+    inline internal::socket internal::socket::make_basic()
+    {
+        socket s;
+        
+        s._descriptor = ::socket(
+            AF_INET6,
+            SOCK_STREAM,
+            ::getprotobyname( "TCP" ) -> p_proto
+        );
+        if( s._descriptor == 0 )
+            throw socket_error{
+                "failed to create socket: "
+                + std::string{ std::strerror( errno ) }
+            };
+        
+        return s;
+    }
+    
+    inline ::sockaddr_in6 internal::socket::make_sockaddr(
+        const std::string& address,
+        unsigned int port
+    )
+    {
+        ::sockaddr_in6 info;
+        std::memset( &info, 0, sizeof( info ) );
+        
+        info.sin6_family = AF_INET6;
+        info.sin6_port   = htons( port );
+        
+        if(
+               !::inet_pton( AF_INET6, address.c_str(), info.sin6_addr.s6_addr )
+            && !::inet_pton( AF_INET , address.c_str(), info.sin6_addr.s6_addr )
+        )
+            throw socket_error{ address + " is not a valid IP address" };
+        
+        return info;
+    }
+    
+    inline void internal::socket::set_info( flags< info_type > t )
+    {
+        auto _set_info = [ this ](
+            std::function< int(
+                internal::socket::fd_type,
+                ::sockaddr*,
+                ::socklen_t*
+            ) > getter,
+            std::string & address,
+            unsigned int& port,
+            const char  * name
+        ){
+            ::sockaddr_in6 info;
+            ::socklen_t info_len = sizeof( info );
+            char address_buffer[ INET6_ADDRSTRLEN ];
+            
+            if(
+                getter(
+                    this -> _descriptor,
+                    reinterpret_cast< sockaddr* >( &info ),
+                    &info_len
+                ) == -1
+                || (
+                    // Report IPv4-compatible addresses as IPv4, fail over to
+                    // IPv6
+                    ::inet_ntop(
+                        AF_INET,
+                        &info.sin6_addr,
+                        address_buffer,
+                        info_len
+                    ) ==  NULL
+                    && ::inet_ntop(
+                        AF_INET6,
+                        &info.sin6_addr,
+                        address_buffer,
+                        info_len
+                    ) ==  NULL
+                )
+            )
+                throw socket_error{
+                    "could not get "
+                    + std::string{ name }
+                    + " information from socket: "
+                    + std::string{ std::strerror( errno ) }
+                };
+            
+            address = address_buffer;
+            port    = ntohs( info.sin6_port );
+        };
+        
+        if( t & info_type::LOCAL )
+            _set_info( ::getsockname,  _local_address,  _local_port,  "local" );
+        if( t & info_type::REMOTE )
+            _set_info( ::getpeername, _remote_address, _remote_port, "remote" );
+    }
+    
+    inline void internal::socket::set_reuse()
+    {
+        // Certain POSIX implementations don't support OR-ing option names
+        // together
+        set_sockopt< int >( SO_REUSEADDR, 1, "address reuse" );
+        set_sockopt< int >( SO_REUSEPORT, 1, "port reuse"    );
+    }
+    
+    inline void internal::socket::set_nonblocking()
+    {
+        // Because we want non-blocking behavior on 0-second timeouts, all
+        // sockets are set to `O_NONBLOCK` even though `pselect()` is used.
+        ::fcntl(
+            _descriptor,
+            F_SETFL,
+            ::fcntl( _descriptor, F_GETFL, 0 ) | O_NONBLOCK
+        );
+    }
+    
+    template< typename T > void internal::socket::set_sockopt(
+        int optname,
+        T   value,
+        const std::string& description
+    )
+    {
+        auto value_ptr  = &value;
+        auto value_size = sizeof( T );
+        
+        if( ::setsockopt(
+            _descriptor,
+            SOL_SOCKET,
+            optname,
+            value_ptr,
+            value_size
+        ) == -1 )
+            throw socket_error{
+                "failed to set socket "
+                + description
+                + ": "
+                + std::string{ std::strerror( errno ) }
+            };
+    }
 }
 
 
 namespace show // `show::connection` implementation ////////////////////////////
 {
+    inline connection::connection( connection&& o ) :
+        _serve_socket  { std::move( o._serve_socket   ) },
+        _timeout       { std::move( o._timeout        ) },
+        get_buffer     { std::move( o.get_buffer      ) },
+        put_buffer     { std::move( o.put_buffer      ) }
+    {
+        setg(
+            o.eback(),
+            o. gptr(),
+            o.egptr()
+        );
+        setp(
+            o.pbase(),
+            o.epptr()
+        );
+    }
+    
+    inline connection& connection::operator =( connection&& o )
+    {
+        std::swap( _serve_socket  , o._serve_socket   );
+        std::swap( get_buffer     , o.get_buffer      );
+        std::swap( put_buffer     , o.put_buffer      );
+        std::swap( _timeout       , o._timeout        );
+        
+        auto eback_temp = eback();
+        auto  gptr_temp =  gptr();
+        auto egptr_temp = egptr();
+        setg(
+            o.eback(),
+            o. gptr(),
+            o.egptr()
+        );
+        o.setg(
+            eback_temp,
+             gptr_temp,
+            egptr_temp
+        );
+        
+        auto pbase_temp = pbase();
+        auto epptr_temp = epptr();
+        setp(
+            o.pbase(),
+            o.epptr()
+        );
+        o.setp(
+            pbase_temp,
+            epptr_temp
+        );
+        
+        return *this;
+    }
+    
+    inline int connection::timeout() const
+    {
+        return _timeout;
+    }
+    
+    inline int connection::timeout( int t )
+    {
+        _timeout = t;
+        return _timeout;
+    }
+    
     inline connection::connection(
         internal::socket&& serve_socket,
         int                timeout
@@ -1072,109 +1133,11 @@ namespace show // `show::connection` implementation ////////////////////////////
         else
             return traits_type::to_int_type( static_cast< char >( ASCII_ACK ) );
     }
-    
-    inline connection::connection( connection&& o ) :
-        _serve_socket  { std::move( o._serve_socket   ) },
-        _timeout       { std::move( o._timeout        ) },
-        get_buffer     { std::move( o.get_buffer      ) },
-        put_buffer     { std::move( o.put_buffer      ) }
-    {
-        setg(
-            o.eback(),
-            o. gptr(),
-            o.egptr()
-        );
-        setp(
-            o.pbase(),
-            o.epptr()
-        );
-    }
-    
-    inline connection& connection::operator =( connection&& o )
-    {
-        std::swap( _serve_socket  , o._serve_socket   );
-        std::swap( get_buffer     , o.get_buffer      );
-        std::swap( put_buffer     , o.put_buffer      );
-        std::swap( _timeout       , o._timeout        );
-        
-        auto eback_temp = eback();
-        auto  gptr_temp =  gptr();
-        auto egptr_temp = egptr();
-        setg(
-            o.eback(),
-            o. gptr(),
-            o.egptr()
-        );
-        o.setg(
-            eback_temp,
-             gptr_temp,
-            egptr_temp
-        );
-        
-        auto pbase_temp = pbase();
-        auto epptr_temp = epptr();
-        setp(
-            o.pbase(),
-            o.epptr()
-        );
-        o.setp(
-            pbase_temp,
-            epptr_temp
-        );
-        
-        return *this;
-    }
-    
-    inline int connection::timeout() const
-    {
-        return _timeout;
-    }
-    
-    inline int connection::timeout( int t )
-    {
-        _timeout = t;
-        return _timeout;
-    }
 }
 
 
 namespace show // `show::request` implementation ///////////////////////////////
 {
-    inline request::request( request&& o ) :
-        _connection            {            o._connection                },
-        _protocol              { std::move( o._protocol                ) },
-        _protocol_string       { std::move( o._protocol_string         ) },
-        _method                { std::move( o._method                  ) },
-        _path                  { std::move( o._path                    ) },
-        _query_args            { std::move( o._query_args              ) },
-        _headers               { std::move( o._headers                 ) },
-        _unknown_content_length{ std::move( o._unknown_content_length  ) },
-        _content_length        { std::move( o._content_length          ) },
-        read_content           { std::move( o.read_content             ) }
-    {
-        // `request` can use neither an implicit nor explicit default move
-        // constructor, as that relies on the `std::streambuf` implementation to
-        // be move-friendly, which unfortunately it doesn't seem to be for some
-        // of the major compilers.
-        o._connection = nullptr;
-    }
-    
-    inline request& request::operator =( request&& o )
-    {
-        std::swap( _connection            , o._connection              );
-        std::swap( read_content           , o.read_content             );
-        std::swap( _protocol              , o._protocol                );
-        std::swap( _protocol_string       , o._protocol_string         );
-        std::swap( _method                , o._method                  );
-        std::swap( _path                  , o._path                    );
-        std::swap( _query_args            , o._query_args              );
-        std::swap( _headers               , o._headers                 );
-        std::swap( _unknown_content_length, o._unknown_content_length  );
-        std::swap( _content_length        , o._content_length          );
-        
-        return *this;
-    }
-    
     inline request::request( class connection& c ) :
         _connection { &c },
         read_content{ 0  }
@@ -1504,6 +1467,41 @@ namespace show // `show::request` implementation ///////////////////////////////
         }
         else
             _unknown_content_length = YES;
+    }
+    
+    inline request::request( request&& o ) :
+        _connection            {            o._connection                },
+        _protocol              { std::move( o._protocol                ) },
+        _protocol_string       { std::move( o._protocol_string         ) },
+        _method                { std::move( o._method                  ) },
+        _path                  { std::move( o._path                    ) },
+        _query_args            { std::move( o._query_args              ) },
+        _headers               { std::move( o._headers                 ) },
+        _unknown_content_length{ std::move( o._unknown_content_length  ) },
+        _content_length        { std::move( o._content_length          ) },
+        read_content           { std::move( o.read_content             ) }
+    {
+        // `request` can use neither an implicit nor explicit default move
+        // constructor, as that relies on the `std::streambuf` implementation to
+        // be move-friendly, which unfortunately it doesn't seem to be for some
+        // of the major compilers.
+        o._connection = nullptr;
+    }
+    
+    inline request& request::operator =( request&& o )
+    {
+        std::swap( _connection            , o._connection              );
+        std::swap( read_content           , o.read_content             );
+        std::swap( _protocol              , o._protocol                );
+        std::swap( _protocol_string       , o._protocol_string         );
+        std::swap( _method                , o._method                  );
+        std::swap( _path                  , o._path                    );
+        std::swap( _query_args            , o._query_args              );
+        std::swap( _headers               , o._headers                 );
+        std::swap( _unknown_content_length, o._unknown_content_length  );
+        std::swap( _content_length        , o._content_length          );
+        
+        return *this;
     }
     
     inline bool request::eof() const
