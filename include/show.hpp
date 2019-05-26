@@ -471,9 +471,9 @@ namespace show // `show::internal::socket` implementation //////////////////////
     inline internal::socket::socket( socket&& o ) :
         _descriptor    {            o._descriptor       },
         _local_address { std::move( o._local_address  ) },
-        _local_port    { std::move( o._local_port     ) },
+        _local_port    {            o._local_port       },
         _remote_address{ std::move( o._remote_address ) },
-        _remote_port   { std::move( o._remote_port    ) }
+        _remote_port   {            o._remote_port      }
     {
         o._descriptor = 0;
     }
@@ -809,7 +809,7 @@ namespace show // `show::connection` implementation ////////////////////////////
 {
     inline connection::connection( connection&& o ) :
         _serve_socket { std::move( o._serve_socket ) },
-        _timeout      { std::move( o._timeout      ) },
+        _timeout      {            o._timeout        },
         _get_buffer   { std::move( o._get_buffer   ) },
         _put_buffer   { std::move( o._put_buffer   ) }
     {
@@ -1470,15 +1470,15 @@ namespace show // `show::request` implementation ///////////////////////////////
     
     inline request::request( request&& o ) :
         _connection            {            o._connection                },
-        _protocol              { std::move( o._protocol                ) },
+        _protocol              {            o._protocol                  },
         _protocol_string       { std::move( o._protocol_string         ) },
         _method                { std::move( o._method                  ) },
         _path                  { std::move( o._path                    ) },
         _query_args            { std::move( o._query_args              ) },
         _headers               { std::move( o._headers                 ) },
-        _unknown_content_length{ std::move( o._unknown_content_length  ) },
-        _content_length        { std::move( o._content_length          ) },
-        _read_content          { std::move( o._read_content            ) }
+        _unknown_content_length{            o._unknown_content_length    },
+        _content_length        {            o._content_length            },
+        _read_content          {            o._read_content              }
     {
         // `request` can use neither an implicit nor explicit default move
         // constructor, as that relies on the `std::streambuf` implementation to
@@ -1741,7 +1741,7 @@ namespace show // `show::server` implementation ////////////////////////////////
     {}
     
     inline server::server( server&& o ) :
-        _timeout      { o._timeout                    },
+        _timeout      {            o._timeout         },
         _listen_socket{ std::move( o._listen_socket ) }
     {}
     
