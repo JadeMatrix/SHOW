@@ -18,6 +18,10 @@ Response
     .. cpp:function:: response( connection&, protocol, const response_code&, const headers_t& )
         
         Constructs a new response to the client who made a connection.  The protocols, response code, and headers are immediately buffered and cannot be changed after the response is created, so they have to be passed to the constructor.
+        
+        .. seealso::
+            
+            * *show/constants.hpp* for some useful constants representing standard response codes
     
     .. cpp:function:: ~response()
         

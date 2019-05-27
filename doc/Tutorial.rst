@@ -147,6 +147,10 @@ Then, set the `HTTP status code <https://en.wikipedia.org/wiki/List_of_HTTP_stat
         "OK"
     };
 
+.. seealso::
+    
+    * *show/constants.hpp* for some useful constants representing standard response codes
+
 Creating a response object requires the headers and response code to have been decided already, as they are marshalled (serialized) and buffered for sending as soon as the object is created. A response object also needs to know which request it is in response to. While there's nothing preventing you from creating multiple responses to a single request this way, most of the time that will break your application.
 
 Create a response like this::

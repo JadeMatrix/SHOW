@@ -97,6 +97,7 @@ Request
         .. seealso::
             
             * `List of common HTTP methods on Wikipedia <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol#Request_methods>`_ for descriptions of the methods
+            * *show/constants.hpp* for some useful constants representing standard request methods
     
     .. cpp:function:: const std::vector< std::string >& path() const
         
