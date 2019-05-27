@@ -117,9 +117,7 @@ Another thing to keep in mind is that HTTP/1.1 — and HTTP/1.0 with an extensio
 .. seealso::
     
     * :cpp:class:`std::streambuf` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_streambuf>`_
-    
     * :cpp:class:`std::istream` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_istream>`_
-    
     * :cpp:var:`std::cin` on `cppreference.com <http://en.cppreference.com/w/cpp/io/cin>`_
 
 Sending Responses

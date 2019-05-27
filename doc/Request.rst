@@ -11,7 +11,6 @@ Request
     .. seealso::
         
         * :cpp:type:`std::streambuf` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_streambuf>`_
-        
         * :cpp:type:`std::istream` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_istream>`_
     
     .. cpp:enum:: content_length_flag
@@ -51,7 +50,6 @@ Request
         .. seealso::
             
             * :cpp:class:`connection_timeout`
-            
             * :cpp:class:`client_disconnected`
     
     .. cpp:function:: request( request&& )

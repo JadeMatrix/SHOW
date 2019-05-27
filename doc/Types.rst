@@ -64,7 +64,6 @@ Support Types
     .. seealso::
         
         * :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
-        
         * :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
 .. cpp:class:: headers_type
@@ -86,7 +85,6 @@ Support Types
     .. seealso::
         
         * :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
-        
         * :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
 .. cpp:enum-class:: url_flags

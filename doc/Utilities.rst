@@ -18,7 +18,6 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
     .. seealso::
         
         * :cpp:var:`base64::dict_standard`
-        
         * :cpp:var:`base64::dict_urlsafe`
 
 .. cpp:function:: std::string base64::decode( const std::string& o, const base64::dict_type& dict = base64::dict_standard, show::internal::flags< base64::flags > f = {} )
@@ -30,7 +29,6 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
     .. seealso::
         
         * :cpp:var:`base64::dict_standard`
-        
         * :cpp:var:`base64::dict_urlsafe`
 
 .. cpp:class:: base64::decode_error : public std::runtime_error

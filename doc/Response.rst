@@ -13,7 +13,6 @@ Response
     .. seealso::
         
         * :cpp:type:`std::streambuf` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_streambuf>`_
-        
         * :cpp:type:`std::ostream` on `cppreference.com <http://en.cppreference.com/w/cpp/io/basic_ostream>`_
     
     .. cpp:function:: response( connection&, protocol, const response_code&, const headers_t& )
