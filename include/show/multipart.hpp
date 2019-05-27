@@ -7,7 +7,7 @@
 
 #include <functional>   // std::function<>, std::reference_wrapper<>
 #include <streambuf>
-#include <utility>      // std::forward<>()
+#include <utility>      // std::move<>()
 #include <vector>
 
 
@@ -83,10 +83,7 @@ namespace show // `show::multipart` class //////////////////////////////////////
             iterator( multipart&, bool end = false );
         };
         
-        template< class String > multipart(
-            std::streambuf&,
-            String&& boundary
-        );
+        multipart( std::streambuf&, std::string boundary );
         
         constexpr const std::streambuf&   buffer() const { return _buffer  ; }
         constexpr const std::string   & boundary() const { return _boundary; }
@@ -482,13 +479,10 @@ namespace show // `show::multipart::iterator` implementation ///////////////////
 
 namespace show // `show::multipart` implementation /////////////////////////////
 {
-    template< class String > multipart::multipart(
-        std::streambuf& b,
-        String&& boundary
-    ) :
-        _buffer  { b                                  },
-        _boundary{ std::forward< String >( boundary ) },
-        _state   { state::READY                       }
+    inline multipart::multipart( std::streambuf& b, std::string boundary ) :
+        _buffer  { b                     },
+        _boundary{ std::move( boundary ) },
+        _state   { state::READY          }
     {
         if( _boundary.size() < 1 )
             throw std::invalid_argument{ "empty string as multipart boundary" };
