@@ -21,6 +21,45 @@ STRING( REPLACE "${PROJECT_NAME}" "show"
 )
 
 
+IF(
+       "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"
+    OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"
+    OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"
+    OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel"
+)
+    SET( SHOW_COMPILE_OPTIONS
+        "-Werror"
+        "-Wall"
+        "-Wextra"
+        "-Wshadow"
+        "-Wnon-virtual-dtor"
+        "-Wold-style-cast"
+        "-Wcast-align"
+        "-Wunused"
+        "-Woverloaded-virtual"
+        "-Wpedantic"
+        "-Wconversion"
+        "-Wsign-conversion"
+        "-Wnull-dereference"
+        "-Wdouble-promotion"
+        "-Wformat=2"
+    )
+    IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        LIST( APPEND SHOW_COMPILE_OPTIONS
+            "-Wduplicated-cond"
+            "-Wduplicated-branches"
+            "-Wlogical-op"
+            "-Wuseless-cast"
+        )
+    ENDIF()
+ELSEIF( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" )
+    SET( SHOW_COMPILE_OPTIONS
+        "/WX"
+        "/Wall"
+    )
+ENDIF()
+
+
 IF( SHOW_INSTALL_HEADERONLY )
     INCLUDE( SHOWConfigureHeaderOnly )
 ELSE()

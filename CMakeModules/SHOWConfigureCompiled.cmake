@@ -14,6 +14,9 @@ FOREACH( TYPE shared static )
             "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>"
             "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
     )
+    TARGET_COMPILE_OPTIONS( show-${TYPE}
+        PRIVATE ${SHOW_COMPILE_OPTIONS}
+    )
     
     GENERATE_EXPORT_HEADER(
         show-${TYPE}
