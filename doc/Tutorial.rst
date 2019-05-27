@@ -9,8 +9,29 @@ This shows the basic usage of SHOW; see the `examples <https://github.com/JadeMa
 Including & Compiling
 =====================
 
-The preferred method of including SHOW is via the `CMake <https://cmake.org/>`_ package.  Once installed somewhere CMake can find it, import and use SHOW in your *CMakeLists.txt* with::
+SHOW is available in three forms: orignal header-only, shared library, and static library.  If you want to get going fast, SHOW's webserver functionality is entirely contained in a single header file — all you need is *show.hpp* in this project's *include/* directory.  For GCC and Clang, you can either add/link `show.hpp` to one of your standard include search paths, or use the ``-I`` flag to tell the compiler where too find the header::
     
+    clang++ -I "SHOW/include/" ...
+
+Then all you have to do then is include SHOW using ``#include <show.hpp>``.  With either compiler you'll also need to specify C++11 support with ``-std=c++11``.
+
+However, the preferred method of including SHOW is via `CMake <https://cmake.org/>`_, which offers a powerful framework for configuring your project's build.  To install SHOW with CMake (assuming you have just cloned it to a directory called *SHOW/*)::
+    
+    mkdir SHOW-build SHOW-install
+    cd SHOW-build
+    cmake -D CMAKE_INSTALL_PREFIX=../SHOW-install ../SHOW
+    make install
+
+By default, if you build & install using CMake both the shared & static libraries will be created.  If you want CMake integration but also want SHOW to be header-only, run ``cmake`` with the ``-D SHOW_INSTALL_HEADERONLY=TRUE`` argument.
+
+To get CMake to see where SHOW was installed, either:
+
+    * pass ``-D CMAKE_PREFIX_PATH=<your install directory>`` when configuring your project, or
+    * leave off the ``-D CMAKE_INSTALL_PREFIX=...`` argument when building SHOW (which will install it system-wide).
+
+Once installed somewhere CMake can find it, import and use SHOW in your *CMakeLists.txt* with::
+    
+    # Use the `show-shared` component if you want to link against that
     FIND_PACKAGE( SHOW REQUIRED COMPONENTS show )
     ADD_EXECUTABLE( my_server my_server.cpp )
     TARGET_LINK_LIBRARIES( my_server PRIVATE SHOW::show )
@@ -20,12 +41,6 @@ You should also switch your compiler to C++11 mode with::
     SET( CMAKE_CXX_STANDARD 11 )
     SET( CMAKE_CXX_STANDARD_REQUIRED ON )
     SET( CMAKE_CXX_EXTENSIONS OFF )
-
-For GCC and Clang, you can either link `show.hpp` to one of your standard include search paths, or use the ``-I`` flag to tell the compiler where too find the header::
-    
-    clang++ -I "SHOW/src/" ...
-
-SHOW is entirely contained in a single header file, you have to do then is include SHOW using ``#include <show.hpp>``.  With either compiler you'll also need to specify C++11 support with ``-std=c++11``.
 
 Creating a Server
 =================

@@ -130,6 +130,9 @@ namespace show // Utilities ////////////////////////////////////////////////////
 }
 
 
+// @SHOW_CPP_BEGIN
+
+
 namespace show // `show::multipart::segment` implementation ////////////////////
 {
     inline std::streamsize multipart::segment::showmanyc()
@@ -646,6 +649,9 @@ namespace show // Utility functions implementation /////////////////////////////
         return std::streambuf::traits_type::eof();
     }
 }
+
+
+// @SHOW_CPP_END
 
 
 #endif

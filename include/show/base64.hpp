@@ -70,6 +70,9 @@ namespace show { namespace base64 // Declarations //////////////////////////////
 } }
 
 
+// @SHOW_CPP_BEGIN
+
+
 namespace show { namespace base64 // Definitions ///////////////////////////////
 {
     inline std::string encode(
@@ -237,6 +240,9 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
         return decoded;
     }
 } }
+
+
+// @SHOW_CPP_END
 
 
 #endif

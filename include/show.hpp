@@ -465,6 +465,9 @@ namespace show // URL-encoding /////////////////////////////////////////////////
 }
 
 
+// @SHOW_CPP_BEGIN
+
+
 namespace show // `show::internal::socket` implementation //////////////////////
 {
     inline internal::socket::socket( socket&& o ) :
@@ -777,7 +780,14 @@ namespace show // `show::internal::socket` implementation //////////////////////
             ::fcntl( _descriptor, F_GETFL, 0 ) | O_NONBLOCK
         );
     }
-    
+}
+
+
+// @SHOW_CPP_END
+
+
+namespace show // `show::internal::socket` templates implementation ////////////
+{
     template< typename T > void internal::socket::set_sockopt(
         int optname,
         T   value,
@@ -802,6 +812,9 @@ namespace show // `show::internal::socket` implementation //////////////////////
             };
     }
 }
+
+
+// @SHOW_CPP_BEGIN
 
 
 namespace show // `show::connection` implementation ////////////////////////////
@@ -1845,5 +1858,7 @@ namespace show // URL-encoding implementations /////////////////////////////////
     }
 }
 
+
+// @SHOW_CPP_END
 
 #endif

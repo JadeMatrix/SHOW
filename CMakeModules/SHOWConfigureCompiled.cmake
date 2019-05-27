@@ -1,0 +1,84 @@
+INCLUDE( GenerateExportHeader )
+
+SET( EXPORT_FILENAME "${CMAKE_CURRENT_BINARY_DIR}/export.hpp" )
+
+
+FOREACH( TYPE shared static )
+    STRING( TOUPPER "${TYPE}" TYPE_UPPER )
+    
+    ADD_LIBRARY( show-${TYPE} ${TYPE_UPPER} )
+    SET_TARGET_PROPERTIES( show-${TYPE} PROPERTIES OUTPUT_NAME "show" )
+    TARGET_INCLUDE_DIRECTORIES(
+        show-${TYPE}
+        INTERFACE
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include/>"
+            "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+    )
+    
+    GENERATE_EXPORT_HEADER(
+        show-${TYPE}
+        EXPORT_FILE_NAME "${EXPORT_FILENAME}"
+        INCLUDE_GUARD_NAME "SHOW_EXPORT_HPP"
+        EXPORT_MACRO_NAME "SHOW_EXPORT"
+        DEPRECATED_MACRO_NAME "SHOW_DEPRECATED"
+        NO_EXPORT_MACRO_NAME "SHOW_NOEXPORT"
+    )
+ENDFOREACH()
+
+
+SET( SPLIT_SCRIPT "${PROJECT_SOURCE_DIR}/CMakeModules/SHOWSplitHeader.cmake" )
+SET( SPLIT_SOURCES )
+SET( SPLIT_HEADERS )
+
+FOREACH( NAME
+    "show"
+    "show/base64"
+    "show/constants"
+    "show/multipart"
+)
+    SET(   ORIG_FILENAME "${PROJECT_SOURCE_DIR}/include/${NAME}.hpp"       )
+    SET( HEADER_FILENAME "${CMAKE_CURRENT_BINARY_DIR}/include/${NAME}.hpp" )
+    SET( SOURCE_FILENAME "${CMAKE_CURRENT_BINARY_DIR}/src/${NAME}.cpp"     )
+    
+    ADD_CUSTOM_COMMAND(
+        OUTPUT "${HEADER_FILENAME}" "${SOURCE_FILENAME}"
+        COMMAND "${CMAKE_COMMAND}"
+            -D   "ORIG_FILENAME=${ORIG_FILENAME}"
+            -D "HEADER_FILENAME=${HEADER_FILENAME}"
+            -D "SOURCE_FILENAME=${SOURCE_FILENAME}"
+            -D "EXPORT_FILENAME=${EXPORT_FILENAME}"
+            -P "${SPLIT_SCRIPT}"
+        MAIN_DEPENDENCY "${ORIG_FILENAME}"
+        DEPENDS "${SPLIT_SCRIPT}"
+    )
+    
+    LIST( APPEND SPLIT_SOURCES "${SOURCE_FILENAME}" )
+    LIST( APPEND SPLIT_HEADERS "${HEADER_FILENAME}" )
+ENDFOREACH()
+
+
+# Synchronize source generation so we don't delete & write files during
+# compilation
+ADD_CUSTOM_TARGET( split_sources DEPENDS ${SPLIT_HEADERS} ${SPLIT_SOURCES} )
+
+
+FOREACH( TYPE shared static )
+    TARGET_SOURCES( show-${TYPE} PRIVATE ${SPLIT_SOURCES} )
+    ADD_DEPENDENCIES( show-${TYPE} split_sources )
+    
+    INSTALL(
+        TARGETS show-${TYPE}
+        EXPORT "show-config"
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    )
+    INSTALL(
+        DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    )
+ENDFOREACH()
+
+ADD_LIBRARY( show INTERFACE )
+TARGET_LINK_LIBRARIES( show INTERFACE show-static )
+INSTALL(TARGETS show EXPORT "show-config")
