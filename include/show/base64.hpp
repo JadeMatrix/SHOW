@@ -33,7 +33,7 @@ namespace show { namespace base64 // Declarations //////////////////////////////
             );
         }
         template<>
-        constexpr std::array< char, 64 > fill_dict< 64 >( const char* str )
+        constexpr std::array< char, 64 > fill_dict< 64 >( const char* )
         {
             return {};
         }

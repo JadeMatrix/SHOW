@@ -795,7 +795,7 @@ namespace show // `show::internal::socket` templates implementation ////////////
     )
     {
         auto value_ptr  = &value;
-        auto value_size = sizeof( T );
+        auto value_size = static_cast< ::socklen_t >( sizeof( T ) );
         
         if( ::setsockopt(
             _descriptor,
@@ -1742,8 +1742,8 @@ namespace show // `show::server` implementation ////////////////////////////////
     {}
     
     inline server::server( server&& o ) :
-        _timeout      {            o._timeout         },
-        _listen_socket{ std::move( o._listen_socket ) }
+        _listen_socket{ std::move( o._listen_socket ) },
+        _timeout      {            o._timeout         }
     {}
     
     inline server& server::operator =( server&& o )
