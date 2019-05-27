@@ -148,30 +148,30 @@ SUITE( ShowServerTests )
     
     TEST( FailInUsePort )
     {
-        auto test_socket = socket(
+        auto test_socket = ::socket(
             AF_INET6,
             SOCK_STREAM,
-            getprotobyname( "TCP" ) -> p_proto
+            ::getprotobyname( "TCP" ) -> p_proto
         );
         REQUIRE CHECK( test_socket != 0 );
         
-        sockaddr_in6 socket_address;
-        memset( &socket_address, 0, sizeof( socket_address ) );
+        ::sockaddr_in6 socket_address;
+        std::memset( &socket_address, 0, sizeof( socket_address ) );
         socket_address.sin6_family = AF_INET6;
         
         REQUIRE CHECK(
-            bind(
+            ::bind(
                 test_socket,
-                reinterpret_cast< sockaddr* >( &socket_address ),
+                reinterpret_cast< ::sockaddr* >( &socket_address ),
                 sizeof( socket_address )
             ) == 0
         );
         
-        socklen_t got_length = sizeof( socket_address );
+        ::socklen_t got_length = sizeof( socket_address );
         REQUIRE CHECK(
-            getsockname(
+            ::getsockname(
                 test_socket,
-                reinterpret_cast< sockaddr* >( &socket_address ),
+                reinterpret_cast< ::sockaddr* >( &socket_address ),
                 &got_length
             ) == 0
         );

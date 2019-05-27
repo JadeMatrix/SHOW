@@ -493,7 +493,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         
         if( ::bind(
             s._descriptor,
-            reinterpret_cast< sockaddr* >( &info ),
+            reinterpret_cast< ::sockaddr* >( &info ),
             sizeof( info )
         ) == -1 )
             throw socket_error{
@@ -525,7 +525,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         
         if( ::bind(
             s._descriptor,
-            reinterpret_cast< sockaddr* >( &info ),
+            reinterpret_cast< ::sockaddr* >( &info ),
             sizeof( info )
         ) == -1 )
             throw socket_error{
@@ -537,7 +537,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         
         if( ::connect(
             s._descriptor,
-            reinterpret_cast< sockaddr* >( &info ),
+            reinterpret_cast< ::sockaddr* >( &info ),
             sizeof( info )
         ) < 0 )
             throw socket_error{
@@ -560,7 +560,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         
         s._descriptor = ::accept(
             _descriptor,
-            reinterpret_cast< sockaddr* >( &info ),
+            reinterpret_cast< ::sockaddr* >( &info ),
             &info_len
         );
         
@@ -629,7 +629,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
             FD_SET( _descriptor, &write_descriptors );
         }
         
-        auto select_result = pselect(
+        auto select_result = ::pselect(
             _descriptor + 1,
             r ? &read_descriptors  : NULL,
             w ? &write_descriptors : NULL,
@@ -725,7 +725,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
             if(
                 getter(
                     this -> _descriptor,
-                    reinterpret_cast< sockaddr* >( &info ),
+                    reinterpret_cast< ::sockaddr* >( &info ),
                     &info_len
                 ) == -1
                 || (
@@ -909,7 +909,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                     "response send"
                 );
             
-            auto bytes_sent = static_cast< internal::buffsize_type >( send(
+            auto bytes_sent = static_cast< internal::buffsize_type >( ::send(
                 _serve_socket.descriptor(),
                 pbase() + send_offset,
                 static_cast< std::size_t >( to_send ),
@@ -962,7 +962,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                         "request read"
                     );
                 
-                bytes_read = read(
+                bytes_read = ::read(
                     _serve_socket.descriptor(),
                     eback(),
                     buffer_size
