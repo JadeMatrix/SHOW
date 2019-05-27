@@ -4,8 +4,14 @@
 #include <curl/curl.h>
 
 #include <chrono>
+#include <cstring>      // std::memset
 #include <string>
 #include <thread>
+
+#include <netdb.h>      // ::getprotobyname
+#include <netinet/in.h> // ::sockaddr_in6
+#include <sys/socket.h> // ::socket, ::bind, ::socklen_t
+#include <unistd.h>     // ::close
 
 
 SUITE( ShowServerTests )

@@ -7,8 +7,16 @@
 
 #include <functional>   // std::function<>, std::reference_wrapper<>
 #include <streambuf>
-#include <utility>      // std::move<>()
 #include <vector>
+
+
+// @SHOW_CPP_BEGIN
+
+
+#include <utility>      // std::move<>()
+
+
+// @SHOW_CPP_END
 
 
 namespace show // `show::multipart` class //////////////////////////////////////

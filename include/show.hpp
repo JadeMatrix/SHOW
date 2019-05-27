@@ -3,29 +3,39 @@
 #define SHOW_HPP
 
 
-#include <algorithm>    // std::copy
 #include <array>
-#include <cstring>
 #include <iomanip>
-#include <limits>
 #include <map>
-#include <memory>
-#include <sstream>
-#include <stack>
+#include <memory>       // std::unique_ptr
 #include <stdexcept>
 #include <streambuf>
 #include <type_traits>  // std::enable_if, std::is_enum
 #include <vector>
+
+#include <sys/socket.h> // ::socklen_t
+
+
+// @SHOW_CPP_BEGIN
+
+
+#include <cstring>      // std::memset
+#include <algorithm>    // std::copy
+#include <limits>
+#include <stack>
+#include <sstream>
 #include <utility>      // std::swap
 
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <unistd.h>
+#include <arpa/inet.h>  // ::inet_pton, ::inet_ntop
+#include <fcntl.h>      // ::fcntl
+#include <netdb.h>      // ::getprotobyname
+#include <netinet/in.h> // ::sockaddr_in6
+#include <stdio.h>      // ::read
+#include <sys/select.h> // ::pselect
+#include <sys/socket.h> // ::socket, ::bind, ::socklen_t, ::send
+#include <unistd.h>     // ::close
+
+
+// @SHOW_CPP_END
 
 
 namespace show // Constants ////////////////////////////////////////////////////
@@ -252,8 +262,6 @@ namespace show // Main classes /////////////////////////////////////////////////
         // Make an initialized socket with all basic settings applied
         static socket make_basic();
         
-        static ::sockaddr_in6 make_sockaddr( const std::string&, unsigned int );
-        
         enum class info_type { local, remote };
         
         void set_info( flags< info_type > = (
@@ -470,6 +478,11 @@ namespace show // URL-encoding /////////////////////////////////////////////////
 
 namespace show // `show::internal::socket` implementation //////////////////////
 {
+    namespace internal
+    {
+        ::sockaddr_in6 make_sockaddr( const std::string&, unsigned int );
+    }
+    
     inline internal::socket::socket( socket&& o ) :
         _descriptor    {            o._descriptor       },
         _local_address { std::move( o._local_address  ) },
@@ -489,7 +502,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         s.set_reuse();
         s.set_nonblocking();
         
-        auto info = make_sockaddr( address, port );
+        auto info = internal::make_sockaddr( address, port );
         
         if( ::bind(
             s._descriptor,
@@ -521,7 +534,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         auto s = make_basic();
         s.set_reuse();
         
-        auto info = make_sockaddr( "::", client_port );
+        auto info = internal::make_sockaddr( "::", client_port );
         
         if( ::bind(
             s._descriptor,
@@ -533,7 +546,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
                 + std::string{ std::strerror( errno ) }
             };
         
-        info = make_sockaddr( server_address, server_port );
+        info = internal::make_sockaddr( server_address, server_port );
         
         if( ::connect(
             s._descriptor,
@@ -686,26 +699,6 @@ namespace show // `show::internal::socket` implementation //////////////////////
         return s;
     }
     
-    inline ::sockaddr_in6 internal::socket::make_sockaddr(
-        const std::string& address,
-        unsigned int port
-    )
-    {
-        ::sockaddr_in6 info;
-        std::memset( &info, 0, sizeof( info ) );
-        
-        info.sin6_family = AF_INET6;
-        info.sin6_port   = htons( port );
-        
-        if(
-               !::inet_pton( AF_INET6, address.c_str(), info.sin6_addr.s6_addr )
-            && !::inet_pton( AF_INET , address.c_str(), info.sin6_addr.s6_addr )
-        )
-            throw socket_error{ address + " is not a valid IP address" };
-        
-        return info;
-    }
-    
     inline void internal::socket::set_info( flags< info_type > t )
     {
         auto _set_info = [ this ](
@@ -779,6 +772,26 @@ namespace show // `show::internal::socket` implementation //////////////////////
             F_SETFL,
             ::fcntl( _descriptor, F_GETFL, 0 ) | O_NONBLOCK
         );
+    }
+    
+    inline ::sockaddr_in6 internal::make_sockaddr(
+        const std::string& address,
+        unsigned int port
+    )
+    {
+        ::sockaddr_in6 info;
+        std::memset( &info, 0, sizeof( info ) );
+        
+        info.sin6_family = AF_INET6;
+        info.sin6_port   = htons( port );
+        
+        if(
+               !::inet_pton( AF_INET6, address.c_str(), info.sin6_addr.s6_addr )
+            && !::inet_pton( AF_INET , address.c_str(), info.sin6_addr.s6_addr )
+        )
+            throw socket_error{ address + " is not a valid IP address" };
+        
+        return info;
     }
 }
 
