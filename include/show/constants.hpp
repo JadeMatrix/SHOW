@@ -68,81 +68,84 @@ namespace show
     
     namespace code
     {
+        // These are provided in PascalCase thanks to `continue` for code 100
+        // being a reserved word
+        
         // 1xx - Informational -------------------------------------------------
         
-        static const response_code CONTINUE                       { 100, "Continue"                        };
-        static const response_code SWITCHING_PROTOCOLS            { 101, "Switching Protocols"             };
-        static const response_code PROCESSING                     { 102, "Processing"                      };
+        static const response_code Continue                     { 100, "Continue"                        };
+        static const response_code SwitchingProtocols           { 101, "Switching Protocols"             };
+        static const response_code Processing                   { 102, "Processing"                      };
         
         // 2xx - Success -------------------------------------------------------
         
-        static const response_code OK                             { 200, "OK"                              };
-        static const response_code CREATED                        { 201, "Created"                         };
-        static const response_code ACCEPTED                       { 202, "Accepted"                        };
-        static const response_code NON_AUTHORITATIVE_INFORMATION  { 203, "Non-Authoritative Information"   };
-        static const response_code NO_CONTENT                     { 204, "No Content"                      };
-        static const response_code RESET_CONTENT                  { 205, "Reset Content"                   };
-        static const response_code PARTIAL_CONTENT                { 206, "Partial Content"                 };
-        static const response_code MULTI_STATUS                   { 207, "Multi-Status"                    };
-        static const response_code ALREADY_REPORTED               { 208, "Already Reported"                };
-        static const response_code IM_USED                        { 226, "IM Used"                         };
+        static const response_code OK                           { 200, "OK"                              };
+        static const response_code Created                      { 201, "Created"                         };
+        static const response_code Accepted                     { 202, "Accepted"                        };
+        static const response_code NonAuthoritativeInformation  { 203, "Non-Authoritative Information"   };
+        static const response_code NoContent                    { 204, "No Content"                      };
+        static const response_code ResetContent                 { 205, "Reset Content"                   };
+        static const response_code PartialContent               { 206, "Partial Content"                 };
+        static const response_code MultiStatus                  { 207, "Multi-Status"                    };
+        static const response_code AlreadyReported              { 208, "Already Reported"                };
+        static const response_code IMUsed                       { 226, "IM Used"                         };
         
         // 3xx - Redirection ---------------------------------------------------
         
-        static const response_code MULTIPLE_CHOICES               { 300, "Multiple Choices"                };
-        static const response_code MOVED_PERMANENTLY              { 301, "Moved Permanently"               };
-        static const response_code FOUND                          { 302, "Found"                           };
-        static const response_code SEE_OTHER                      { 303, "See Other"                       };
-        static const response_code NOT_MODIFIED                   { 304, "Not Modified"                    };
-        static const response_code USE_PROXY                      { 305, "Use Proxy"                       };
-        static const response_code SWITCH_PROXY                   { 306, "Switch Proxy"                    };
-        static const response_code TEMPORARY_REDIRECT             { 307, "Temporary Redirect"              };
-        static const response_code PERMANENT_REDIRECT             { 308, "Permanent Redirect"              };
+        static const response_code MultipleChoices              { 300, "Multiple Choices"                };
+        static const response_code MovedPermanently             { 301, "Moved Permanently"               };
+        static const response_code Found                        { 302, "Found"                           };
+        static const response_code SeeOther                     { 303, "See Other"                       };
+        static const response_code NotModified                  { 304, "Not Modified"                    };
+        static const response_code UseProxy                     { 305, "Use Proxy"                       };
+        static const response_code SwitchProxy                  { 306, "Switch Proxy"                    };
+        static const response_code TemporaryRedirect            { 307, "Temporary Redirect"              };
+        static const response_code PermanentRedirect            { 308, "Permanent Redirect"              };
         
         // 4xx - Client Errors -------------------------------------------------
         
-        static const response_code BAD_REQUEST                    { 400, "Bad Request"                     };
-        static const response_code UNAUTHORIZED                   { 401, "Unauthorized"                    };
-        static const response_code PAYMENT_REQUIRED               { 402, "Payment Required"                };
-        static const response_code FORBIDDEN                      { 403, "Forbidden"                       };
-        static const response_code NOT_FOUND                      { 404, "Not Found"                       };
-        static const response_code METHOD_NOT_ALLOWED             { 405, "Method Not Allowed"              };
-        static const response_code NOT_ACCEPTABLE                 { 406, "Not Acceptable"                  };
-        static const response_code PROXY_AUTHENTICATION_REQUIRED  { 407, "Proxy Authentication Required"   };
-        static const response_code REQUEST_TIMEOUT                { 408, "Request Timeout"                 };
-        static const response_code CONFLICT                       { 409, "Conflict"                        };
-        static const response_code GONE                           { 410, "Gone"                            };
-        static const response_code LENGTH_REQUIRED                { 411, "Length Required"                 };
-        static const response_code PRECONDITION_FAILED            { 412, "Precondition Failed"             };
-        static const response_code PAYLOAD_TOO_LARGE              { 413, "Payload Too Large"               };
-        static const response_code URI_TOO_LONG                   { 414, "URI Too Long"                    };
-        static const response_code UNSUPPORTED_MEDIA_TYPE         { 415, "Unsupported Media Type"          };
-        static const response_code RANGE_NOT_SATISFIABLE          { 416, "Range Not Satisfiable"           };
-        static const response_code EXPECTATION_FAILED             { 417, "Expectation Failed"              };
-        static const response_code IM_A_TEAPOT                    { 418, "I'm a teapot"                    };
-        static const response_code MISDIRECTED_REQUEST            { 421, "Misdirected Request"             };
-        static const response_code UNPROCESSABLE_ENTITY           { 422, "Unprocessable Entity"            };
-        static const response_code LOCKED                         { 423, "Locked"                          };
-        static const response_code FAILED_DEPENDENCY              { 424, "Failed Dependency"               };
-        static const response_code UPGRADE_REQUIRED               { 426, "Upgrade Required"                };
-        static const response_code PRECONDITION_REQUIRED          { 428, "Precondition Required"           };
-        static const response_code TOO_MANY_REQUESTS              { 429, "Too Many Requests"               };
-        static const response_code REQUEST_HEADER_FIELDS_TOO_LARGE{ 431, "Request Header Fields Too Large" };
-        static const response_code UNAVAILABLE_FOR_LEGAL_REASONS  { 451, "Unavailable For Legal Reasons"   };
+        static const response_code BadRequest                   { 400, "Bad Request"                     };
+        static const response_code Unauthorized                 { 401, "Unauthorized"                    };
+        static const response_code PaymentRequired              { 402, "Payment Required"                };
+        static const response_code Forbidden                    { 403, "Forbidden"                       };
+        static const response_code NotFound                     { 404, "Not Found"                       };
+        static const response_code MethodNotAllowed             { 405, "Method Not Allowed"              };
+        static const response_code NotAcceptable                { 406, "Not Acceptable"                  };
+        static const response_code ProxyAuthenticationRequired  { 407, "Proxy Authentication Required"   };
+        static const response_code RequestTimeout               { 408, "Request Timeout"                 };
+        static const response_code Conflict                     { 409, "Conflict"                        };
+        static const response_code Gone                         { 410, "Gone"                            };
+        static const response_code LengthRequired               { 411, "Length Required"                 };
+        static const response_code PreconditionFailed           { 412, "Precondition Failed"             };
+        static const response_code PayloadTooLarge              { 413, "Payload Too Large"               };
+        static const response_code URITooLong                   { 414, "URI Too Long"                    };
+        static const response_code UnsupportedMediaType         { 415, "Unsupported Media Type"          };
+        static const response_code RangeNotSatisfiable          { 416, "Range Not Satisfiable"           };
+        static const response_code ExpectationFailed            { 417, "Expectation Failed"              };
+        static const response_code Imateapot                    { 418, "I'm a teapot"                    };
+        static const response_code MisdirectedRequest           { 421, "Misdirected Request"             };
+        static const response_code UnprocessableEntity          { 422, "Unprocessable Entity"            };
+        static const response_code Locked                       { 423, "Locked"                          };
+        static const response_code FailedDependency             { 424, "Failed Dependency"               };
+        static const response_code UpgradeRequired              { 426, "Upgrade Required"                };
+        static const response_code PreconditionRequired         { 428, "Precondition Required"           };
+        static const response_code TooManyRequests              { 429, "Too Many Requests"               };
+        static const response_code RequestHeaderFieldsTooLarge  { 431, "Request Header Fields Too Large" };
+        static const response_code UnavailableForLegalReasons   { 451, "Unavailable For Legal Reasons"   };
         
         // 5xx - Server Errors -------------------------------------------------
         
-        static const response_code INTERNAL_SERVER_ERROR          { 500, "Internal Server Error"           };
-        static const response_code NOT_IMPLEMENTED                { 501, "Not Implemented"                 };
-        static const response_code BAD_GATEWAY                    { 502, "Bad Gateway"                     };
-        static const response_code SERVICE_UNAVAILABLE            { 503, "Service Unavailable"             };
-        static const response_code GATEWAY_TIMEOUT                { 504, "Gateway Timeout"                 };
-        static const response_code HTTP_VERSION_NOT_SUPPORTED     { 505, "HTTP Version Not Supported"      };
-        static const response_code VARIANT_ALSO_NEGOTIATES        { 506, "Variant Also Negotiates"         };
-        static const response_code INSUFFICIENT_STORAGE           { 507, "Insufficient Storage"            };
-        static const response_code LOOP_DETECTED                  { 508, "Loop Detected"                   };
-        static const response_code NOT_EXTENDED                   { 510, "Not Extended"                    };
-        static const response_code NETWORK_AUTHENTICATION_REQUIRED{ 511, "Network Authentication Required" };
+        static const response_code InternalServerError          { 500, "Internal Server Error"           };
+        static const response_code NotImplemented               { 501, "Not Implemented"                 };
+        static const response_code BadGateway                   { 502, "Bad Gateway"                     };
+        static const response_code ServiceUnavailable           { 503, "Service Unavailable"             };
+        static const response_code GatewayTimeout               { 504, "Gateway Timeout"                 };
+        static const response_code HTTPVersionNotSupported      { 505, "HTTP Version Not Supported"      };
+        static const response_code VariantAlsoNegotiates        { 506, "Variant Also Negotiates"         };
+        static const response_code InsufficientStorage          { 507, "Insufficient Storage"            };
+        static const response_code LoopDetected                 { 508, "Loop Detected"                   };
+        static const response_code NotExtended                  { 510, "Not Extended"                    };
+        static const response_code NetworkAuthenticationRequired{ 511, "Network Authentication Required" };
     }
 }
 

@@ -36,7 +36,7 @@ void handle_connection( show::connection&& connection )
         // http://en.cppreference.com/w/cpp/thread/sleep_for
         show::response response{
             request.connection(),
-            show::protocol::HTTP_1_0,
+            show::protocol::http_1_0,
             { 501, "Not Implemented" },
             { server_header }
         };

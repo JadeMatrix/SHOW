@@ -1,5 +1,6 @@
 #include "UnitTest++_wrap.hpp"
 #include <show.hpp>
+#include <show/constants.hpp>
 
 #include <string>
 
@@ -24,7 +25,7 @@ SUITE( ShowTypeTests )
     {
         CHECK_EQUAL(
             "HELLO WORLD",
-            show::internal::toupper_ASCII( "Hello World" )
+            show::internal::toupper_ascii( "Hello World" )
         );
     }
     

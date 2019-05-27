@@ -21,11 +21,11 @@ Request
         +-----------+--------------+
         | Value     | Evaluates to |
         +===========+==============+
-        | ``NO``    | ``false``    |
+        | ``no``    | ``false``    |
         +-----------+--------------+
-        | ``YES``   | ``true``     |
+        | ``yes``   | ``true``     |
         +-----------+--------------+
-        | ``MAYBE`` | ``true``     |
+        | ``maybe`` | ``true``     |
         +-----------+--------------+
     
     .. cpp:function:: const std::string& client_address() const
@@ -66,11 +66,11 @@ Request
     
     .. cpp:function:: protocol protocol() const
         
-        The HTTP protocol used by the request.  If ``NONE``, it's usually safe to assume HTTP/1.0.  If ``UNKNOWN``, typically either a *400 Bad Request* should be returned, just assume HTTP/1.0 to be permissive, or try to interpret something from :cpp:func:`protocol_string`.
+        The HTTP protocol used by the request.  If ``protocol::none``, it's usually safe to assume HTTP/1.0.  If ``protocol::unknown``, typically either a *400 Bad Request* should be returned, just assume HTTP/1.0 to be permissive, or try to interpret something from :cpp:func:`protocol_string`.
     
     .. cpp:function:: const std::string& protocol_string() const
         
-        The raw protocol string sent in the request, useful if :cpp:func:`protocol` is ``UNKNOWN``
+        The raw protocol string sent in the request, useful if :cpp:func:`protocol` is ``protocol::unknown``
     
     .. cpp:function:: const std::string& method() const
         
@@ -152,4 +152,4 @@ Request
     
     .. cpp:function:: unsigned long long content_length() const
         
-        The number of bytes in the request content; only holds a meaningful value if :cpp:func:`unknown_content_length` is ``YES``/``true``
+        The number of bytes in the request content; only holds a meaningful value if :cpp:func:`unknown_content_length` is ``yes``/``true``

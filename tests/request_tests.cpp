@@ -178,7 +178,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::protocol::NONE,
+                    show::protocol::none,
                     test_request.protocol()
                 );
             }
@@ -194,7 +194,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::protocol::UNKNOWN,
+                    show::protocol::unknown,
                     test_request.protocol()
                 );
             }
@@ -210,7 +210,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::protocol::HTTP_1_0,
+                    show::protocol::http_1_0,
                     test_request.protocol()
                 );
             }
@@ -226,7 +226,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::protocol::HTTP_1_1,
+                    show::protocol::http_1_1,
                     test_request.protocol()
                 );
             }
@@ -242,7 +242,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::protocol::HTTP_1_0,
+                    show::protocol::http_1_0,
                     test_request.protocol()
                 );
             }
@@ -258,7 +258,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::protocol::UNKNOWN,
+                    show::protocol::unknown,
                     test_request.protocol()
                 );
                 CHECK_EQUAL(
@@ -928,7 +928,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::request::NO,
+                    show::request::no,
                     test_request.unknown_content_length()
                 );
                 CHECK_EQUAL(
@@ -952,7 +952,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::request::YES,
+                    show::request::yes,
                     test_request.unknown_content_length()
                 );
                 CHECK_EQUAL(
@@ -973,7 +973,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::request::MAYBE,
+                    show::request::maybe,
                     test_request.unknown_content_length()
                 );
                 CHECK_EQUAL(
@@ -994,7 +994,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::request::MAYBE,
+                    show::request::maybe,
                     test_request.unknown_content_length()
                 );
                 CHECK_EQUAL(
@@ -1015,7 +1015,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::request::MAYBE,
+                    show::request::maybe,
                     test_request.unknown_content_length()
                 );
                 CHECK_EQUAL(
@@ -1037,7 +1037,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 CHECK_EQUAL(
-                    show::request::MAYBE,
+                    show::request::maybe,
                     test_request.unknown_content_length()
                 );
                 CHECK_EQUAL(
@@ -1061,7 +1061,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 REQUIRE CHECK_EQUAL(
-                    show::request::NO,
+                    show::request::no,
                     test_request.unknown_content_length()
                 );
                 std::string content{
@@ -1088,7 +1088,7 @@ SUITE( ShowRequestTests )
             ),
             []( show::request& test_request ){
                 REQUIRE CHECK_EQUAL(
-                    show::request::NO,
+                    show::request::no,
                     test_request.unknown_content_length()
                 );
                 std::string content = std::string(
@@ -1119,7 +1119,7 @@ SUITE( ShowRequestTests )
             ),
             [ very_long_content ]( show::request& test_request ){
                 REQUIRE CHECK_EQUAL(
-                    show::request::NO,
+                    show::request::no,
                     test_request.unknown_content_length()
                 );
                 std::string content = std::string(

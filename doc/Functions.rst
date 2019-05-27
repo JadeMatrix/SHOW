@@ -4,7 +4,7 @@ Functions
 
 .. cpp:namespace-push:: show
 
-.. cpp:function:: std::string url_encode( const std::string& o, internal::flags< url_flags > = url_flags::USE_PLUS_SPACE )
+.. cpp:function:: std::string url_encode( const std::string& o, internal::flags< url_flags > = url_flags::use_plus_space )
     
     URL-encode a string ``o``, escaping all reserved, special, or non-ASCII characters with `percent-encoding <https://en.wikipedia.org/wiki/Percent-encoding>`_.
     

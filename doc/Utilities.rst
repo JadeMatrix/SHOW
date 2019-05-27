@@ -25,7 +25,7 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
     
     Decode a base64-encoded string ``o`` using the character set ``dict``, which must point to a ``char`` array of length 64.  Throws a :cpp:class:`base64::decode_error` if the input is not encoded against ``dict`` or has incorrect padding.
     
-    Incorrect padding can be ignored by passing ``show::base64::flags::IGNORE_PADDING`` as the ``flags`` argument.
+    Incorrect padding can be ignored by passing ``show::base64::flags::ignore_padding`` as the ``flags`` argument.
     
     .. seealso::
         
@@ -64,7 +64,7 @@ These are utilities for handling `base64 <https://en.wikipedia.org/wiki/Base64>`
     Options that can be passed to :cpp:func:`base64::decode`.  Possible enum values are:
     
     +--------------------+-------------------------------------------------------------+
-    | ``IGNORE_PADDING`` | Ignore missing padding on the end of base64-encoded strings |
+    | ``ignore_padding`` | Ignore missing padding on the end of base64-encoded strings |
     +--------------------+-------------------------------------------------------------+
 
 Multipart Content Support

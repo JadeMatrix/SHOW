@@ -48,7 +48,7 @@ void get_form( show::request& request )
 {
     show::response response{
         request.connection(),
-        show::protocol::HTTP_1_0,
+        show::protocol::http_1_0,
         { 200, "OK" },
         {
             server_header,
@@ -78,7 +78,7 @@ void analyze_form( show::request& request )
         
         show::response response{
             request.connection(),
-            show::protocol::HTTP_1_0,
+            show::protocol::http_1_0,
             { 400, "Bad Request" },
             { server_header }
         };
@@ -135,7 +135,7 @@ void analyze_form( show::request& request )
         
         show::response response{
             request.connection(),
-            show::protocol::HTTP_1_0,
+            show::protocol::http_1_0,
             { 200, "OK" },
             {
                 server_header,
@@ -196,7 +196,7 @@ int main( int argc, char* argv[] )
                 {
                     show::response response{
                         request.connection(),
-                        show::protocol::HTTP_1_0,
+                        show::protocol::http_1_0,
                         { 404, "Not Found" },
                         { server_header }
                     };
@@ -205,7 +205,7 @@ int main( int argc, char* argv[] )
                 
                 show::response response{
                     request.connection(),
-                    show::protocol::HTTP_1_0,
+                    show::protocol::http_1_0,
                     { 405, "Method Not Allowed" },
                     { server_header }
                 };

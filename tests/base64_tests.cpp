@@ -286,7 +286,7 @@ SUITE( ShowBase64Tests )
         auto s = show::base64::decode(
             "SGVsbG8gV29ybGQ",
             show::base64::dict_standard,
-            show::base64::flags::IGNORE_PADDING
+            show::base64::flags::ignore_padding
         );
         std::string hw{ "Hello World" };
         CHECK_EQUAL( hw, s );
@@ -297,7 +297,7 @@ SUITE( ShowBase64Tests )
         auto s = show::base64::decode(
             "AAA",
             show::base64::dict_standard,
-            show::base64::flags::IGNORE_PADDING
+            show::base64::flags::ignore_padding
         );
         std::string hw( 2, '\0' );
         CHECK_EQUAL( hw, s );

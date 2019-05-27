@@ -52,7 +52,7 @@ int main( int argc, char* argv[] )
                 
                 show::response response{
                     connection,
-                    show::protocol::HTTP_1_0,
+                    show::protocol::http_1_0,
                     code,
                     headers
                 };

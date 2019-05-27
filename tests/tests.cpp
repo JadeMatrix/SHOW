@@ -44,10 +44,10 @@ std::ostream& operator<<( std::ostream& out, const show::protocol& v )
 {
     switch( v )
     {
-    case show::protocol::NONE:     out << "NONE"    ; break;
-    case show::protocol::UNKNOWN:  out << "UNKNOWN" ; break;
-    case show::protocol::HTTP_1_0: out << "HTTP_1_0"; break;
-    case show::protocol::HTTP_1_1: out << "HTTP_1_1"; break;
+    case show::protocol::none    : out << "none"    ; break;
+    case show::protocol::unknown : out << "unknown" ; break;
+    case show::protocol::http_1_0: out << "http_1_0"; break;
+    case show::protocol::http_1_1: out << "http_1_1"; break;
     }
     return out;
 }
@@ -59,9 +59,9 @@ std::ostream& operator<<(
 {
     switch( v )
     {
-    case show::request::NO:    out << "NO"   ; break;
-    case show::request::YES:   out << "YES"  ; break;
-    case show::request::MAYBE: out << "MAYBE"; break;
+    case show::request::no   : out << "no"   ; break;
+    case show::request::yes  : out << "yes"  ; break;
+    case show::request::maybe: out << "maybe"; break;
     }
     return out;
 }

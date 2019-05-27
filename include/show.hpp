@@ -50,13 +50,13 @@ namespace show // Basic types //////////////////////////////////////////////////
         using buffsize_type = ssize_t;
         
         // Locale-independent ASCII uppercase
-        inline char toupper_ASCII( char c )
+        inline char toupper_ascii( char c )
         {
             if( c >= 'a' && c <= 'z' )
                 c &= ~0x20;
             return c;
         }
-        inline std::string toupper_ASCII( std::string s )
+        inline std::string toupper_ascii( std::string s )
         {
             std::string out;
             for(
@@ -64,11 +64,11 @@ namespace show // Basic types //////////////////////////////////////////////////
                 i < s.size();
                 ++i
             )
-                out += toupper_ASCII( s[ i ] );
+                out += toupper_ascii( s[ i ] );
             return out;
         }
         
-        struct less_ignore_case_ASCII
+        struct less_ignore_case_ascii
         {
             bool operator()(
                 const std::string& lhs,
@@ -88,8 +88,8 @@ namespace show // Basic types //////////////////////////////////////////////////
                     ++i
                 )
                 {
-                    auto lhc = toupper_ASCII( lhs[ i ] );
-                    auto rhc = toupper_ASCII( rhs[ i ] );
+                    auto lhc = toupper_ascii( lhs[ i ] );
+                    auto rhc = toupper_ascii( rhs[ i ] );
                     
                     if( lhc < rhc )
                         return true;
@@ -161,10 +161,10 @@ namespace show // Basic types //////////////////////////////////////////////////
     
     enum class protocol
     {
-        NONE     =  0,
-        UNKNOWN  =  1,
-        HTTP_1_0 = 10,
-        HTTP_1_1 = 11
+        none     =  0,
+        unknown  =  1,
+        http_1_0 = 10,
+        http_1_1 = 11
     };
     
     struct response_code
@@ -181,7 +181,7 @@ namespace show // Basic types //////////////////////////////////////////////////
     using headers_type = std::map<
         std::string,
         std::vector< std::string >,
-        internal::less_ignore_case_ASCII
+        internal::less_ignore_case_ascii
     >;
 }
 
@@ -202,7 +202,7 @@ namespace show // Main classes /////////////////////////////////////////////////
     public:
         using fd_type = int;
         
-        enum class wait_for_type { READ, WRITE };
+        enum class wait_for_type { read, write };
         
         socket( socket&& );
         
@@ -254,10 +254,10 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         static ::sockaddr_in6 make_sockaddr( const std::string&, unsigned int );
         
-        enum class info_type { LOCAL, REMOTE };
+        enum class info_type { local, remote };
         
         void set_info( flags< info_type > = (
-            info_type::LOCAL | info_type::REMOTE
+            info_type::local | info_type::remote
         ) );
         void set_reuse();
         void set_nonblocking();
@@ -288,13 +288,13 @@ namespace show // Main classes /////////////////////////////////////////////////
         /*constexpr*/ int timeout( int t ) { return _timeout = t; }
         
     protected:
-        static const internal::buffsize_type BUFFER_SIZE{   1024 };
-        static const char                    ASCII_ACK  { '\x06' };
+        static const internal::buffsize_type buffer_size{   1024 };
+        static const char                    ascii_ack  { '\x06' };
         
         internal::socket _serve_socket;
         int              _timeout;
-        std::unique_ptr< std::array< char, BUFFER_SIZE > > _get_buffer;
-        std::unique_ptr< std::array< char, BUFFER_SIZE > > _put_buffer;
+        std::unique_ptr< std::array< char, buffer_size > > _get_buffer;
+        std::unique_ptr< std::array< char, buffer_size > > _put_buffer;
         
         connection( internal::socket&& serve_socket, int timeout );
         
@@ -329,9 +329,9 @@ namespace show // Main classes /////////////////////////////////////////////////
     public:
         enum content_length_flag
         {
-            NO = 0,
-            YES,
-            MAYBE
+            no = 0,
+            yes,
+            maybe
         };
         
         request( class connection& );
@@ -455,11 +455,11 @@ namespace show // Throwables ///////////////////////////////////////////////////
 
 namespace show // URL-encoding /////////////////////////////////////////////////
 {
-    enum class url_flags { USE_PLUS_SPACE };
+    enum class url_flags { use_plus_space };
     
     std::string url_encode(
         const std::string&,
-        internal::flags< url_flags > = url_flags::USE_PLUS_SPACE
+        internal::flags< url_flags > = url_flags::use_plus_space
     );
     std::string url_decode( const std::string& );
 }
@@ -498,7 +498,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
                 + std::string{ std::strerror( errno ) }
             };
         
-        s.set_info( info_type::LOCAL );
+        s.set_info( info_type::local );
         
         if( listen( s._descriptor, 3 ) == -1 )
             throw socket_error{
@@ -612,8 +612,8 @@ namespace show // `show::internal::socket` implementation //////////////////////
         fd_set read_descriptors, write_descriptors;
         timespec timeout_spec{ timeout, 0 };
         
-        bool r = wf & wait_for_type::READ;
-        bool w = wf & wait_for_type::WRITE;
+        bool r = wf & wait_for_type::read;
+        bool w = wf & wait_for_type::write;
         
         if( r )
         {
@@ -652,11 +652,11 @@ namespace show // `show::internal::socket` implementation //////////////////////
         
         // At least one of these must be true
         if( w && r )
-            return wait_for_type::READ | wait_for_type::WRITE;
+            return wait_for_type::read | wait_for_type::write;
         else if( r )
-            return wait_for_type::READ;
+            return wait_for_type::read;
         else
-            return wait_for_type::WRITE;
+            return wait_for_type::write;
     }
     
     inline internal::socket::socket() :
@@ -753,9 +753,9 @@ namespace show // `show::internal::socket` implementation //////////////////////
             port    = ntohs( info.sin6_port );
         };
         
-        if( t & info_type::LOCAL )
+        if( t & info_type::local )
             _set_info( ::getsockname,  _local_address,  _local_port,  "local" );
-        if( t & info_type::REMOTE )
+        if( t & info_type::remote )
             _set_info( ::getpeername, _remote_address, _remote_port, "remote" );
     }
     
@@ -864,8 +864,8 @@ namespace show // `show::connection` implementation ////////////////////////////
     ) :
         _serve_socket  { std::move( serve_socket )             },
         // `std::make_unique<>()` available in C++14
-        _get_buffer    { new std::array< char, BUFFER_SIZE >{} },
-        _put_buffer    { new std::array< char, BUFFER_SIZE >{} }
+        _get_buffer    { new std::array< char, buffer_size >{} },
+        _put_buffer    { new std::array< char, buffer_size >{} }
     {
         this -> timeout( timeout );
         setg(
@@ -875,7 +875,7 @@ namespace show // `show::connection` implementation ////////////////////////////
         );
         setp(
             reinterpret_cast< char* >( _put_buffer.get() ),
-            reinterpret_cast< char* >( _put_buffer.get() ) + BUFFER_SIZE
+            reinterpret_cast< char* >( _put_buffer.get() ) + buffer_size
         );
     }
     
@@ -891,7 +891,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             
             if( _timeout != 0 )
                 _serve_socket.wait_for(
-                    internal::socket::wait_for_type::WRITE,
+                    internal::socket::wait_for_type::write,
                     _timeout,
                     "response send"
                 );
@@ -944,7 +944,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             {
                 if( _timeout != 0 )
                     _serve_socket.wait_for(
-                        internal::socket::wait_for_type::READ,
+                        internal::socket::wait_for_type::read,
                         _timeout,
                         "request read"
                     );
@@ -952,7 +952,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                 bytes_read = read(
                     _serve_socket.descriptor(),
                     eback(),
-                    BUFFER_SIZE
+                    buffer_size
                 );
                 
                 if( bytes_read == -1 )  // Error
@@ -1034,7 +1034,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                     gptr() - 1,
                     egptr()
                 );
-            else if( egptr() < eback() + BUFFER_SIZE )
+            else if( egptr() < eback() + buffer_size )
             {
                 setg(
                     eback(),
@@ -1078,7 +1078,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             success.
             http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
             */
-            return traits_type::to_int_type( static_cast< char >( ASCII_ACK ) );
+            return traits_type::to_int_type( static_cast< char >( ascii_ack ) );
         }
     }
     
@@ -1118,7 +1118,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             return c;
         }
         else
-            return traits_type::to_int_type( static_cast< char >( ASCII_ACK ) );
+            return traits_type::to_int_type( static_cast< char >( ascii_ack ) );
     }
 }
 
@@ -1139,14 +1139,14 @@ namespace show // `show::request` implementation ///////////////////////////////
         std::string key_buffer, value_buffer;
         
         enum {
-            READING_METHOD,
-            READING_PATH,
-            READING_QUERY_ARGS,
-            READING_PROTOCOL,
-            READING_HEADER_NAME,
-            READING_HEADER_PADDING,
-            READING_HEADER_VALUE
-        } parse_state{ READING_METHOD };
+            reading_method,
+            reading_path,
+            reading_query_args,
+            reading_protocol,
+            reading_header_name,
+            reading_header_padding,
+            reading_header_value
+        } parse_state{ reading_method };
         
         while( reading )
         {
@@ -1177,32 +1177,32 @@ namespace show // `show::request` implementation ///////////////////////////////
             
             switch( parse_state )
             {
-            case READING_METHOD:
+            case reading_method:
                 {
                     switch( current_char )
                     {
                     case ' ':
-                        parse_state = READING_PATH;
+                        parse_state = reading_path;
                         break;
                     default:
-                        _method += internal::toupper_ASCII( current_char );
+                        _method += internal::toupper_ascii( current_char );
                         break;
                     }
                 }
                 break;
                 
-            case READING_PATH:
+            case reading_path:
                 {
                     switch( current_char )
                     {
                     case '?':
-                        parse_state = READING_QUERY_ARGS;
+                        parse_state = reading_query_args;
                         break;
                     case '\n':
-                        parse_state = READING_HEADER_NAME;
+                        parse_state = reading_header_name;
                         break;
                     case ' ':
-                        parse_state = READING_PROTOCOL;
+                        parse_state = reading_protocol;
                         break;
                     case '/':
                         if( path_begun )
@@ -1234,7 +1234,7 @@ namespace show // `show::request` implementation ///////////////////////////////
                     }
                     
                     if(
-                        parse_state != READING_PATH
+                        parse_state != reading_path
                         && _path.size() > 0
                     )
                         try
@@ -1248,7 +1248,7 @@ namespace show // `show::request` implementation ///////////////////////////////
                 }
                 break;
                 
-            case READING_QUERY_ARGS:
+            case reading_query_args:
                 {
                     switch( current_char )
                     {
@@ -1287,9 +1287,9 @@ namespace show // `show::request` implementation ///////////////////////////////
                             }
                         
                         if( current_char == '\n' )
-                            parse_state = READING_HEADER_NAME;
+                            parse_state = reading_header_name;
                         else if( current_char == ' ' )
-                            parse_state = READING_PROTOCOL;
+                            parse_state = reading_protocol;
                         
                         break;
                     default:
@@ -1301,19 +1301,19 @@ namespace show // `show::request` implementation ///////////////////////////////
                 }
                 break;
                 
-            case READING_PROTOCOL:
+            case reading_protocol:
                 if( current_char == '\n' )
-                    parse_state = READING_HEADER_NAME;
+                    parse_state = reading_header_name;
                 else
                     _protocol_string += current_char;
                 break;
                 
-            case READING_HEADER_NAME:
+            case reading_header_name:
                 {
                     switch( current_char )
                     {
                     case ':':
-                        parse_state = READING_HEADER_PADDING;
+                        parse_state = reading_header_padding;
                         break;
                     case '\n':
                         if( key_buffer.size() < 1 )
@@ -1336,18 +1336,18 @@ namespace show // `show::request` implementation ///////////////////////////////
                 }
                 break;
                 
-            case READING_HEADER_PADDING:
+            case reading_header_padding:
                 if( current_char == ' ' || current_char == '\t' )
                 {
-                    parse_state = READING_HEADER_VALUE;
+                    parse_state = reading_header_value;
                     break;
                 }
                 else if( current_char == '\n' )
-                    parse_state = READING_HEADER_VALUE;
+                    parse_state = reading_header_value;
                 else
                     throw request_parse_error{ "malformed header" };
                 
-            case READING_HEADER_VALUE:
+            case reading_header_value:
                 {
                     switch( current_char )
                     {
@@ -1397,7 +1397,7 @@ namespace show // `show::request` implementation ///////////////////////////////
                             value_buffer = "";
                             check_for_multiline_header = false;
                             
-                            parse_state = READING_HEADER_NAME;
+                            parse_state = reading_header_name;
                         }
                         else
                         {
@@ -1412,24 +1412,24 @@ namespace show // `show::request` implementation ///////////////////////////////
         }
         
         std::string protocol_string_upper{
-            internal::toupper_ASCII( _protocol_string )
+            internal::toupper_ascii( _protocol_string )
         };
         
         if( protocol_string_upper == "HTTP/1.0" )
-            _protocol = protocol::HTTP_1_0;
+            _protocol = protocol::http_1_0;
         else if( protocol_string_upper == "HTTP/1.1" )
-            _protocol = protocol::HTTP_1_1;
+            _protocol = protocol::http_1_1;
         else if( protocol_string_upper == "" )
-            _protocol = protocol::NONE;
+            _protocol = protocol::none;
         else
-            _protocol = protocol::UNKNOWN;
+            _protocol = protocol::unknown;
         
         auto content_length_header = _headers.find( "Content-Length" );
         
         if( content_length_header != _headers.end() )
         {
             if( content_length_header -> second.size() > 1 )
-                _unknown_content_length = MAYBE;
+                _unknown_content_length = maybe;
             else
                 try
                 {
@@ -1443,17 +1443,17 @@ namespace show // `show::request` implementation ///////////////////////////////
                         10
                     );
                     if( convert_stopped < value_size )
-                        _unknown_content_length = MAYBE;
+                        _unknown_content_length = maybe;
                     else
-                        _unknown_content_length = NO;
+                        _unknown_content_length = no;
                 }
                 catch( const std::invalid_argument& e )
                 {
-                    _unknown_content_length = MAYBE;
+                    _unknown_content_length = maybe;
                 }
         }
         else
-            _unknown_content_length = YES;
+            _unknown_content_length = yes;
     }
     
     inline request::request( request&& o ) :
@@ -1591,7 +1591,7 @@ namespace show // `show::response` implementation //////////////////////////////
     {
         std::stringstream headers_stream;
         
-        if( protocol == protocol::HTTP_1_1 )
+        if( protocol == protocol::http_1_1 )
             headers_stream << "HTTP/1.1 ";
         else
             headers_stream << "HTTP/1.0 ";
@@ -1744,7 +1744,7 @@ namespace show // `show::server` implementation ////////////////////////////////
     {
         if( _timeout != 0 )
             _listen_socket.wait_for(
-                internal::socket::wait_for_type::READ,
+                internal::socket::wait_for_type::read,
                 _timeout,
                 "listen"
             );
@@ -1764,7 +1764,7 @@ namespace show // URL-encoding implementations /////////////////////////////////
         std::stringstream encoded;
         encoded << std::hex;
         
-        std::string space{ f & url_flags::USE_PLUS_SPACE ? "+" : "%20" };
+        std::string space{ f & url_flags::use_plus_space ? "+" : "%20" };
         
         for( auto c : o )
         {

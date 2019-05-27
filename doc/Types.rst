@@ -25,16 +25,16 @@ Support Types
     Symbolizes the HTTP protocols understood by SHOW.  Possible enum values are:
     
     +--------------+---------------------------------------------------------+
-    | ``HTTP_1_0`` | HTTP/1.0                                                |
+    | ``http_1_0`` | HTTP/1.0                                                |
     +--------------+---------------------------------------------------------+
-    | ``HTTP_1_1`` | HTTP/1.1                                                |
+    | ``http_1_1`` | HTTP/1.1                                                |
     +--------------+---------------------------------------------------------+
-    | ``NONE``     | The request did not specify a protocol version          |
+    | ``none``     | The request did not specify a protocol version          |
     +--------------+---------------------------------------------------------+
-    | ``UNKOWN``   | The protocol specified by the request wasn't recognized |
+    | ``unkown``   | The protocol specified by the request wasn't recognized |
     +--------------+---------------------------------------------------------+
     
-    There is no ``HTTP_2`` as SHOW is not intended to handle HTTP/2 requests.  These are much better handled by a reverse proxy such as `NGINX <https://wiki.nginx.org/>`_, which will convert them into HTTP/1.0 or HTTP/1.1 requests for SHOW.
+    There is no ``http_2`` as SHOW is not intended to handle HTTP/2 requests.  These are much better handled by a reverse proxy such as `NGINX <https://wiki.nginx.org/>`_, which will convert them into HTTP/1.0 or HTTP/1.1 requests for SHOW.
 
 .. cpp:class:: response_code
     
@@ -94,7 +94,7 @@ Support Types
     Options that can be passed to :cpp:func:`url_encode`.  Possible enum values are:
     
     +--------------------+--------------------------------------------+
-    | ``USE_PLUS_SPACE`` | Encode spaces as ``+`` rather than ``%20`` |
+    | ``use_plus_space`` | Encode spaces as ``+`` rather than ``%20`` |
     +--------------------+--------------------------------------------+
 
 Throwables

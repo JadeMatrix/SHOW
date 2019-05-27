@@ -49,7 +49,7 @@ namespace show { namespace base64 // Declarations //////////////////////////////
     );
     
     
-    enum class flags { IGNORE_PADDING };
+    enum class flags { ignore_padding };
     
     
     std::string encode(
@@ -168,7 +168,7 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
         if( b64_size % 4 )
             b64_size += 4 - ( b64_size % 4 );
         
-        if( !( f & flags::IGNORE_PADDING ) && b64_size > o.size() )
+        if( !( f & flags::ignore_padding ) && b64_size > o.size() )
             throw decode_error{ "missing required padding" };
         
         std::map< char, /*unsigned*/ char > reverse_lookup;

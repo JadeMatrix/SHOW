@@ -44,7 +44,7 @@ namespace show // `show::multipart` class //////////////////////////////////////
             std::string  _buffer;
             bool         _finished;
             
-            static const char ASCII_ACK { '\x06' };
+            static const char ascii_ack { '\x06' };
             
             segment();
             segment( multipart&  );
@@ -186,7 +186,7 @@ namespace show // `show::multipart::segment` implementation ////////////////////
             if( traits_type::not_eof( c ) == c )
                 *gptr() = traits_type::to_char_type( c );
             
-            return traits_type::to_int_type( static_cast< char >( ASCII_ACK ) );
+            return traits_type::to_int_type( static_cast< char >( ascii_ack ) );
         }
         else
             return traits_type::eof();
