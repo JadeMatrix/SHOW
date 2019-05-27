@@ -214,21 +214,21 @@ SUITE( ShowServerTests )
         
         std::thread test_thread{ []{
             std::this_thread::sleep_for( std::chrono::seconds{ 2 } );
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
             // Don't bother checking return code, we just need the request
             // sent
-            curl_easy_perform( curl );
+            ::curl_easy_perform( curl );
             // CHECK_EQUAL(
             //     CURLE_OK,
-            //     curl_easy_perform( curl )
+            //     ::curl_easy_perform( curl )
             // );
-            curl_easy_cleanup( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         try
@@ -249,15 +249,15 @@ SUITE( ShowServerTests )
         show::server test_server{ "::", 9090, 0 };
         
         std::thread test_thread{ []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         std::this_thread::sleep_for( std::chrono::seconds{ 1 } );
@@ -280,15 +280,15 @@ SUITE( ShowServerTests )
         show::server test_server{ "::", 9090, 2 };
         
         std::thread test_thread{ []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         try

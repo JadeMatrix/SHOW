@@ -118,8 +118,8 @@ std::ostream& operator<<( std::ostream& out, const show::headers_type& v )
 int main( int, char*[] )
 {
     std::srand( static_cast< unsigned int >( std::time( nullptr ) ) );
-    curl_global_init( CURL_GLOBAL_ALL );
+    ::curl_global_init( CURL_GLOBAL_ALL );
     auto failed = UnitTest::RunAllTests();
-    curl_global_cleanup();
+    ::curl_global_cleanup();
     return failed;
 }

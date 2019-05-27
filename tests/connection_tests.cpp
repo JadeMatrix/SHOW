@@ -35,15 +35,15 @@ SUITE( ShowConnectionTests )
         show::server test_server{ address, port, -1 };
         
         std::thread test_thread{ []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         try
@@ -78,20 +78,20 @@ SUITE( ShowConnectionTests )
         };
         
         std::thread test_thread{ [ client_port ]{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_LOCALPORT,
+                ::CURLOPT_LOCALPORT,
                 client_port
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         try
@@ -120,15 +120,15 @@ SUITE( ShowConnectionTests )
         show::server test_server{ "::", 9090, 0 };
         
         std::thread test_thread{ []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         // Wait for cURL thread to send request
@@ -172,15 +172,15 @@ SUITE( ShowConnectionTests )
         show::server test_server{ "::", 9090, -1 };
         
         std::thread test_thread{ []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         try
@@ -221,15 +221,15 @@ SUITE( ShowConnectionTests )
         show::server test_server{ "::", 9090, -1 };
         
         std::thread test_thread{ []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         try
@@ -270,15 +270,15 @@ SUITE( ShowConnectionTests )
         show::server test_server{ "::", 9090, -1 };
         
         std::thread test_thread{ []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         } };
         
         try
@@ -320,15 +320,15 @@ SUITE( ShowConnectionTests )
         show::server test_server{ address, port, 1 };
         
         auto do_curl = []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         };
         
         std::thread test_thread1{ do_curl };
@@ -374,15 +374,15 @@ SUITE( ShowConnectionTests )
         show::server test_server{ address, port, 1 };
         
         auto do_curl = []{
-            auto curl = curl_easy_init();
+            auto curl = ::curl_easy_init();
             REQUIRE CHECK( curl );
-            curl_easy_setopt(
+            ::curl_easy_setopt(
                 curl,
-                CURLOPT_URL,
+                ::CURLOPT_URL,
                 "http://0.0.0.0:9090/"
             );
-            curl_easy_perform( curl );
-            curl_easy_cleanup( curl );
+            ::curl_easy_perform( curl );
+            ::curl_easy_cleanup( curl );
         };
         
         std::thread test_thread{ do_curl };
