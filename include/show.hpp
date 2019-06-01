@@ -3,16 +3,15 @@
 #define SHOW_HPP
 
 
-#include <array>
 #include <iomanip>
 #include <map>
-#include <memory>       // std::unique_ptr
 #include <stdexcept>
 #include <streambuf>
 #include <type_traits>  // std::enable_if, std::is_enum
 #include <vector>
 
 #include <sys/socket.h> // ::socklen_t
+// TODO: ::ssize_t header
 
 
 // @SHOW_CPP_BEGIN
@@ -57,7 +56,7 @@ namespace show // Basic types //////////////////////////////////////////////////
     {
         // `ssize_t` instead of `std::streamsize` because this is for use with
         // POSIX `read()`
-        using buffsize_type = ssize_t;
+        using buffsize_type = ::ssize_t;
         
         // Locale-independent ASCII uppercase
         inline char toupper_ascii( char c )
@@ -296,13 +295,16 @@ namespace show // Main classes /////////////////////////////////////////////////
         /*constexpr*/ int timeout( int t ) { return _timeout = t; }
         
     protected:
-        static const internal::buffsize_type buffer_size{   1024 };
-        static const char                    ascii_ack  { '\x06' };
+        using buffer_type      = std::vector< char >;
+        using buffer_size_type = buffer_type::size_type;
+        
+        static const buffer_size_type default_buffer_size{ 1024 };
+        static const char ascii_ack{ '\x06' };
         
         internal::socket _serve_socket;
         int              _timeout;
-        std::unique_ptr< std::array< char, buffer_size > > _get_buffer;
-        std::unique_ptr< std::array< char, buffer_size > > _put_buffer;
+        buffer_type      _get_buffer;
+        buffer_type      _put_buffer;
         
         connection( internal::socket&& serve_socket, int timeout );
         
@@ -888,20 +890,19 @@ namespace show // `show::connection` implementation ////////////////////////////
         internal::socket&& serve_socket,
         int                timeout
     ) :
-        _serve_socket  { std::move( serve_socket )             },
-        // `std::make_unique<>()` available in C++14
-        _get_buffer    { new std::array< char, buffer_size >{} },
-        _put_buffer    { new std::array< char, buffer_size >{} }
+        _serve_socket  { std::move( serve_socket ) },
+        _get_buffer    ( default_buffer_size       ),
+        _put_buffer    ( default_buffer_size       )
     {
         this -> timeout( timeout );
         setg(
-            reinterpret_cast< char* >( _get_buffer.get() ),
-            reinterpret_cast< char* >( _get_buffer.get() ),
-            reinterpret_cast< char* >( _get_buffer.get() )
+            reinterpret_cast< char* >( _get_buffer.data() ),
+            reinterpret_cast< char* >( _get_buffer.data() ),
+            reinterpret_cast< char* >( _get_buffer.data() )
         );
         setp(
-            reinterpret_cast< char* >( _put_buffer.get() ),
-            reinterpret_cast< char* >( _put_buffer.get() ) + buffer_size
+            reinterpret_cast< char* >( _put_buffer.data() ),
+            reinterpret_cast< char* >( _put_buffer.data() ) + _put_buffer.size()
         );
     }
     
@@ -978,7 +979,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                 bytes_read = ::read(
                     _serve_socket.descriptor(),
                     eback(),
-                    buffer_size
+                    _get_buffer.size()
                 );
                 
                 if( bytes_read == -1 )  // Error
@@ -1060,7 +1061,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                     gptr() - 1,
                     egptr()
                 );
-            else if( egptr() < eback() + buffer_size )
+            else if( egptr() < eback() + _get_buffer.size() )
             {
                 setg(
                     eback(),
