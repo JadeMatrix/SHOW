@@ -5,14 +5,14 @@
 
 #include "../show.hpp"
 
-#include <functional>   // std::function<>, std::reference_wrapper<>
+#include <functional>   // std::reference_wrapper<>
 #include <streambuf>
 #include <vector>
 
 
 // @SHOW_CPP_BEGIN
 
-
+#include <functional>   // std::function<>
 #include <utility>      // std::move<>()
 
 
@@ -112,13 +112,20 @@ namespace show // `show::multipart` class //////////////////////////////////////
 }
 
 
-namespace show // Utilities ////////////////////////////////////////////////////
+namespace show // Exceptions ///////////////////////////////////////////////////
 {
     class multipart_parse_error : public request_parse_error
     {
         using request_parse_error::request_parse_error;
     };
-    
+}
+
+
+// @SHOW_CPP_BEGIN
+
+
+namespace show // Utilities ////////////////////////////////////////////////////
+{
     namespace internal
     {
         std::streambuf::int_type read_buffer_until_boundary(
@@ -136,9 +143,6 @@ namespace show // Utilities ////////////////////////////////////////////////////
         );
     }
 }
-
-
-// @SHOW_CPP_BEGIN
 
 
 namespace show // `show::multipart::segment` implementation ////////////////////
