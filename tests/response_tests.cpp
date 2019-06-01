@@ -575,6 +575,43 @@ SUITE( ShowResponseTests )
     }
 #endif
     
+    TEST( StreamResponseContent )
+    {
+        run_checks_against_response(
+            (
+                "GET / HTTP/1.0\r\n"
+                "\r\n"
+            ),
+            []( show::connection& test_connection ){
+                show::request test_request{ test_connection };
+                show::response test_response{
+                    test_connection,
+                    show::protocol::http_1_0,
+                    { 200, "OK" },
+                    {}
+                };
+                std::ostream out{ &test_response };
+                out
+                    << "Hello World"
+                    << std::endl
+                    << 1234
+                    << "\n"
+                    << std::boolalpha
+                    << true
+                    << std::noboolalpha
+                    << "\r\n"
+                ;
+            },
+            (
+                "HTTP/1.0 200 OK\r\n"
+                "\r\n"
+                "Hello World\n"
+                "1234\n"
+                "true\r\n"
+            )
+        );
+    }
+    
     TEST( FailReturnInvalidHeaderName )
     {
         handle_request(

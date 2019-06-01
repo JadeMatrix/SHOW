@@ -2,6 +2,7 @@
 #include <show.hpp>
 
 #include <chrono>       // std::chrono::seconds
+#include <sstream>
 #include <string>
 #include <thread>       // std::this_thread::sleep_for()
 
@@ -91,6 +92,42 @@ SUITE( ShowRequestTests )
                         {}
                     } )
                 );
+            }
+        );
+    }
+    
+    TEST( StreamRequestContent )
+    {
+        std::string content{ " 1234\nfalse \nHello World!" };
+        run_checks_against_request(
+            (
+                "GET / HTTP/1.0\r\nContent-Length: "
+                + std::to_string( content.size() )
+                + "\r\n\r\n"
+                + content
+            ),
+            []( show::request& test_request ){
+                std::istream in{ &test_request };
+                
+                int int_val{ 0 };
+                in >> int_val;
+                REQUIRE CHECK( int_val == 1234 );
+                
+                bool bool_val{ true };
+                in >> std::boolalpha >> bool_val >> std::noboolalpha;
+                REQUIRE CHECK( bool_val == false );
+                
+                // Clang does not skip whitespace before extracting to a stream
+                // buffer, while GCC does
+                in >> std::ws;
+                
+                std::stringstream ss;
+                in >> ss.rdbuf();
+                REQUIRE CHECK( ss.str() == "Hello World!" );
+                
+                std::string string_val;
+                in >> string_val;
+                CHECK( !in.good() );
             }
         );
     }
