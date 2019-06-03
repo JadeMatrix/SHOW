@@ -60,6 +60,11 @@ ELSEIF( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" )
 ENDIF()
 
 
+OPTION(
+    SHOW_INSTALL_HEADERONLY
+    "Install raw header-only version of SHOW rather than compiled libraries"
+    OFF
+)
 IF( SHOW_INSTALL_HEADERONLY )
     INCLUDE( SHOWConfigureHeaderOnly )
 ELSE()
