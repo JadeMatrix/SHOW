@@ -25,6 +25,11 @@ TARGET_COMPILE_OPTIONS( show_unit_test_utils
     PUBLIC ${SHOW_COMPILE_OPTIONS}
 )
 
+OPTION(
+    SHOW_BUILD_BROKEN_UNIT_TESTS
+    "Enable some unit tests that don't work reliably and need a redesign"
+    OFF
+)
 IF( SHOW_BUILD_BROKEN_UNIT_TESTS )
     TARGET_COMPILE_DEFINITIONS( show_unit_test_utils
         PUBLIC "SHOW_BUILD_BROKEN_UNIT_TESTS"
