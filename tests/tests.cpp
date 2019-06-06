@@ -42,13 +42,15 @@ std::string escape_seq( const std::string& s )
 
 std::ostream& operator<<( std::ostream& out, const show::protocol& v )
 {
-    switch( v )
-    {
-    case show::protocol::none    : out << "none"    ; break;
-    case show::protocol::unknown : out << "unknown" ; break;
-    case show::protocol::http_1_0: out << "http_1_0"; break;
-    case show::protocol::http_1_1: out << "http_1_1"; break;
-    }
+    std::ostream::sentry s{ out };
+    if( s )
+        switch( v )
+        {
+        case show::protocol::none    : out << "none"    ; break;
+        case show::protocol::unknown : out << "unknown" ; break;
+        case show::protocol::http_1_0: out << "http_1_0"; break;
+        case show::protocol::http_1_1: out << "http_1_1"; break;
+        }
     return out;
 }
 
@@ -57,12 +59,14 @@ std::ostream& operator<<(
     const show::request::content_length_flag& v
 )
 {
-    switch( v )
-    {
-    case show::request::no   : out << "no"   ; break;
-    case show::request::yes  : out << "yes"  ; break;
-    case show::request::maybe: out << "maybe"; break;
-    }
+    std::ostream::sentry s{ out };
+    if( s )
+        switch( v )
+        {
+        case show::request::no   : out << "no"   ; break;
+        case show::request::yes  : out << "yes"  ; break;
+        case show::request::maybe: out << "maybe"; break;
+        }
     return out;
 }
 
@@ -71,16 +75,20 @@ std::ostream& operator<<(
     const std::vector< std::string >& v
 )
 {
-    std::stringstream stringified;
-    stringified << "{";
-    for( auto iter = v.begin(); iter != v.end(); ++iter )
+    std::ostream::sentry s{ out };
+    if( s )
     {
-        stringified << '"' << escape_seq( *iter ) << '"';
-        if( iter + 1 != v.end() )
-            stringified << ", ";
+        std::stringstream stringified;
+        stringified << "{";
+        for( auto iter = v.begin(); iter != v.end(); ++iter )
+        {
+            stringified << '"' << escape_seq( *iter ) << '"';
+            if( iter + 1 != v.end() )
+                stringified << ", ";
+        }
+        stringified << "}";
+        out << stringified.str();
     }
-    stringified << "}";
-    out << stringified.str();
     return out;
 }
 
@@ -101,13 +109,17 @@ template< typename T > void fmt_map_of_lists( std::ostream& out, T v )
 
 std::ostream& operator<<( std::ostream& out, const show::query_args_type& v )
 {
-    fmt_map_of_lists( out, v );
+    std::ostream::sentry s{ out };
+    if( s )
+        fmt_map_of_lists( out, v );
     return out;
 }
 
 std::ostream& operator<<( std::ostream& out, const show::headers_type& v )
 {
-    fmt_map_of_lists( out, v );
+    std::ostream::sentry s{ out };
+    if( s )
+        fmt_map_of_lists( out, v );
     return out;
 }
 
