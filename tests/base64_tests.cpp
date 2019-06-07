@@ -1,4 +1,5 @@
-#include "UnitTest++_wrap.hpp"
+#include "doctest_wrap.hpp"
+
 #include <show/base64.hpp>
 
 #include <string>
@@ -61,333 +62,221 @@ namespace
 }
 
 
-SUITE( ShowBase64Tests )
+TEST_CASE( "base64-encode with no padding" )
 {
-    TEST( EncodeNoPadding )
+    REQUIRE( show::base64::encode( "123" ) == "MTIz" );
+}
+
+TEST_CASE( "base64-encode with half padding" )
+{
+    REQUIRE( show::base64::encode( "12345" ) == "MTIzNDU=" );
+}
+
+TEST_CASE( "base64-encode with full padding" )
+{
+    REQUIRE( show::base64::encode( "1234" ) == "MTIzNA==" );
+}
+
+TEST_CASE( "base64-encode with standard dictionary" )
+{
+    REQUIRE( show::base64::encode(
+        std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
+        show::base64::dict_standard
+    ) == "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" );
+}
+
+TEST_CASE( "base64-encode with URL-safe dictionary" )
+{
+    REQUIRE( show::base64::encode(
+        std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
+        show::base64::dict_urlsafe
+    ) == "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" );
+}
+
+TEST_CASE( "base64-encode empty string" )
+{
+    REQUIRE( show::base64::encode( "" ) == "" );
+}
+
+TEST_CASE( "base64-encode null bytes string" )
+{
+    REQUIRE( show::base64::encode( std::string( "\0\0\0", 3 ) ) == "AAAA" );
+}
+
+TEST_CASE( "base64-encode null bytes string with full padding" )
+{
+    REQUIRE( show::base64::encode( std::string( "\0\0", 2 ) ) == "AAA=" );
+}
+
+TEST_CASE( "base64-encode null bytes with string half padding" )
+{
+    REQUIRE( show::base64::encode( std::string( "\0", 1 ) ) == "AA==" );
+}
+
+TEST_CASE( "base64-encode long string" )
+{
+    REQUIRE(
+        show::base64::encode( long_message ) == long_message_base64_encoded
+    );
+}
+
+TEST_CASE( "base64-encode very long string" )
+{
+    std::string very_long_message;
+    std::string very_long_message_encoded;
+    for( int i = 0; i < 256; ++i )
     {
-        CHECK_EQUAL(
-            "MTIz",
-            show::base64::encode( "123" )
-        );
+        very_long_message         += long_message;
+        very_long_message_encoded += long_message_base64_encoded;
     }
-    
-    TEST( EncodeHalfPadding )
+    REQUIRE(
+        show::base64::encode( very_long_message ) == very_long_message_encoded
+    );
+}
+
+TEST_CASE( "base64-decode with no padding" )
+{
+    REQUIRE( show::base64::decode( "MTIz" ) == "123" );
+}
+
+TEST_CASE( "base64-decode with half padding" )
+{
+    REQUIRE( show::base64::decode( "MTIzNDU=" ) == "12345" );
+}
+
+TEST_CASE( "base64-decode with full padding" )
+{
+    REQUIRE( show::base64::decode( "MTIzNA==" ) == "1234" );
+}
+
+TEST_CASE( "base64-decode with standard dictionary" )
+{
+    REQUIRE( show::base64::decode(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+        show::base64::dict_standard
+    ) == std::string( full_dict_bytes, sizeof( full_dict_bytes ) ) );
+}
+
+TEST_CASE( "base64-decode with URL-safe dictionary" )
+{
+    REQUIRE( show::base64::decode(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
+        show::base64::dict_urlsafe
+    ) == std::string( full_dict_bytes, sizeof( full_dict_bytes ) ) );
+}
+
+TEST_CASE( "base64-decode empty string" )
+{
+    REQUIRE( show::base64::decode( "" ) == "" );
+}
+
+TEST_CASE( "base64-decode null bytes string" )
+{
+    REQUIRE( show::base64::decode( "AAAA" ) == std::string( "\0\0\0", 3 ) );
+}
+
+TEST_CASE( "base64-decode null bytes string with full padding" )
+{
+    REQUIRE( show::base64::decode( "AAA=" ) == std::string( "\0\0", 2 ) );
+}
+
+TEST_CASE( "base64-decode null bytes with string half padding" )
+{
+    REQUIRE( show::base64::decode( "AA==" ) == std::string( "\0", 1 ) );
+}
+
+TEST_CASE( "base64-decode long string" )
+{
+    REQUIRE(
+        show::base64::decode( long_message_base64_encoded ) == long_message
+    );
+}
+
+TEST_CASE( "base64-decode very long string" )
+{
+    std::string very_long_message;
+    std::string very_long_message_encoded;
+    for( int i = 0; i < 256; ++i )
     {
-        CHECK_EQUAL(
-            "MTIzNDU=",
-            show::base64::encode( "12345" )
-        );
+        very_long_message         += long_message;
+        very_long_message_encoded += long_message_base64_encoded;
     }
-    
-    TEST( EncodeFullPadding )
-    {
-        CHECK_EQUAL(
-            "MTIzNA==",
-            show::base64::encode( "1234" )
-        );
-    }
-    
-    TEST( EncodeStandardDictionary )
-    {
-        CHECK_EQUAL(
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
-            show::base64::encode(
-                std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-                show::base64::dict_standard
-            )
-        );
-    }
-    
-    TEST( EncodeURLSafeDictionary )
-    {
-        CHECK_EQUAL(
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
-            show::base64::encode(
-                std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-                show::base64::dict_urlsafe
-            )
-        );
-    }
-    
-    TEST( EncodeEmptyString )
-    {
-        CHECK_EQUAL(
-            "",
-            show::base64::encode( "" )
-        );
-    }
-    
-    TEST( EncodeNullBytesString )
-    {
-        CHECK_EQUAL(
-            "AAAA",
-            show::base64::encode( std::string( "\0\0\0", 3 ) )
-        );
-    }
-    
-    TEST( EncodeNullBytesStringFullPadding )
-    {
-        CHECK_EQUAL(
-            "AAA=",
-            show::base64::encode( std::string( "\0\0", 2 ) )
-        );
-    }
-    
-    TEST( EncodeNullBytesStringHalfPadding )
-    {
-        CHECK_EQUAL(
-            "AA==",
-            show::base64::encode( std::string( "\0", 1 ) )
-        );
-    }
-    
-    TEST( EncodeLongString )
-    {
-        CHECK_EQUAL(
-            long_message_base64_encoded,
-            show::base64::encode( long_message )
-        );
-    }
-    
-    TEST( EncodeVeryLongString )
-    {
-        std::string very_long_message;
-        std::string very_long_message_encoded;
-        for( int i = 0; i < 256; ++i )
-        {
-            very_long_message         += long_message;
-            very_long_message_encoded += long_message_base64_encoded;
-        }
-        CHECK_EQUAL(
-            very_long_message_encoded,
-            show::base64::encode( very_long_message )
-        );
-    }
-    
-    TEST( DecodeNoPadding )
-    {
-        CHECK_EQUAL(
-            "123",
-            show::base64::decode( "MTIz" )
-        );
-    }
-    
-    TEST( DecodeHalfPadding )
-    {
-        CHECK_EQUAL(
-            "12345",
-            show::base64::decode( "MTIzNDU=" )
-        );
-    }
-    
-    TEST( DecodeFullPadding )
-    {
-        CHECK_EQUAL(
-            "1234",
-            show::base64::decode( "MTIzNA==" )
-        );
-    }
-    
-    TEST( DecodeStandardDictionary )
-    {
-        CHECK_EQUAL(
-            std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-            show::base64::decode(
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
-                show::base64::dict_standard
-            )
-        );
-    }
-    
-    TEST( DecodeURLSafeDictionary )
-    {
-        CHECK_EQUAL(
-            std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
-            show::base64::decode(
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
-                show::base64::dict_urlsafe
-            )
-        );
-    }
-    
-    TEST( DecodeEmptyString )
-    {
-        CHECK_EQUAL(
-            "",
-            show::base64::decode( "" )
-        );
-    }
-    
-    TEST( DecodeLongString )
-    {
-        CHECK_EQUAL(
-            long_message,
-            show::base64::decode( long_message_base64_encoded )
-        );
-    }
-    
-    TEST( DecodeVeryLongString )
-    {
-        std::string very_long_message;
-        std::string very_long_message_encoded;
-        for( int i = 0; i < 256; ++i )
-        {
-            very_long_message         += long_message;
-            very_long_message_encoded += long_message_base64_encoded;
-        }
-        CHECK_EQUAL(
-            very_long_message,
-            show::base64::decode( very_long_message_encoded )
-        );
-    }
-    
-    TEST( DecodeIgnoreExtraFullPadding )
-    {
-        CHECK_EQUAL(
-            "123",
-            show::base64::decode( "MTIz==" )
-        );
-    }
-    
-    TEST( DecodeIgnoreExtraHalfPadding )
-    {
-        CHECK_EQUAL(
-            "123",
-            show::base64::decode( "MTIz=" )
-        );
-    }
-    
-    TEST( DecodeIgnoreExtraSuperPadding )
-    {
-        CHECK_EQUAL(
-            "123",
-            show::base64::decode( "MTIz==============" )
-        );
-    }
-    
-    TEST( DecodeEmptyStringWithHalfPadding )
-    {
-        CHECK_EQUAL(
-            "",
-            show::base64::decode( "=" )
-        );
-    }
-    
-    TEST( DecodeEmptyStringWithFullPadding )
-    {
-        CHECK_EQUAL(
-            "",
-            show::base64::decode( "==" )
-        );
-    }
-    
-    TEST( DecodeMissingPadding )
-    {
-        auto s = show::base64::decode(
-            "SGVsbG8gV29ybGQ",
-            show::base64::dict_standard,
-            show::base64::flags::ignore_padding
-        );
-        std::string hw{ "Hello World" };
-        CHECK_EQUAL( hw, s );
-    }
-    
-    TEST( DecodeMissingPaddingNulls )
-    {
-        auto s = show::base64::decode(
-            "AAA",
-            show::base64::dict_standard,
-            show::base64::flags::ignore_padding
-        );
-        std::string hw( 2, '\0' );
-        CHECK_EQUAL( hw, s );
-    }
-    
-    TEST( DecodeFailMissingPadding )
-    {
-        try
-        {
-            show::base64::decode( "SGVsbG8gV29ybGQ" );
-            CHECK( false );
-        }
-        catch( const show::base64::decode_error& e )
-        {
-            CHECK_EQUAL(
-                "missing required padding",
-                e.what()
-            );
-        }
-    }
-    
-    TEST( DecodeFailPrematurePadding )
-    {
-        try
-        {
-            show::base64::decode( "A=B=" );
-            CHECK( false );
-        }
-        catch( const show::base64::decode_error& e )
-        {
-            CHECK_EQUAL(
-                "premature padding",
-                e.what()
-            );
-        }
-    }
-    
-    TEST( DecodeFailStartNotInDictionary )
-    {
-        try
-        {
-            show::base64::decode( "*GV$bG8g?29ybGQh" );
-            CHECK( false );
-        }
-        catch( const show::base64::decode_error& e )
-        {
-            CHECK_EQUAL(
-                "character not in dictionary",
-                e.what()
-            );
-        }
-    }
-    
-    TEST( DecodeFailMidNotInDictionary )
-    {
-        try
-        {
-            show::base64::decode( "SGV$bG8g?29ybGQh" );
-            CHECK( false );
-        }
-        catch( const show::base64::decode_error& e )
-        {
-            CHECK_EQUAL(
-                "character not in dictionary",
-                e.what()
-            );
-        }
-    }
-    
-    TEST( DecodeNullBytesString )
-    {
-        CHECK_EQUAL(
-            std::string( "\0\0\0", 3 ),
-            show::base64::decode( "AAAA" )
-        );
-    }
-    
-    TEST( DecodeNullBytesStringFullPadding )
-    {
-        CHECK_EQUAL(
-            std::string( "\0\0", 2 ),
-            show::base64::decode( "AAA=" )
-        );
-    }
-    
-    TEST( DecodeNullBytesStringHalfPadding )
-    {
-        CHECK_EQUAL(
-            std::string( "\0", 1 ),
-            show::base64::decode( "AA==" )
-        );
-    }
+    REQUIRE(
+        show::base64::decode( very_long_message_encoded ) == very_long_message
+    );
+}
+
+TEST_CASE( "base64-decode ignore extra full padding" )
+{
+    REQUIRE( show::base64::decode( "MTIz==" ) == "123" );
+}
+
+TEST_CASE( "base64-decode ignore extra half padding" )
+{
+    REQUIRE( show::base64::decode( "MTIz=" ) == "123" );
+}
+
+TEST_CASE( "base64-decode ignore super extra padding" )
+{
+    REQUIRE( show::base64::decode( "MTIz==============" ) == "123" );
+}
+
+TEST_CASE( "base64-decode empty string with half padding" )
+{
+    REQUIRE( show::base64::decode( "=" ) == "" );
+}
+
+TEST_CASE( "base64-decode empty string with full padding" )
+{
+    REQUIRE( show::base64::decode( "==" ) == "" );
+}
+
+TEST_CASE( "base64-decode missing padding" )
+{
+    REQUIRE( show::base64::decode(
+        "SGVsbG8gV29ybGQ",
+        show::base64::dict_standard,
+        show::base64::flags::ignore_padding
+    ) == "Hello World" );
+}
+
+TEST_CASE( "base64-decode missing padding nulls" )
+{
+    REQUIRE( show::base64::decode(
+        "AAA",
+        show::base64::dict_standard,
+        show::base64::flags::ignore_padding
+    ) == std::string( 2, '\0' ) );
+}
+
+TEST_CASE( "base64-decode fail on missing padding" )
+{
+    REQUIRE_THROWS_WITH(
+        show::base64::decode( "SGVsbG8gV29ybGQ" ),
+        "missing required padding"
+    );
+}
+
+TEST_CASE( "base64-decode fail on premature padding" )
+{
+    REQUIRE_THROWS_WITH(
+        show::base64::decode( "A=B=" ),
+        "premature padding"
+    );
+}
+
+TEST_CASE( "base64-decode fail on start not in dictionary" )
+{
+    REQUIRE_THROWS_WITH(
+        show::base64::decode( "*GV$bG8g?29ybGQh" ),
+        "character not in dictionary"
+    );
+}
+
+TEST_CASE( "base64-decode fail on mid not in dictionary" )
+{
+    REQUIRE_THROWS_WITH(
+        show::base64::decode( "SGV$bG8g?29ybGQh" ),
+        "character not in dictionary"
+    );
 }

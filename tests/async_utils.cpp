@@ -5,7 +5,7 @@
 #include <netdb.h>      // getprotobyname()
 #include <unistd.h>     // write()
 
-#include "UnitTest++_wrap.hpp"
+#include "doctest_wrap.hpp"
 
 #include <cstring>      // std::strerror()
 #include <exception>    // std::runtime_error
@@ -45,7 +45,7 @@ void write_to_socket(
             m.c_str() + pos,
             m.size()
         );
-        REQUIRE CHECK( written >= 0 );
+        REQUIRE( written >= 0 );
         pos += static_cast< std::string::size_type >( written );
     }
 }
@@ -156,11 +156,9 @@ void check_response_to_request(
         );
     }
     
-    // Check escaped strings so UnitTest++ will pretty-print them
-    CHECK_EQUAL(
-        "\"" + escape_seq( response     ) + "\"",
-        "\"" + escape_seq( got_response ) + "\""
-    );
+    // Check escaped strings so doctest will pretty-print them (surrounding
+    // quotes will be added by doctest)
+    REQUIRE( escape_seq( got_response ) == escape_seq( response ) );
 }
 
 void run_checks_against_response(

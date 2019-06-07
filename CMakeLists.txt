@@ -11,6 +11,10 @@ PROJECT(
 )
 
 LIST( APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMakeModules/" )
+IF( EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" )
+    INCLUDE( "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" )
+    CONAN_SET_FIND_PATHS()
+ENDIF()
 
 INCLUDE( CTest )
 INCLUDE( GNUInstallDirs )

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef SHOW_TESTS_UNITTESTPP_WRAP_HPP
-#define SHOW_TESTS_UNITTESTPP_WRAP_HPP
+#ifndef SHOW_TESTS_DOCTEST_WRAP_HPP
+#define SHOW_TESTS_DOCTEST_WRAP_HPP
 
 
 #include <string>
@@ -12,8 +12,8 @@
 
 std::string escape_seq( const std::string& s );
 
-// Stream format operators for ues with UnitTest++ must be declared before
-// including UnitTest++.h
+// Stream format operators for ues with doctest must be declared before
+// including doctest/doctest.h
 std::ostream& operator<<( std::ostream& out, const show::protocol& v );
 std::ostream& operator<<(
     std::ostream& out,
@@ -31,7 +31,7 @@ std::ostream& operator<<(
 );
 
 
-#include <UnitTest++/UnitTest++.h>
+#include <doctest/doctest.h>
 
 
 #endif

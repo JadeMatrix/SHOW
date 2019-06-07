@@ -1,4 +1,5 @@
-#include "UnitTest++_wrap.hpp"
+#define DOCTEST_CONFIG_IMPLEMENT
+#include "doctest_wrap.hpp"
 
 #include <curl/curl.h>
 
@@ -6,7 +7,7 @@
 #include <ctime>    // std::time()
 
 
-// Implementations of operators from UnitTest++_wrap.hpp ///////////////////////
+// Implementations of operators from doctest_wrap.hpp //////////////////////////
 
 
 std::string escape_seq( const std::string& s )
@@ -127,11 +128,15 @@ std::ostream& operator<<( std::ostream& out, const show::headers_type& v )
 // Main ////////////////////////////////////////////////////////////////////////
 
 
-int main( int, char*[] )
+int main( int argc, char* argv[] )
 {
     std::srand( static_cast< unsigned int >( std::time( nullptr ) ) );
     ::curl_global_init( CURL_GLOBAL_ALL );
-    auto failed = UnitTest::RunAllTests();
+    
+    doctest::Context context{};
+    context.applyCommandLine( argc, argv );
+    auto failed = context.run();
+    
     ::curl_global_cleanup();
     return failed;
 }

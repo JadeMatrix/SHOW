@@ -1,8 +1,11 @@
-FIND_PACKAGE( UnitTest++ REQUIRED )
-
-
+FIND_PACKAGE( doctest 2.3.3 REQUIRED COMPONENTS doctest )
 # Unfortunately CMake doesn't supply a component-based package for cURL
+# TODO: Add FindCURL.cmake or remove cURL dependency
 FIND_PACKAGE( CURL REQUIRED )
+
+
+INCLUDE( doctest )
+
 
 ADD_CUSTOM_TARGET( tests ALL )
 
@@ -18,7 +21,7 @@ TARGET_INCLUDE_DIRECTORIES( show_unit_test_utils
 TARGET_LINK_LIBRARIES( show_unit_test_utils
     PUBLIC
         show
-        UnitTest++
+        doctest::doctest
         ${CURL_LIBRARIES}
 )
 TARGET_COMPILE_OPTIONS( show_unit_test_utils
@@ -36,6 +39,7 @@ IF( SHOW_BUILD_BROKEN_UNIT_TESTS )
     )
 ENDIF()
 
+
 FOREACH( SUITE
     "base64"
     "connection"
@@ -46,16 +50,13 @@ FOREACH( SUITE
     "type"
     "url_encode"
 )
-    ADD_EXECUTABLE( show_${SUITE}_unit_tests )
-    TARGET_SOURCES( show_${SUITE}_unit_tests
+    ADD_EXECUTABLE( ${SUITE}_tests )
+    TARGET_SOURCES( ${SUITE}_tests
         PRIVATE "${SUITE}_tests.cpp"
     )
-    TARGET_LINK_LIBRARIES( show_${SUITE}_unit_tests
+    TARGET_LINK_LIBRARIES( ${SUITE}_tests
         PRIVATE show_unit_test_utils
     )
-    ADD_DEPENDENCIES( tests show_${SUITE}_unit_tests )
-    ADD_TEST(
-        NAME "${SUITE}_unit_tests"
-        COMMAND show_${SUITE}_unit_tests
-    )
+    ADD_DEPENDENCIES( tests ${SUITE}_tests )
+    DOCTEST_DISCOVER_TESTS( ${SUITE}_tests )
 ENDFOREACH()

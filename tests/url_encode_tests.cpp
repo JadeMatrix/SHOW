@@ -1,4 +1,5 @@
-#include "UnitTest++_wrap.hpp"
+#include "doctest_wrap.hpp"
+
 #include <show.hpp>
 
 #include <string>
@@ -6,231 +7,155 @@
 #include "constants.hpp"
 
 
-SUITE( ShowURLEncodeTests )
+TEST_CASE( "URL-encode with no conversion" )
 {
-    TEST( EncodeNoConversion )
+    REQUIRE( show::url_encode( "hello_world_0123" ) == "hello_world_0123");
+}
+
+TEST_CASE( "URL-encode space as \"+\"" )
+{
+    REQUIRE( show::url_encode( "hello world 0123" ) == "hello+world+0123" );
+}
+
+TEST_CASE( "URL-encode space as \"%20\"" )
+{
+    REQUIRE(
+        show::url_encode( "hello world 0123", {} ) == "hello%20world%200123"
+    );
+}
+
+TEST_CASE( "URL-encode slash" )
+{
+    REQUIRE( show::url_encode( "hello/world/0123" ) == "hello%2Fworld%2F0123" );
+}
+
+TEST_CASE( "URL-encode control characters" )
+{
+    REQUIRE( show::url_encode( "\t\r\n" ) == "%09%0D%0A" );
+}
+
+TEST_CASE( "URL-encode empty string" )
+{
+    REQUIRE( show::url_encode( "" ) == "" );
+}
+
+TEST_CASE( "URL-encode null bytes string" )
+{
+    REQUIRE( show::url_encode( std::string( "\0\0\0", 3 ) ) == "%00%00%00" );
+}
+
+TEST_CASE( "URL-encode unicode string" )
+{
+    REQUIRE(
+        show::url_encode( "こんにちは皆様" )
+        == "%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF%E7%9A%86%E6%A7%98"
+    );
+}
+
+TEST_CASE( "URL-encode long string" )
+{
+    REQUIRE(
+        show::url_encode( long_message, {} ) ==  long_message_url_encoded
+    );
+}
+
+TEST_CASE( "URL-encode very long string" )
+{
+    std::string very_long_message;
+    std::string very_long_message_encoded;
+    for( int i = 0; i < 256; ++i )
     {
-        CHECK_EQUAL(
-            "hello_world_0123",
-            show::url_encode( "hello_world_0123" )
-        );
+        very_long_message         += long_message;
+        very_long_message_encoded += long_message_url_encoded;
     }
-    
-    TEST( EncodeSpaceConversionPlus )
+    REQUIRE(
+        show::url_encode( very_long_message, {} ) == very_long_message_encoded
+    );
+}
+
+TEST_CASE( "URL-decode with no conversion" )
+{
+    REQUIRE( show::url_decode( "hello_world" ) == "hello_world" );
+}
+
+TEST_CASE( "URL-decode space as \"+\"" )
+{
+    REQUIRE( show::url_decode( "hello+world" ) == "hello world" );
+}
+
+TEST_CASE( "URL-decode space as \"%20\"" )
+{
+    REQUIRE( show::url_decode( "hello%20world" ) == "hello world" );
+}
+
+TEST_CASE( "URL-decode slash" )
+{
+    REQUIRE( show::url_decode( "hello%2Fworld" ) == "hello/world" );
+}
+
+TEST_CASE( "URL-decode empty string" )
+{
+    REQUIRE( show::url_decode( "" ) == "" );
+}
+
+TEST_CASE( "URL-decode null bytes string" )
+{
+    REQUIRE( show::url_decode( "%00%00%00" ) == std::string( "\0\0\0", 3 ) );
+}
+
+TEST_CASE( "URL-decode unicode string" )
+{
+    REQUIRE( show::url_decode(
+        "%E4%B8%B9%E7%BE%BD%E3%81%95%E3%82%93%E3%81%AE%E5%BA%AD%E3%81%AB%E3%81%AF"
+    ) == "丹羽さんの庭には" );
+}
+
+TEST_CASE( "URL-decode lowercase" )
+{
+    REQUIRE( show::url_decode(
+        "%e4%b8%b9%e7%be%bd%e3%81%95%e3%82%93%e3%81%ae%e5%ba%ad%e3%81%ab%e3%81%af"
+    ) == "丹羽さんの庭には" );
+}
+
+TEST_CASE( "URL-decode long string" )
+{
+    REQUIRE( show::url_decode( long_message_url_encoded ) == long_message );
+}
+
+TEST_CASE( "URL-decode very long string" )
+{
+    std::string very_long_message;
+    std::string very_long_message_encoded;
+    for( int i = 0; i < 256; ++i )
     {
-        CHECK_EQUAL(
-            "hello+world+0123",
-            show::url_encode( "hello world 0123" )
-        );
+        very_long_message         += long_message;
+        very_long_message_encoded += long_message_url_encoded;
     }
-    
-    TEST( EncodeSpaceConversionPercent )
-    {
-        CHECK_EQUAL(
-            "hello%20world%200123",
-            show::url_encode( "hello world 0123", {} )
-        );
-    }
-    
-    TEST( EncodeSlash )
-    {
-        CHECK_EQUAL(
-            "hello%2Fworld%2F0123",
-            show::url_encode( "hello/world/0123" )
-        );
-    }
-    
-    TEST( EncodeControlChars )
-    {
-        CHECK_EQUAL(
-            "%09%0D%0A",
-            show::url_encode( "\t\r\n" )
-        );
-    }
-    
-    TEST( EncodeEmptyString )
-    {
-        CHECK_EQUAL(
-            "",
-            show::url_encode( "" )
-        );
-    }
-    
-    TEST( EncodeNullBytesString )
-    {
-        CHECK_EQUAL(
-            "%00%00%00",
-            show::url_encode( std::string( "\0\0\0", 3 ) )
-        );
-    }
-    
-    TEST( EncodeUnicodeString )
-    {
-        CHECK_EQUAL(
-            "%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF%E7%9A%86%E6%A7%98",
-            show::url_encode( "こんにちは皆様" )
-        );
-    }
-    
-    TEST( EncodeLongString )
-    {
-        CHECK_EQUAL(
-            long_message_url_encoded,
-            show::url_encode( long_message, {} )
-        );
-    }
-    
-    TEST( EncodeVeryLongString )
-    {
-        std::string very_long_message;
-        std::string very_long_message_encoded;
-        for( int i = 0; i < 256; ++i )
-        {
-            very_long_message         += long_message;
-            very_long_message_encoded += long_message_url_encoded;
-        }
-        CHECK_EQUAL(
-            very_long_message_encoded,
-            show::url_encode( very_long_message, {} )
-        );
-    }
-    
-    TEST( DecodeNoConversion )
-    {
-        CHECK_EQUAL(
-            "hello_world",
-            show::url_decode( "hello_world" )
-        );
-    }
-    
-    TEST( DecodeSpaceConversionPlus )
-    {
-        CHECK_EQUAL(
-            "hello world",
-            show::url_decode( "hello+world" )
-        );
-    }
-    
-    TEST( DecodeSpaceConversionPercent )
-    {
-        CHECK_EQUAL(
-            "hello world",
-            show::url_decode( "hello%20world" )
-        );
-    }
-    
-    TEST( DecodeSlash )
-    {
-        CHECK_EQUAL(
-            "hello/world",
-            show::url_decode( "hello%2Fworld" )
-        );
-    }
-    
-    TEST( DecodeEmptyString )
-    {
-        CHECK_EQUAL(
-            "",
-            show::url_decode( "" )
-        );
-    }
-    
-    TEST( DecodeNullBytesString )
-    {
-        CHECK_EQUAL(
-            std::string( "\0\0\0", 3 ),
-            show::url_decode( "%00%00%00" )
-        );
-    }
-    
-    TEST( DecodeUnicodeString )
-    {
-        CHECK_EQUAL(
-            "丹羽さんの庭には",
-            show::url_decode(
-                "%E4%B8%B9%E7%BE%BD%E3%81%95%E3%82%93%E3%81%AE%E5%BA%AD%E3%81%AB%E3%81%AF"
-            )
-        );
-    }
-    
-    TEST( DecodeLowercase )
-    {
-        CHECK_EQUAL(
-            "丹羽さんの庭には",
-            show::url_decode(
-                "%e4%b8%b9%e7%be%bd%e3%81%95%e3%82%93%e3%81%ae%e5%ba%ad%e3%81%ab%e3%81%af"
-            )
-        );
-    }
-    
-    TEST( DecodeLongString )
-    {
-        CHECK_EQUAL(
-            long_message,
-            show::url_decode( long_message_url_encoded )
-        );
-    }
-    
-    TEST( DecodeVeryLongString )
-    {
-        std::string very_long_message;
-        std::string very_long_message_encoded;
-        for( int i = 0; i < 256; ++i )
-        {
-            very_long_message         += long_message;
-            very_long_message_encoded += long_message_url_encoded;
-        }
-        CHECK_EQUAL(
-            very_long_message,
-            show::url_decode( very_long_message_encoded )
-        );
-    }
-    
-    TEST( DecodeFailIncompleteEscapeSequence )
-    {
-        try
-        {
-            show::url_decode( "hello%2" );
-            CHECK( false );
-        }
-        catch( const show::url_decode_error& e )
-        {
-            CHECK_EQUAL(
-                "incomplete URL-encoded sequence",
-                e.what()
-            );
-        }
-    }
-    
-    TEST( DecodeFailIncompleteEscapeSequenceFirstChar )
-    {
-        try
-        {
-            show::url_decode( "hello%m0world" );
-            CHECK( false );
-        }
-        catch( const show::url_decode_error& e )
-        {
-            CHECK_EQUAL(
-                "invalid URL-encoded sequence",
-                e.what()
-            );
-        }
-    }
-    
-    TEST( DecodeFailIncompleteEscapeSequenceSecondChar )
-    {
-        try
-        {
-            show::url_decode( "hello%2zworld" );
-            CHECK( false );
-        }
-        catch( const show::url_decode_error& e )
-        {
-            CHECK_EQUAL(
-                "invalid URL-encoded sequence",
-                e.what()
-            );
-        }
-    }
+    REQUIRE(
+        show::url_decode( very_long_message_encoded ) == very_long_message
+    );
+}
+
+TEST_CASE( "URL-decode fail on incomplete escape sequence" )
+{
+    REQUIRE_THROWS_WITH(
+        show::url_decode( "hello%2" ),
+        "incomplete URL-encoded sequence"
+    );
+}
+
+TEST_CASE( "URL-decode fail on incomplete escape sequence (first char)" )
+{
+    REQUIRE_THROWS_WITH(
+        show::url_decode( "hello%m0world" ),
+        "invalid URL-encoded sequence"
+    );
+}
+
+TEST_CASE( "URL-decode fail on incomplete escape sequence (second char)" )
+{
+    REQUIRE_THROWS_WITH(
+        show::url_decode( "hello%2zworld" ),
+        "invalid URL-encoded sequence"
+    );
 }
