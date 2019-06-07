@@ -518,7 +518,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         
         s.set_info( info_type::local );
         
-        if( listen( s._descriptor, 3 ) == -1 )
+        if( ::listen( s._descriptor, 3 ) == -1 )
             throw socket_error{
                 "could not listen on socket: "
                 + std::string{ std::strerror( errno ) }

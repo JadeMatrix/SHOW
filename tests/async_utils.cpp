@@ -40,7 +40,7 @@ void write_to_socket(
     std::string::size_type pos{ 0 };
     while( pos < m.size() )
     {
-        auto written = write(
+        auto written = ::write(
             s.descriptor(),
             m.c_str() + pos,
             m.size()
@@ -106,8 +106,8 @@ void check_response_to_request(
     
     write_to_socket( client_socket, request );
     
-    timespec timeout_spec{ 2, 0 };
-    fd_set read_descriptors;
+    ::timespec timeout_spec{ 2, 0 };
+    ::fd_set read_descriptors;
     
     std::string got_response;
     
@@ -116,7 +116,7 @@ void check_response_to_request(
         FD_ZERO( &read_descriptors );
         FD_SET( client_socket.descriptor(), &read_descriptors );
         
-        auto select_result = pselect(
+        auto select_result = ::pselect(
             client_socket.descriptor() + 1,
             &read_descriptors,
             NULL,
@@ -136,7 +136,7 @@ void check_response_to_request(
             break;
         
         char buffer[ 512 ];
-        auto read_bytes = read(
+        auto read_bytes = ::read(
             client_socket.descriptor(),
             buffer,
             sizeof( buffer )
