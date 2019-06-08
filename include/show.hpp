@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <sys/socket.h> // ::socklen_t
-// TODO: ::ssize_t header
+#include <sys/types.h>  // ::ssize_t
 
 
 // @SHOW_CPP_BEGIN
