@@ -9,7 +9,7 @@ This shows the basic usage of SHOW; see the `examples <https://github.com/JadeMa
 Including & Compiling
 =====================
 
-SHOW is available in three forms: orignal header-only, shared library, and static library.  If you want to get going fast, SHOW's webserver functionality is entirely contained in a single header file — all you need is *show.hpp* in this project's *include/* directory.  For GCC and Clang, you can either add/link `show.hpp` to one of your standard include search paths, or use the ``-I`` flag to tell the compiler where too find the header::
+SHOW is available as either a header-only or compiled library (static or shared).  If you want to get going fast, SHOW's webserver functionality is entirely contained in a single header file — all you need is *show.hpp* in this project's *include/* directory.  For GCC and Clang, you can either add/link `show.hpp` to one of your standard include search paths, or use the ``-I`` flag to tell the compiler where too find the header::
     
     clang++ -I "SHOW/include/" ...
 
@@ -22,7 +22,7 @@ However, the preferred method of including SHOW is via `CMake <https://cmake.org
     cmake -D CMAKE_INSTALL_PREFIX=../SHOW-install ../SHOW
     make install
 
-By default, if you build & install using CMake both the shared & static libraries will be created.  If you want CMake integration but also want SHOW to be header-only, run ``cmake`` with the ``-D SHOW_INSTALL_HEADERONLY=TRUE`` argument.
+By default, if you configure, build & install using CMake, a static library will be created (you can tell CMake that a shared library should be built by passing ``-D BUILD_SHARED_LIBS=ON``).  If you want CMake integration but also want SHOW to be header-only, run ``cmake`` with the ``-D SHOW_INSTALL_HEADERONLY=TRUE`` argument.
 
 To get CMake to see where SHOW was installed, either:
 
