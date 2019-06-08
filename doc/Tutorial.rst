@@ -42,6 +42,14 @@ You should also switch your compiler to C++11 mode with::
     SET( CMAKE_CXX_STANDARD_REQUIRED ON )
     SET( CMAKE_CXX_EXTENSIONS OFF )
 
+.. seealso::
+    
+    * ``BUILD_SHARED_LIBS`` on `cmake.org <https://cmake.org/cmake/help/v3.6/variable/BUILD_SHARED_LIBS.html>`_
+    * ``CMAKE_PREFIX_PATH`` on `cmake.org <https://cmake.org/cmake/help/v3.6/variable/CMAKE_PREFIX_PATH.html>`_
+    * ``CMAKE_INSTALL_PREFIX`` on `cmake.org <https://cmake.org/cmake/help/v3.6/variable/CMAKE_INSTALL_PREFIX.html>`_
+    * ``FIND_PACKAGE`` on `cmake.org <https://cmake.org/cmake/help/v3.6/command/find_package.html>`_
+    * ``TARGET_LINK_LIBRARIES`` on `cmake.org <https://cmake.org/cmake/help/v3.6/command/target_link_libraries.html>`_
+
 Creating a Server
 =================
 

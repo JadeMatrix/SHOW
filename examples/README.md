@@ -1,16 +1,16 @@
 There are two easy ways to build the examples in this directory.  If you have [CMake](https://cmake.org/) installed, make a build directory somewhere and `cd` to it.  Then run
 
 ```sh
-cmake $SHOW_REPO_DIR
+cmake <repo_dir>
 ```
 
-where `$SHOW_REPO_DIR` is where you cloned SHOW.  Then either run `make examples` to build all examples, or `make $NAME` to build a specific example.  The other way to build any of the examples is manually with Clang (`clang++`) or GCC (`g++`):
+where `<repo_dir>` is where you cloned SHOW.  Then either run `make examples` to build all examples, or `make <example>` to build a specific example named `<example>`.  The other way to build any of the examples is manually with Clang (`clang++`) or GCC (`g++`):
 
 ```sh
 clang++ -std=c++11 \
-    -I $SHOW_REPO_DIR/src \
-    $SHOW_REPO_DIR/examples/$NAME.cpp \
-    -o $NAME
+    -I <repo_dir>/src \
+    <repo_dir>/examples/<example>.cpp \
+    -o <example>
 ```
 
 Each of these servers can be tested from a second terminal window.
@@ -60,7 +60,7 @@ Hello World
 
 # `streaming_echo`
 
-A more advanced echo server that streams large requests using `std::istream` and responds using `std::ostream`.  Run & test it like `http_1_1`, but use a longer request you can enter in parts.  For example, first paste this into Netcat:
+A more advanced echo server that streams large requests using `std::istream` and responds using `std::ostream`.  Run & test it like `http_1_1`, but use a longer request you can enter in parts.  For example, paste these three blocks of text into Netcat, each followed by enter:
 
 ```http
 POST /foo/bar HTTP/1.0
@@ -71,21 +71,17 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 ```
 
-Then paste this:
-
 ```http
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 ```
-
-and finally this:
 
 ```http
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 ```
 
-The server should echo back each of the three lines as soon as you paste them in.  Note that there is a newline following each of those data chunks.  This might not show up with some Markdown renderers, so try opening this file in a plaintext editor and copying from there.
+The server should echo back each of the three lines as soon as you press enter.
 
 # `fileserve`
 
