@@ -9,7 +9,7 @@ INCLUDE( doctest )
 
 ADD_CUSTOM_TARGET( tests ALL )
 
-ADD_LIBRARY( show_unit_test_utils STATIC EXCLUDE_FROM_ALL )
+ADD_LIBRARY( show_unit_test_utils OBJECT EXCLUDE_FROM_ALL )
 TARGET_SOURCES( show_unit_test_utils
     PRIVATE
         "async_utils.cpp"
