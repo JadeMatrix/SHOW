@@ -1,6 +1,5 @@
-#include "doctest_wrap.hpp"
-
 #include <show.hpp>
+#include <show/testing/doctest_wrap.hpp>
 
 #include <curl/curl.h>
 

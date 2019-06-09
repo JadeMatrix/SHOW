@@ -1,10 +1,8 @@
-#include "doctest_wrap.hpp"
-
 #include <show.hpp>
+#include <show/testing/constants.hpp>
+#include <show/testing/doctest_wrap.hpp>
 
 #include <string>
-
-#include "constants.hpp"
 
 
 TEST_CASE( "URL-encode with no conversion" )

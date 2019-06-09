@@ -1,12 +1,10 @@
-#include "doctest_wrap.hpp"
-
 #include <show/multipart.hpp>
+#include <show/testing/async_utils.hpp>
+#include <show/testing/constants.hpp>
+#include <show/testing/doctest_wrap.hpp>
 
 #include <sstream>
 #include <string>
-
-#include "async_utils.hpp"
-#include "constants.hpp"
 
 
 namespace

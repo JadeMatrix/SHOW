@@ -1,6 +1,6 @@
 #pragma once
-#ifndef SHOW_TESTS_DOCTEST_WRAP_HPP
-#define SHOW_TESTS_DOCTEST_WRAP_HPP
+#ifndef SHOW_TESTING_DOCTEST_WRAP_HPP
+#define SHOW_TESTING_DOCTEST_WRAP_HPP
 
 
 #include <string>

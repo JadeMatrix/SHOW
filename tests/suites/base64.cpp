@@ -1,10 +1,8 @@
-#include "doctest_wrap.hpp"
-
 #include <show/base64.hpp>
+#include <show/testing/constants.hpp>
+#include <show/testing/doctest_wrap.hpp>
 
 #include <string>
-
-#include "constants.hpp"
 
 
 namespace

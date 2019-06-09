@@ -1,7 +1,4 @@
-#define DOCTEST_CONFIG_IMPLEMENT
-#include "doctest_wrap.hpp"
-
-#include <curl/curl.h>
+#include <show/testing/doctest_wrap.hpp>
 
 
 // Implementations of operators from doctest_wrap.hpp //////////////////////////
@@ -119,20 +116,4 @@ std::ostream& operator<<( std::ostream& out, const show::headers_type& v )
     if( s )
         fmt_map_of_lists( out, v );
     return out;
-}
-
-
-// Main ////////////////////////////////////////////////////////////////////////
-
-
-int main( int argc, char* argv[] )
-{
-    ::curl_global_init( CURL_GLOBAL_ALL );
-    
-    doctest::Context context{};
-    context.applyCommandLine( argc, argv );
-    auto failed = context.run();
-    
-    ::curl_global_cleanup();
-    return failed;
 }

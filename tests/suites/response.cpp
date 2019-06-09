@@ -1,9 +1,7 @@
-#include "doctest_wrap.hpp"
-
 #include <show.hpp>
-
-#include "async_utils.hpp"
-#include "constants.hpp"
+#include <show/testing/async_utils.hpp>
+#include <show/testing/constants.hpp>
+#include <show/testing/doctest_wrap.hpp>
 
 #include <iostream> // std::cerr
 

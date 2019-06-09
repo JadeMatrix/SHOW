@@ -1,6 +1,6 @@
 #pragma once
-#ifndef SHOW_TESTS_CONSTANTS_HPP
-#define SHOW_TESTS_CONSTANTS_HPP
+#ifndef SHOW_TESTING_CONSTANTS_HPP
+#define SHOW_TESTING_CONSTANTS_HPP
 
 
 #include <string>

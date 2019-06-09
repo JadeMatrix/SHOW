@@ -1,14 +1,12 @@
-#include "doctest_wrap.hpp"
-
 #include <show.hpp>
+#include <show/testing/async_utils.hpp>
+#include <show/testing/constants.hpp>
+#include <show/testing/doctest_wrap.hpp>
 
 #include <chrono>       // std::chrono::seconds
 #include <sstream>
 #include <string>
 #include <thread>       // std::this_thread::sleep_for()
-
-#include "async_utils.hpp"
-#include "constants.hpp"
 
 
 TEST_CASE( "request (simple)" )
