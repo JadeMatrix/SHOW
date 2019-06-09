@@ -31,7 +31,7 @@ Request
         
         The IP address of the client that sent the request
     
-    .. cpp:function:: const unsigned int client_port() const
+    .. cpp:function:: port_type client_port() const
         
         The port of the client that sent the request
     

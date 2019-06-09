@@ -1055,8 +1055,8 @@ TEST_CASE( "request client disconnect" )
 TEST_CASE( "request fail on incomplete (client hang)" )
 {
     // connection_timeout on incomplete request w/ client hanging
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     show::server test_server{ address, port, 1 };
     
     auto request_thread = send_request_async(
@@ -1093,8 +1093,8 @@ TEST_CASE( "request fail on incomplete (client hang)" )
 TEST_CASE( "request fail on incomplete (client disconnect)" )
 {
     // client_disconnected on incomplete request w/ client incomplete
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     show::server test_server{ address, port, 1 };
     
     auto request_thread = send_request_async(
@@ -1131,8 +1131,8 @@ TEST_CASE( "request fail on truncated content (client hang)" )
 {
     // connection_timeout on content length < Content-Length w/ client
     // hanging
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     show::server test_server{ address, port, 1 };
     
     auto request_thread = send_request_async(
@@ -1176,8 +1176,8 @@ TEST_CASE( "request fail on truncated content (client disconnect)" )
 {
     // client_disconnected on content length < Content-Length w/ client
     // incomplete
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     show::server test_server{ address, port, 1 };
     
     auto request_thread = send_request_async(

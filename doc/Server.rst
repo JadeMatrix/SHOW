@@ -8,7 +8,7 @@ Server
     
     The server class serves as the basis for writing an HTTP application with SHOW.  Creating a server object allows the application to handle HTTP requests on a single IP/port combination.
     
-    .. cpp:function:: server( const std::string& address, unsigned int port, int timeout = -1 )
+    .. cpp:function:: server( const std::string& address, port_type port, int timeout = -1 )
         
         Constructs a new server to serve on the given IP address and port.  The IP address will typically be ``localhost``/``0.0.0.0``/``::``.  The port should be some random higher-level port chosen for the application.
         
@@ -26,7 +26,7 @@ Server
         
         Get the address this server is servering on
     
-    .. cpp:function:: unsigned int port() const
+    .. cpp:function:: port_type port() const
         
         Get the port this server is servering on
     

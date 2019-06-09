@@ -17,8 +17,8 @@
 
 TEST_CASE( "server with IPV4 address" )
 {
-    std::string  address{ "0.0.0.0" };
-    unsigned int port   { 9090      };
+    std::string     address{ "0.0.0.0" };
+    show::port_type port   { 9090      };
     show::server test_server{ address, port };
     REQUIRE( test_server.address() == address );
     REQUIRE( test_server.port   () == port    );
@@ -26,8 +26,8 @@ TEST_CASE( "server with IPV4 address" )
 
 TEST_CASE( "server with IPV6 address" )
 {
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     show::server test_server{ address, port };
     // SHOW will report IPv4-compatible addresses as IPv4 strings
     REQUIRE( test_server.address() == "0.0.0.0" );
@@ -265,12 +265,12 @@ TEST_CASE( "server connection positive timeout" )
 
 TEST_CASE( "server move construct" )
 {
-    auto make_server = []( const std::string& address, unsigned int port ){
+    auto make_server = []( const std::string& address, show::port_type port ){
         return show::server{ address, port };
     };
     
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     auto test_server = make_server( address, port );
     
     // SHOW will report IPv4-compatible addresses as IPv4 strings
@@ -280,19 +280,19 @@ TEST_CASE( "server move construct" )
 
 TEST_CASE( "server move assign" )
 {
-    auto make_server = []( const std::string& address, unsigned int port ){
+    auto make_server = []( const std::string& address, show::port_type port ){
         return show::server{ address, port };
     };
     
-    std::string  address1{ "0.0.0.0" };
-    unsigned int port1   { 9090      };
+    std::string     address1{ "0.0.0.0" };
+    show::port_type port1   { 9090      };
     auto test_server = make_server( address1, port1 );
     
     REQUIRE( test_server.address() == address1 );
     REQUIRE( test_server.port   () ==    port1 );
     
-    std::string  address2{ "::" };
-    unsigned int port2   { 9595 };
+    std::string     address2{ "::" };
+    show::port_type port2   { 9595 };
     test_server = make_server( address2, port2 );
     
     // SHOW will report IPv4-compatible addresses as IPv4 strings

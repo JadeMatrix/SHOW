@@ -37,7 +37,7 @@ namespace show // `show::multipart` class //////////////////////////////////////
         public:
             segment( const segment& ) = delete;
             
-            constexpr const headers_type& headers() const { return _headers; }
+            const headers_type& headers() const { return _headers; }
             
             // std::streambuf get functions
             virtual std::streamsize showmanyc();
@@ -91,8 +91,8 @@ namespace show // `show::multipart` class //////////////////////////////////////
         
         multipart( std::streambuf&, std::string boundary );
         
-        constexpr const std::streambuf&   buffer() const { return _buffer  ; }
-        constexpr const std::string   & boundary() const { return _boundary; }
+        const std::streambuf&   buffer() const { return _buffer  ; }
+        const std::string   & boundary() const { return _boundary; }
         
         iterator begin();
         iterator   end();
@@ -278,6 +278,7 @@ namespace show // `show::multipart::segment` implementation ////////////////////
                             reading = false;
                             break;
                         }
+                        SHOW_INTERNAL_ATTRIBUTE_FALLTHROUGH;
                     default:
                         if( !(
                                ( current_char >= 'a' && current_char <= 'z' )
@@ -302,7 +303,10 @@ namespace show // `show::multipart::segment` implementation ////////////////////
                     break;
                 }
                 else if( current_char == '\n' )
+                {
                     parse_state = READING_HEADER_VALUE;
+                    SHOW_INTERNAL_ATTRIBUTE_FALLTHROUGH;
+                }
                 else
                     throw multipart_parse_error{
                         "malformed header in multipart data"
@@ -500,7 +504,6 @@ namespace show // `show::multipart` implementation /////////////////////////////
         if( _boundary.size() < 1 )
             throw std::invalid_argument{ "empty string as multipart boundary" };
         
-        std::streambuf::int_type got_c;
         // \r (usually), \n, and two dashes followed by boundary then possibly
         // two more dashes
         std::string got_boundary( _boundary.size() + 6, '\0' );
@@ -510,7 +513,7 @@ namespace show // `show::multipart` implementation /////////////////////////////
         bool         crlf_start{ false };
         do
         {
-            got_c = internal::read_buffer_until_boundary(
+            auto got_c = internal::read_buffer_until_boundary(
                 crlf_start,
                 _buffer,
                 _boundary,
@@ -527,6 +530,8 @@ namespace show // `show::multipart` implementation /////////////////////////////
                 }
             );
             crlf_start = true;
+            if( std::streambuf::traits_type::not_eof( got_c ) != got_c )
+                break;
         }
         while( !end_of_pre_content );
     }

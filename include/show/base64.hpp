@@ -109,7 +109,9 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                 current_sextet = ( o[ j ] << 4 ) & 0x30 /* 00110000 */;
                 ++j;
                 if( j < o.size() )
-                    current_sextet |= ( o[ j ] >> 4 ) & 0x0F /* 00001111 */;
+                    current_sextet = static_cast< unsigned char >(
+                        current_sextet | (( o[ j ] >> 4 ) & 0x0F)
+                    ) /* 00001111 */;
                 encoded += dict[ current_sextet ];
                 break;
             case 2:
@@ -122,7 +124,9 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
                     current_sextet = ( o[ j ] << 2 ) & 0x3C /* 00111100 */;
                     ++j;
                     if( j < o.size() )
-                        current_sextet |= ( o[ j ] >> 6 ) & 0x03 /* 00000011 */;
+                        current_sextet = static_cast< unsigned char >(
+                            current_sextet | (( o[ j ] >> 6 ) & 0x03)
+                        ) /* 00000011 */;
                     encoded += dict[ current_sextet ];
                 }
                 else

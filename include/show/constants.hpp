@@ -17,8 +17,8 @@ namespace show
     
     // As SHOW is intended to be used behind a reverse proxy, these are of
     // questionable utility but still provided for educational purposes
-    static const unsigned int http_port { 80   };
-    static const unsigned int https_port{ 8080 };
+    static const port_type http_port { 80   };
+    static const port_type https_port{ 8080 };
     
     
     // Headers /////////////////////////////////////////////////////////////////

@@ -3,6 +3,7 @@
 #define SHOW_HPP
 
 
+#include <cstring>      // std::strerror
 #include <iomanip>
 #include <map>
 #include <stdexcept>
@@ -10,6 +11,7 @@
 #include <type_traits>  // std::enable_if, std::is_enum
 #include <vector>
 
+#include <netinet/in.h> // ::sockaddr_in6
 #include <sys/socket.h> // ::socklen_t
 #include <sys/types.h>  // ::ssize_t
 
@@ -17,8 +19,9 @@
 // @SHOW_CPP_BEGIN
 
 
-#include <cstring>      // std::memset
 #include <algorithm>    // std::copy
+#include <cstring>      // std::memset
+#include <functional>   // std::functional
 #include <limits>
 #include <stack>
 #include <sstream>
@@ -27,7 +30,6 @@
 #include <arpa/inet.h>  // ::inet_pton, ::inet_ntop
 #include <fcntl.h>      // ::fcntl
 #include <netdb.h>      // ::getprotobyname
-#include <netinet/in.h> // ::sockaddr_in6
 #include <stdio.h>      // ::read
 #include <sys/select.h> // ::pselect
 #include <sys/socket.h> // ::socket, ::bind, ::socklen_t, ::send
@@ -50,16 +52,10 @@ namespace show // Constants ////////////////////////////////////////////////////
 }
 
 
-namespace show // Basic types //////////////////////////////////////////////////
+namespace show // Utilities ////////////////////////////////////////////////////
 {
     namespace internal
     {
-        // `ssize_t` instead of `std::streamsize` because this is for use with
-        // POSIX `read()`
-        using buffsize_type = ::ssize_t;
-        
-        static const char ascii_ack{ '\x06' };
-        
         // Locale-independent ASCII uppercase
         inline char toupper_ascii( char c )
         {
@@ -112,6 +108,14 @@ namespace show // Basic types //////////////////////////////////////////////////
                 return lhs.size() < rhs.size();
             }
         };
+        
+        constexpr bool errno_restartable( int e )
+        {
+            // `EAGAIN` and `EWOULDBLOCK` may be the same value on some
+            // platforms, and some compilers will then warn about putting both
+            // in the same boolean expression
+            return e == EAGAIN ? true : e == EWOULDBLOCK;
+        }
         
         template< typename E, typename = void > class flags;
         
@@ -169,6 +173,19 @@ namespace show // Basic types //////////////////////////////////////////////////
             return flags< E >{ lhs } & rhs;
         }
     }
+}
+
+
+namespace show // Support types & constants ////////////////////////////////////
+{
+    namespace internal
+    {
+        // `ssize_t` instead of `std::streamsize` because this is for use with
+        // POSIX `read()`
+        using buffsize_type = ::ssize_t;
+        
+        static const char ascii_ack{ '\x06' };
+    }
     
     enum class protocol
     {
@@ -183,6 +200,9 @@ namespace show // Basic types //////////////////////////////////////////////////
         unsigned short code;
         std::string description;
     };
+    
+    // As defined by the POSIX sockets API
+    using port_type = ::uint16_t;
     
     using query_args_type = std::map<
         std::string,
@@ -219,16 +239,16 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         // Make socket for listening on an address & port
         static socket make_server(
-            std::string  address,
-            unsigned int port
+            std::string address,
+            port_type   port
         );
         
         // Make socket for sending to an address & port with an optional local
         // port
         static socket make_client(
             const std::string& server_address,
-            unsigned int       server_port,
-            unsigned int       client_port = 0
+            port_type          server_port,
+            port_type          client_port = 0
         );
         
         // Make a socket for serving an incoming request
@@ -238,11 +258,11 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         socket& operator =( socket&& );
         
-        /*constexpr*/ fd_type        descriptor    ()       { return _descriptor    ; }
-        constexpr const std::string& local_address () const { return _local_address ; }
-        constexpr unsigned int       local_port    () const { return _local_port    ; }
-        constexpr const std::string& remote_address() const { return _remote_address; }
-        constexpr unsigned int       remote_port   () const { return _remote_port   ; }
+        fd_type            descriptor    ()       { return _descriptor    ; }
+        const std::string& local_address () const { return _local_address ; }
+        port_type          local_port    () const { return _local_port    ; }
+        const std::string& remote_address() const { return _remote_address; }
+        port_type          remote_port   () const { return _remote_port   ; }
         
         flags< wait_for_type > wait_for(
             flags< wait_for_type > wf,
@@ -253,9 +273,9 @@ namespace show // Main classes /////////////////////////////////////////////////
     protected:
         fd_type      _descriptor;
         std::string  _local_address;
-        unsigned int _local_port;
+        port_type    _local_port;
         std::string  _remote_address;
-        unsigned int _remote_port;
+        port_type    _remote_port;
         
         // Make an uninitialized socket
         socket();
@@ -275,6 +295,11 @@ namespace show // Main classes /////////////////////////////////////////////////
             T   value,
             const std::string& description
         );
+        
+        static ::sockaddr_in6 make_sockaddr(
+            const std::string&,
+            port_type
+        );
     };
     
     class connection : public std::streambuf
@@ -289,12 +314,12 @@ namespace show // Main classes /////////////////////////////////////////////////
         connection& operator =( connection&& );
         
         const std::string& client_address() const { return _serve_socket.remote_address(); };
-        unsigned int       client_port   () const { return _serve_socket.remote_port   (); };
+        port_type          client_port   () const { return _serve_socket.remote_port   (); };
         const std::string& server_address() const { return _serve_socket. local_address(); };
-        unsigned int       server_port   () const { return _serve_socket. local_port   (); };
+        port_type          server_port   () const { return _serve_socket. local_port   (); };
         
-        constexpr     int timeout() const  { return _timeout    ; }
-        /*constexpr*/ int timeout( int t ) { return _timeout = t; }
+        int timeout() const  { return _timeout    ; }
+        int timeout( int t ) { return _timeout = t; }
         
     protected:
         using buffer_type      = std::vector< char >;
@@ -350,17 +375,17 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         request& operator =( request&& );
         
-        constexpr show::connection                & connection            () const { return *_connection                   ; }
-        constexpr const std::string               & client_address        () const { return _connection -> client_address(); }
-        constexpr unsigned int                      client_port           () const { return _connection -> client_port   (); }
-        constexpr protocol                          protocol              () const { return _protocol                      ; }
-        constexpr const std::string               & protocol_string       () const { return _protocol_string               ; }
-        constexpr const std::string               & method                () const { return _method                        ; }
-        constexpr const std::vector< std::string >& path                  () const { return _path                          ; }
-        constexpr const query_args_type           & query_args            () const { return _query_args                    ; }
-        constexpr const headers_type              & headers               () const { return _headers                       ; }
-        constexpr content_length_flag               unknown_content_length() const { return _unknown_content_length        ; }
-        constexpr std::size_t                       content_length        () const { return _content_length                ; }
+        show::connection                & connection            () const { return *_connection                   ; }
+        const std::string               & client_address        () const { return _connection -> client_address(); }
+        port_type                         client_port           () const { return _connection -> client_port   (); }
+        enum protocol                     protocol              () const { return _protocol                      ; }
+        const std::string               & protocol_string       () const { return _protocol_string               ; }
+        const std::string               & method                () const { return _method                        ; }
+        const std::vector< std::string >& path                  () const { return _path                          ; }
+        const query_args_type           & query_args            () const { return _query_args                    ; }
+        const headers_type              & headers               () const { return _headers                       ; }
+        content_length_flag               unknown_content_length() const { return _unknown_content_length        ; }
+        std::size_t                       content_length        () const { return _content_length                ; }
         
         bool eof() const;
         void flush();
@@ -423,7 +448,7 @@ namespace show // Main classes /////////////////////////////////////////////////
     public:
         server(
             const std::string& address,
-            unsigned int       port,
+            port_type          port,
             int                timeout = -1
         );
         server( server&& );
@@ -432,11 +457,11 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         connection serve();
         
-        constexpr const std::string& address() const { return _listen_socket.local_address(); }
-        constexpr unsigned int       port()    const { return _listen_socket.local_port   (); }
+        const std::string& address() const { return _listen_socket.local_address(); }
+        port_type          port()    const { return _listen_socket.local_port   (); }
         
-        constexpr     int timeout() const  { return _timeout    ; }
-        /*constexpr*/ int timeout( int t ) { return _timeout = t; }
+        int timeout() const  { return _timeout    ; }
+        int timeout( int t ) { return _timeout = t; }
         
     protected:
         internal::socket _listen_socket;
@@ -476,16 +501,26 @@ namespace show // URL-encoding /////////////////////////////////////////////////
 }
 
 
+#if __cplusplus >= 201703L
+    #define SHOW_INTERNAL_ATTRIBUTE_FALLTHROUGH [[ fallthrough ]]
+#else
+    // Check specifically for Clang first as it may define __GNUC__ for
+    // compatibility
+    #if defined __clang__
+        #define SHOW_INTERNAL_ATTRIBUTE_FALLTHROUGH [[ clang::fallthrough ]]
+    #elif defined __GNUC__
+        #define SHOW_INTERNAL_ATTRIBUTE_FALLTHROUGH [[ gnu::fallthrough ]]
+    #else
+        #define SHOW_INTERNAL_ATTRIBUTE_FALLTHROUGH
+    #endif
+#endif
+
+
 // @SHOW_CPP_BEGIN
 
 
 namespace show // `show::internal::socket` implementation //////////////////////
 {
-    namespace internal
-    {
-        ::sockaddr_in6 make_sockaddr( const std::string&, unsigned int );
-    }
-    
     inline internal::socket::socket( socket&& o ) :
         _descriptor    {            o._descriptor       },
         _local_address { std::move( o._local_address  ) },
@@ -497,15 +532,15 @@ namespace show // `show::internal::socket` implementation //////////////////////
     }
     
     inline internal::socket internal::socket::make_server(
-        std::string  address,
-        unsigned int port
+        std::string address,
+        port_type   port
     )
     {
         auto s = make_basic();
         s.set_reuse();
         s.set_nonblocking();
         
-        auto info = internal::make_sockaddr( address, port );
+        auto info = make_sockaddr( address, port );
         
         if( ::bind(
             s._descriptor,
@@ -530,14 +565,14 @@ namespace show // `show::internal::socket` implementation //////////////////////
     
     inline internal::socket internal::socket::make_client(
         const std::string& server_address,
-        unsigned int       server_port,
-        unsigned int       client_port
+        port_type          server_port,
+        port_type          client_port
     )
     {
         auto s = make_basic();
         s.set_reuse();
         
-        auto info = internal::make_sockaddr( "::", client_port );
+        auto info = make_sockaddr( "::", client_port );
         
         if( ::bind(
             s._descriptor,
@@ -549,7 +584,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
                 + std::string{ std::strerror( errno ) }
             };
         
-        info = internal::make_sockaddr( server_address, server_port );
+        info = make_sockaddr( server_address, server_port );
         
         if( ::connect(
             s._descriptor,
@@ -582,7 +617,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
         
         if( s._descriptor == -1 )
         {
-            if( errno == EAGAIN || errno == EWOULDBLOCK )
+            if( internal::errno_restartable( errno ) )
                 throw connection_timeout{};
             else
                 throw socket_error{
@@ -711,7 +746,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
                 ::socklen_t*
             ) > getter,
             std::string & address,
-            unsigned int& port,
+            port_type   & port,
             const char  * name
         ){
             ::sockaddr_in6 info;
@@ -777,9 +812,9 @@ namespace show // `show::internal::socket` implementation //////////////////////
         );
     }
     
-    inline ::sockaddr_in6 internal::make_sockaddr(
+    inline ::sockaddr_in6 internal::socket::make_sockaddr(
         const std::string& address,
-        unsigned int port
+        port_type port
     )
     {
         ::sockaddr_in6 info;
@@ -897,13 +932,13 @@ namespace show // `show::connection` implementation ////////////////////////////
     {
         this -> timeout( timeout );
         setg(
-            reinterpret_cast< char* >( _get_buffer.data() ),
-            reinterpret_cast< char* >( _get_buffer.data() ),
-            reinterpret_cast< char* >( _get_buffer.data() )
+            _get_buffer.data(),
+            _get_buffer.data(),
+            _get_buffer.data()
         );
         setp(
-            reinterpret_cast< char* >( _put_buffer.data() ),
-            reinterpret_cast< char* >( _put_buffer.data() ) + _put_buffer.size()
+            _put_buffer.data(),
+            _put_buffer.data() + _put_buffer.size()
         );
     }
     
@@ -924,18 +959,18 @@ namespace show // `show::connection` implementation ////////////////////////////
                     "response send"
                 );
             
-            auto bytes_sent = static_cast< internal::buffsize_type >( ::send(
+            auto bytes_sent = ::send(
                 _serve_socket.descriptor(),
                 pbase() + send_offset,
                 static_cast< std::size_t >( to_send ),
                 0
-            ) );
+            );
             
             if( bytes_sent == -1 )
             {
                 auto errno_copy = errno;
                 
-                if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
+                if( internal::errno_restartable( errno ) )
                     throw connection_timeout{};
                 else if( errno_copy == ECONNRESET )
                     throw client_disconnected{};
@@ -987,7 +1022,7 @@ namespace show // `show::connection` implementation ////////////////////////////
                 {
                     auto errno_copy = errno;
                     
-                    if( errno_copy == EAGAIN || errno_copy == EWOULDBLOCK )
+                    if( internal::errno_restartable( errno ) )
                         throw connection_timeout{};
                     else if( errno_copy == ECONNRESET )
                         throw client_disconnected{};
@@ -1349,6 +1384,7 @@ namespace show // `show::request` implementation ///////////////////////////////
                             reading = false;
                             break;
                         }
+                        SHOW_INTERNAL_ATTRIBUTE_FALLTHROUGH;
                     default:
                         if( !(
                                ( current_char >= 'a' && current_char <= 'z' )
@@ -1371,7 +1407,10 @@ namespace show // `show::request` implementation ///////////////////////////////
                     break;
                 }
                 else if( current_char == '\n' )
+                {
                     parse_state = reading_header_value;
+                    SHOW_INTERNAL_ATTRIBUTE_FALLTHROUGH;
+                }
                 else
                     throw request_parse_error{ "malformed header" };
                 
@@ -1749,7 +1788,7 @@ namespace show // `show::server` implementation ////////////////////////////////
 {
     inline server::server(
         const std::string& address,
-        unsigned int       port,
+        port_type          port,
         int                timeout
     ) :
         _listen_socket{ internal::socket::make_server( address, port ) },

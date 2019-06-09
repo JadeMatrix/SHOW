@@ -3,9 +3,6 @@
 
 #include <curl/curl.h>
 
-#include <cstdlib>  // std::srand()
-#include <ctime>    // std::time()
-
 
 // Implementations of operators from doctest_wrap.hpp //////////////////////////
 
@@ -130,7 +127,6 @@ std::ostream& operator<<( std::ostream& out, const show::headers_type& v )
 
 int main( int argc, char* argv[] )
 {
-    std::srand( static_cast< unsigned int >( std::time( nullptr ) ) );
     ::curl_global_init( CURL_GLOBAL_ALL );
     
     doctest::Context context{};

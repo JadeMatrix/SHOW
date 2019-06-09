@@ -24,7 +24,7 @@ Connection
         
         The IP address of the connected client
     
-    .. cpp:function:: unsigned int client_port() const
+    .. cpp:function:: port_type client_port() const
         
         The port of the connected client
     
@@ -32,7 +32,7 @@ Connection
         
         The address of the server handling the connection
     
-    .. cpp:function:: unsigned int server_port() const
+    .. cpp:function:: port_type server_port() const
         
         The port of the server handling the connection
     

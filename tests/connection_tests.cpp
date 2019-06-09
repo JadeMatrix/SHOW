@@ -5,9 +5,9 @@
 #include <curl/curl.h>
 
 #include <chrono>
-#include <cstdlib>      // std::rand()
 #include <functional>   // std::function
 #include <memory>       // std::unique_ptr
+#include <random>
 #include <string>
 #include <thread>
 
@@ -24,13 +24,23 @@ namespace
     {
         operation( connection );
     }
+    
+    show::port_type random_port()
+    {
+        std::random_device rd;
+        std::minstd_rand gen{ rd() };
+        return std::uniform_int_distribution< show::port_type >{
+            49152,
+            65535
+        }( gen );
+    }
 }
 
 
 TEST_CASE( "connection inherits server address & port" )
 {
-    std::string  address{ "0.0.0.0" };
-    unsigned int port   { 9090      };
+    std::string     address{ "0.0.0.0" };
+    show::port_type port   { 9090      };
     show::server test_server{ address, port, -1 };
     
     std::thread test_thread{ []{
@@ -64,11 +74,7 @@ TEST_CASE( "connection inherits server address & port" )
 TEST_CASE( "connection detects client address & port" )
 {
     show::server test_server{ "0.0.0.0", 9090, -1 };
-    unsigned int client_port{
-        49152
-        + static_cast< unsigned int >( std::rand() )
-        % ( 65535 - 49152 + 1 )
-    };
+    auto client_port = random_port();
     
     std::thread test_thread{ [ client_port ]{
         auto curl = ::curl_easy_init();
@@ -268,8 +274,8 @@ TEST_CASE( "connection handle in separate thread" )
 
 TEST_CASE( "connection move assign" )
 {
-    std::string  address{ "0.0.0.0" };
-    unsigned int port   { 9090      };
+    std::string     address{ "0.0.0.0" };
+    show::port_type port   { 9090      };
     show::server test_server{ address, port, 1 };
     
     auto do_curl = []{
@@ -310,8 +316,8 @@ TEST_CASE( "connection move assign" )
 
 TEST_CASE( "connection move call" )
 {
-    std::string  address{ "0.0.0.0" };
-    unsigned int port   { 9090      };
+    std::string     address{ "0.0.0.0" };
+    show::port_type port   { 9090      };
     show::server test_server{ address, port, 1 };
     
     auto do_curl = []{

@@ -14,8 +14,8 @@
 
 
 std::thread send_request_async(
-    std::string address,
-    unsigned int port,
+    std::string     address,
+    show::port_type port,
     const std::function< void( show::internal::socket& ) >& request_feeder
 )
 {
@@ -55,8 +55,8 @@ void handle_request(
     const std::function< void( show::connection& ) >& handler_callback
 )
 {
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     show::server test_server{ address, port, 2 };
     
     auto request_thread = send_request_async(
@@ -97,7 +97,7 @@ void run_checks_against_request(
 
 void check_response_to_request(
     const std::string& address,
-    unsigned int       port,
+    show::port_type    port,
     const std::string& request,
     const std::string& response
 )
@@ -167,8 +167,8 @@ void run_checks_against_response(
     const std::string& response
 )
 {
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     
     std::thread server_thread{
         [ address, port, server_callback ](){

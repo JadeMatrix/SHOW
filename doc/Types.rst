@@ -50,7 +50,7 @@ Support Types
     
     .. cpp:member:: std::string description
 
-.. cpp:class:: query_args_type
+.. cpp:type:: query_args_type
     
     An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string > >`, and can be statically initialized like one::
         
@@ -66,7 +66,7 @@ Support Types
         * :cpp:type:`std::map` on `cppreference.com <http://en.cppreference.com/w/cpp/container/map>`_
         * :cpp:type:`std::vector` on `cppreference.com <http://en.cppreference.com/w/cpp/container/vector>`_
 
-.. cpp:class:: headers_type
+.. cpp:type:: headers_type
     
     An alias for :cpp:class:`std::map\< std::string, std::vector\< std::string >, show::internal::less_ignore_case_ASCII >`, where :cpp:class:`show::internal::less_ignore_case_ASCII` is a case-insensitive `compare <http://en.cppreference.com/w/cpp/container/map>`_ for :cpp:class:`std::map`.
     
@@ -94,6 +94,10 @@ Support Types
     +--------------------+--------------------------------------------+
     | ``use_plus_space`` | Encode spaces as ``+`` rather than ``%20`` |
     +--------------------+--------------------------------------------+
+
+.. cpp:type:: port_type
+    
+    Alias for the platform IP port type (``uint16_t`` on POSIX systems).
 
 Throwables
 ==========

@@ -48,8 +48,8 @@ TEST_CASE( "response move assign" )
         };
     };
     
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     
     show::server test_server{ address, port, 2 };
     
@@ -433,8 +433,8 @@ leaving these tests artificially failing for now.
 
 TEST_CASE( "response ..." )
 {
-    std::string  address{ "::" };
-    unsigned int port   { 9090 };
+    std::string     address{ "::" };
+    show::port_type port   { 9090 };
     show::server test_server{ address, port, 1 };
     
     auto request_thread = send_request_async(
