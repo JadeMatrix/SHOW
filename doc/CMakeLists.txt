@@ -4,7 +4,7 @@ IF( TARGET Sphinx::build )
     SET(SHOW_DOC_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/show/")
     ADD_CUSTOM_TARGET( doc ALL )
     
-    FOREACH( BUILDER "html" )
+    FOREACH( BUILDER "html" "man" )
         FILE(MAKE_DIRECTORY "${SHOW_DOC_OUTPUT_DIR}/${BUILDER}/")
         ADD_CUSTOM_TARGET(
             doc_${BUILDER}
