@@ -58,6 +58,8 @@ namespace show // Basic types //////////////////////////////////////////////////
         // POSIX `read()`
         using buffsize_type = ::ssize_t;
         
+        static const char ascii_ack{ '\x06' };
+        
         // Locale-independent ASCII uppercase
         inline char toupper_ascii( char c )
         {
@@ -299,7 +301,6 @@ namespace show // Main classes /////////////////////////////////////////////////
         using buffer_size_type = buffer_type::size_type;
         
         static const buffer_size_type default_buffer_size{ 1024 };
-        static const char ascii_ack{ '\x06' };
         
         internal::socket _serve_socket;
         int              _timeout;
@@ -1105,7 +1106,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             success.
             http://en.cppreference.com/w/cpp/io/basic_streambuf/pbackfail
             */
-            return traits_type::to_int_type( static_cast< char >( ascii_ack ) );
+            return traits_type::to_int_type( internal::ascii_ack );
         }
     }
     
@@ -1145,7 +1146,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             return c;
         }
         else
-            return traits_type::to_int_type( static_cast< char >( ascii_ack ) );
+            return traits_type::to_int_type( internal::ascii_ack );
     }
 }
 
