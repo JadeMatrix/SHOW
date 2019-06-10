@@ -10,7 +10,9 @@ Server
     
     .. cpp:function:: server( const std::string& address, port_type port, int timeout = -1 )
         
-        Constructs a new server to serve on the given IP address and port.  The IP address will typically be ``localhost``/``0.0.0.0``/``::``.  The port should be some random higher-level port chosen for the application.
+        Constructs a new server to serve on the given IP address and port.  The IP address will typically be ``localhost``/``0.0.0.0``/``::``.
+        
+        The port should be some random higher-level port chosen for the application.  Alternatively, a port value of 0 signifies "any free port," in which case :cpp:func:`port` can be used to obtain the port chosen by the operating system.
         
         The timeout is the maximum number of seconds :cpp:func:`serve()` will wait for an incoming connection before throwing :cpp:class:`connection_timeout`.  A value of 0 means that :cpp:func:`serve()` will return immediately if there are no connections waiting to be served; -1 means :cpp:func:`serve()` will wait forever (until the program is interrupted).
     
