@@ -1,5 +1,6 @@
 #include <show.hpp>
 #include <show/testing/doctest_wrap.hpp>
+#include <show/testing/utils.hpp>
 
 #include <curl/curl.h>
 
@@ -23,32 +24,26 @@ namespace
     {
         operation( connection );
     }
-    
-    show::port_type random_port()
-    {
-        std::random_device rd;
-        std::minstd_rand gen{ rd() };
-        return std::uniform_int_distribution< show::port_type >{
-            49152,
-            65535
-        }( gen );
-    }
 }
 
 
 TEST_CASE( "connection inherits server address & port" )
 {
-    std::string     address{ "0.0.0.0" };
-    show::port_type port   { 9090      };
-    show::server test_server{ address, port, -1 };
+    show::server test_server{ "0.0.0.0", 0, -1 };
+    std::string server_url{
+        "http://"
+        + test_server.address()
+        + ":"
+        + std::to_string( test_server.port() )
+    };
     
-    std::thread test_thread{ []{
+    std::thread test_thread{ [ &server_url ]{
         auto curl = ::curl_easy_init();
         REQUIRE( curl );
         ::curl_easy_setopt(
             curl,
             ::CURLOPT_URL,
-            "http://0.0.0.0:9090/"
+            server_url.c_str()
         );
         ::curl_easy_perform( curl );
         ::curl_easy_cleanup( curl );
@@ -72,16 +67,23 @@ TEST_CASE( "connection inherits server address & port" )
 
 TEST_CASE( "connection detects client address & port" )
 {
-    show::server test_server{ "0.0.0.0", 9090, -1 };
+    show::server test_server{ "0.0.0.0", 0, -1 };
+    std::string server_url{
+        "http://"
+        + test_server.address()
+        + ":"
+        + std::to_string( test_server.port() )
+    };
+    // FIXME: unsafe, don't know if in use
     auto client_port = random_port();
     
-    std::thread test_thread{ [ client_port ]{
+    std::thread test_thread{ [ client_port, &server_url ]{
         auto curl = ::curl_easy_init();
         REQUIRE( curl );
         ::curl_easy_setopt(
             curl,
             ::CURLOPT_URL,
-            "http://0.0.0.0:9090/"
+            server_url.c_str()
         );
         ::curl_easy_setopt(
             curl,
@@ -109,15 +111,21 @@ TEST_CASE( "connection detects client address & port" )
 
 TEST_CASE( "connection set independent indefinite timeout" )
 {
-    show::server test_server{ "::", 9090, 0 };
+    show::server test_server{ "::", 0, 0 };
+    std::string server_url{
+        "http://"
+        + test_server.address()
+        + ":"
+        + std::to_string( test_server.port() )
+    };
     
-    std::thread test_thread{ []{
+    std::thread test_thread{ [ &server_url ]{
         auto curl = ::curl_easy_init();
         REQUIRE( curl );
         ::curl_easy_setopt(
             curl,
             ::CURLOPT_URL,
-            "http://0.0.0.0:9090/"
+            server_url.c_str()
         );
         ::curl_easy_perform( curl );
         ::curl_easy_cleanup( curl );
@@ -152,15 +160,21 @@ TEST_CASE( "connection set independent indefinite timeout" )
 
 TEST_CASE( "connection set independent immediate timeout" )
 {
-    show::server test_server{ "::", 9090, -1 };
+    show::server test_server{ "::", 0, -1 };
+    std::string server_url{
+        "http://"
+        + test_server.address()
+        + ":"
+        + std::to_string( test_server.port() )
+    };
     
-    std::thread test_thread{ []{
+    std::thread test_thread{ [ &server_url ]{
         auto curl = ::curl_easy_init();
         REQUIRE( curl );
         ::curl_easy_setopt(
             curl,
             ::CURLOPT_URL,
-            "http://0.0.0.0:9090/"
+            server_url.c_str()
         );
         ::curl_easy_perform( curl );
         ::curl_easy_cleanup( curl );
@@ -192,15 +206,21 @@ TEST_CASE( "connection set independent immediate timeout" )
 
 TEST_CASE( "connection set independent positive timeout" )
 {
-    show::server test_server{ "::", 9090, -1 };
+    show::server test_server{ "::", 0, -1 };
+    std::string server_url{
+        "http://"
+        + test_server.address()
+        + ":"
+        + std::to_string( test_server.port() )
+    };
     
-    std::thread test_thread{ []{
+    std::thread test_thread{ [ &server_url ]{
         auto curl = ::curl_easy_init();
         REQUIRE( curl );
         ::curl_easy_setopt(
             curl,
             ::CURLOPT_URL,
-            "http://0.0.0.0:9090/"
+            server_url.c_str()
         );
         ::curl_easy_perform( curl );
         ::curl_easy_cleanup( curl );
@@ -232,15 +252,21 @@ TEST_CASE( "connection set independent positive timeout" )
 
 TEST_CASE( "connection handle in separate thread" )
 {
-    show::server test_server{ "::", 9090, -1 };
+    show::server test_server{ "::", 0, -1 };
+    std::string server_url{
+        "http://"
+        + test_server.address()
+        + ":"
+        + std::to_string( test_server.port() )
+    };
     
-    std::thread test_thread{ []{
+    std::thread test_thread{ [ &server_url ]{
         auto curl = ::curl_easy_init();
         REQUIRE( curl );
         ::curl_easy_setopt(
             curl,
             ::CURLOPT_URL,
-            "http://0.0.0.0:9090/"
+            server_url.c_str()
         );
         ::curl_easy_perform( curl );
         ::curl_easy_cleanup( curl );
@@ -273,17 +299,21 @@ TEST_CASE( "connection handle in separate thread" )
 
 TEST_CASE( "connection move assign" )
 {
-    std::string     address{ "0.0.0.0" };
-    show::port_type port   { 9090      };
-    show::server test_server{ address, port, 1 };
+    show::server test_server{ "0.0.0.0", 0, 1 };
+    std::string server_url{
+        "http://"
+        + test_server.address()
+        + ":"
+        + std::to_string( test_server.port() )
+    };
     
-    auto do_curl = []{
+    auto do_curl = [ &server_url ]{
         auto curl = ::curl_easy_init();
         REQUIRE( curl );
         ::curl_easy_setopt(
             curl,
             ::CURLOPT_URL,
-            "http://0.0.0.0:9090/"
+            server_url.c_str()
         );
         ::curl_easy_perform( curl );
         ::curl_easy_cleanup( curl );
@@ -315,17 +345,21 @@ TEST_CASE( "connection move assign" )
 
 TEST_CASE( "connection move call" )
 {
-    std::string     address{ "0.0.0.0" };
-    show::port_type port   { 9090      };
-    show::server test_server{ address, port, 1 };
+    show::server test_server{ "0.0.0.0", 0, 1 };
+    std::string server_url{
+        "http://"
+        + test_server.address()
+        + ":"
+        + std::to_string( test_server.port() )
+    };
     
-    auto do_curl = []{
+    auto do_curl = [ &server_url ]{
         auto curl = ::curl_easy_init();
         REQUIRE( curl );
         ::curl_easy_setopt(
             curl,
             ::CURLOPT_URL,
-            "http://0.0.0.0:9090/"
+            server_url.c_str()
         );
         ::curl_easy_perform( curl );
         ::curl_easy_cleanup( curl );

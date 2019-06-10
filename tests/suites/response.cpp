@@ -46,15 +46,15 @@ TEST_CASE( "response move assign" )
         };
     };
     
-    std::string     address{ "::" };
-    show::port_type port   { 9090 };
+    show::server test_server{ "::", 0, 2 };
     
-    show::server test_server{ address, port, 2 };
+    std::string     server_address{ test_server.address() };
+    show::port_type server_port   { test_server.port   () };
     
-    std::thread request_thread1{ [ address, port ](){
+    std::thread request_thread1{ [ &server_address, server_port ](){
         check_response_to_request(
-            address,
-            port,
+            server_address,
+            server_port,
             (
                 "GET / HTTP/1.0\r\n"
                 "Test-Header: foo\r\n"
@@ -67,10 +67,10 @@ TEST_CASE( "response move assign" )
             )
         );
     } };
-    std::thread request_thread2{ [ address, port ](){
+    std::thread request_thread2{ [ &server_address, server_port ](){
         check_response_to_request(
-            address,
-            port,
+            server_address,
+            server_port,
             (
                 "GET / HTTP/1.0\r\n"
                 "Test-Header: bar\r\n"
@@ -431,13 +431,11 @@ leaving these tests artificially failing for now.
 
 TEST_CASE( "response ..." )
 {
-    std::string     address{ "::" };
-    show::port_type port   { 9090 };
-    show::server test_server{ address, port, 1 };
+    show::server test_server{ "::", 0, 1 };
     
     auto request_thread = send_request_async(
-        address,
-        port,
+        test_server.address(),
+        test_server.port(),
         []( show::socket_fd request_socket ){
             std::cout << "writing...\n";
             

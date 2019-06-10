@@ -54,13 +54,11 @@ void handle_request(
     const std::function< void( show::connection& ) >& handler_callback
 )
 {
-    std::string     address{ "::" };
-    show::port_type port   { 9090 };
-    show::server test_server{ address, port, 2 };
+    show::server test_server{ "::", 0, 2 };
     
     auto request_thread = send_request_async(
-        address,
-        port,
+        test_server.address(),
+        test_server.port(),
         [ request ]( show::internal::socket& request_socket ){
             write_to_socket( request_socket, request );
         }
@@ -166,45 +164,39 @@ void run_checks_against_response(
     const std::string& response
 )
 {
-    std::string     address{ "::" };
-    show::port_type port   { 9090 };
+    show::server test_server{ "::", 0, 10 };
+    auto server_address = test_server.address();
+    auto server_port    = test_server.port   ();
     
-    std::thread server_thread{
-        [ address, port, server_callback ](){
-            try
-            {
-                show::server test_server{ address, port, 2 };
-                auto test_connection = test_server.serve();
-                server_callback( test_connection );
-            }
-            catch( const show::connection_timeout& e )
-            {
-                throw std::runtime_error{ "show::connection_timeout" };
-            }
-            catch( const show::client_disconnected& e )
-            {
-                throw std::runtime_error{ "show::client_disconnected" };
-            }
-        }
-    };
-    
-    // Make sure server thread is listening
-    std::this_thread::sleep_for( std::chrono::milliseconds{ 250 } );
-    
-    try
-    {
+    std::thread client_thread{ [
+        &server_address,
+         server_port,
+        &request,
+        &response
+    ](){
         check_response_to_request(
-            address,
-            port,
+            server_address,
+            server_port,
             request,
             response
         );
-    }
-    catch( ... )
+    } };
+    
+    try
     {
-        server_thread.join();
-        throw;
+        auto test_connection = test_server.serve();
+        server_callback( test_connection );
+    }
+    catch( const show::connection_timeout& e )
+    {
+        client_thread.join();
+        throw std::runtime_error{ "show::connection_timeout" };
+    }
+    catch( const show::client_disconnected& e )
+    {
+        client_thread.join();
+        throw std::runtime_error{ "show::client_disconnected" };
     }
     
-    server_thread.join();
+    client_thread.join();
 }

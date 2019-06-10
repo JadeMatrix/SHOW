@@ -10,6 +10,7 @@ TARGET_SOURCES( testing
         "src/async_utils.cpp"
         "src/doctest_wrap.cpp"
         "src/main.cpp"
+        "src/utils.cpp"
 )
 TARGET_INCLUDE_DIRECTORIES( testing
     PUBLIC
