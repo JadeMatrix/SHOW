@@ -29,4 +29,4 @@ Response
     
     .. cpp:function:: virtual void flush()
         
-        Ensure the content currently written to the request is sent to the client
+        Ensure the content currently written to the request is sent to the client.

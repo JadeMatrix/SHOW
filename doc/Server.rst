@@ -18,7 +18,7 @@ Server
     
     .. cpp:function:: ~server()
         
-        Destructor for a server; any existing connections made from this server will continue to function
+        Destructor for a server; any existing connections made from this server will continue to function.
     
     .. cpp:function:: connection serve()
         
