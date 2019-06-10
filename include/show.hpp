@@ -288,13 +288,7 @@ namespace show // Main classes /////////////////////////////////////////////////
         void set_info( flags< info_type > = (
             info_type::local | info_type::remote
         ) );
-        void set_reuse();
         void set_nonblocking();
-        template< typename T > void set_sockopt(
-            int optname,
-            T   value,
-            const std::string& description
-        );
         
         static ::sockaddr_in6 make_sockaddr(
             const std::string&,
@@ -537,7 +531,6 @@ namespace show // `show::internal::socket` implementation //////////////////////
     )
     {
         auto s = make_basic();
-        s.set_reuse();
         s.set_nonblocking();
         
         auto info = make_sockaddr( address, port );
@@ -570,7 +563,6 @@ namespace show // `show::internal::socket` implementation //////////////////////
     )
     {
         auto s = make_basic();
-        s.set_reuse();
         
         auto info = make_sockaddr( "::", client_port );
         
@@ -793,14 +785,6 @@ namespace show // `show::internal::socket` implementation //////////////////////
             _set_info( ::getpeername, _remote_address, _remote_port, "remote" );
     }
     
-    inline void internal::socket::set_reuse()
-    {
-        // Certain POSIX implementations don't support OR-ing option names
-        // together
-        set_sockopt< int >( SO_REUSEADDR, 1, "address reuse" );
-        set_sockopt< int >( SO_REUSEPORT, 1, "port reuse"    );
-    }
-    
     inline void internal::socket::set_nonblocking()
     {
         // Because we want non-blocking behavior on 0-second timeouts, all
@@ -832,40 +816,6 @@ namespace show // `show::internal::socket` implementation //////////////////////
         return info;
     }
 }
-
-
-// @SHOW_CPP_END
-
-
-namespace show // `show::internal::socket` templates implementation ////////////
-{
-    template< typename T > void internal::socket::set_sockopt(
-        int optname,
-        T   value,
-        const std::string& description
-    )
-    {
-        auto value_ptr  = &value;
-        auto value_size = static_cast< ::socklen_t >( sizeof( T ) );
-        
-        if( ::setsockopt(
-            _descriptor,
-            SOL_SOCKET,
-            optname,
-            value_ptr,
-            value_size
-        ) == -1 )
-            throw socket_error{
-                "failed to set socket "
-                + description
-                + ": "
-                + std::string{ std::strerror( errno ) }
-            };
-    }
-}
-
-
-// @SHOW_CPP_BEGIN
 
 
 namespace show // `show::connection` implementation ////////////////////////////

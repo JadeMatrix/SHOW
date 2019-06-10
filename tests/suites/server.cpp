@@ -130,53 +130,11 @@ TEST_CASE( "server change to positive timout" * doctest::timeout( 1.1 ) )
 
 TEST_CASE( "server fail on in use port" )
 {
-#ifdef SHOW_BUILD_BROKEN_UNIT_TESTS
-    
-    // FIXME: Fails because SHOW sets address & port reuse on server sockets
     auto s = show::internal::socket::make_server( "::", 0 );
     REQUIRE_THROWS_WITH(
         ( show::server{ "::", s.local_port() } ),
         "failed to bind listen socket: Address already in use"
     );
-    
-#else
-    
-    auto test_socket = ::socket(
-        AF_INET6,
-        SOCK_STREAM,
-        ::getprotobyname( "TCP" ) -> p_proto
-    );
-    REQUIRE( test_socket > 0 );
-    
-    ::sockaddr_in6 socket_address;
-    std::memset( &socket_address, 0, sizeof( socket_address ) );
-    socket_address.sin6_family = AF_INET6;
-    
-    REQUIRE(
-        ::bind(
-            test_socket,
-            reinterpret_cast< ::sockaddr* >( &socket_address ),
-            sizeof( socket_address )
-        ) == 0
-    );
-    
-    ::socklen_t got_length = sizeof( socket_address );
-    REQUIRE(
-        ::getsockname(
-            test_socket,
-            reinterpret_cast< ::sockaddr* >( &socket_address ),
-            &got_length
-        ) == 0
-    );
-    
-    REQUIRE_THROWS_WITH(
-        ( show::server{ "::", ntohs( socket_address.sin6_port ) } ),
-        "failed to bind listen socket: Address already in use"
-    );
-    
-    close( test_socket );
-    
-#endif
 }
 
 TEST_CASE( "server fail on invalid address" )
