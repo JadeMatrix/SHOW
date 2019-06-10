@@ -31,6 +31,29 @@ TEST_CASE( "server with IPV6 address" )
     REQUIRE( test_server.port   () != 0         );
 }
 
+TEST_CASE( "server with custom port" )
+{
+    while( true )
+    {
+        try
+        {
+            auto port = random_port();
+            show::server test_server{ "0.0.0.0", port };
+            REQUIRE( test_server.address() == "0.0.0.0" );
+            REQUIRE( test_server.port   () == port      );
+            break;
+        }
+        catch( const show::socket_error& e )
+        {
+            if(
+                std::string{ e.what() }
+                != "failed to bind listen socket: Address already in use"
+            )
+                throw;
+        }
+    }
+}
+
 TEST_CASE( "server with indefinite serve by default" )
 {
     show::server test_server{ "::", 0 };
