@@ -262,47 +262,35 @@ TEST_CASE( "server move construct" )
 {
     auto make_server = [](){
         show::server test_server{ "::", 0 };
-        return std::tuple<
-            std::string,
-            show::port_type,
-            show::server
-        >{
-            test_server.address(),
-            test_server.port(),
-            std::move( test_server )
-        };
+        std::string     address{ test_server.address() };
+        show::port_type port   { test_server.port   () };
+        return std::make_tuple( std::move( test_server ), address, port );
     };
     
     auto tpl = make_server();
     
-    REQUIRE( std::get< 2 >( tpl ).address() == std::get< 0 >( tpl ) );
-    REQUIRE( std::get< 2 >( tpl ).port   () == std::get< 1 >( tpl ) );
+    REQUIRE( std::get< 0 >( tpl ).address() == std::get< 1 >( tpl ) );
+    REQUIRE( std::get< 0 >( tpl ).port   () == std::get< 2 >( tpl ) );
 }
 
 TEST_CASE( "server move assign" )
 {
     auto make_server = [](){
         show::server test_server{ "::", 0 };
-        return std::tuple<
-            std::string,
-            show::port_type,
-            show::server
-        >{
-            test_server.address(),
-            test_server.port(),
-            std::move( test_server )
-        };
+        std::string     address{ test_server.address() };
+        show::port_type port   { test_server.port   () };
+        return std::make_tuple( std::move( test_server ), address, port );
     };
     
     auto tpl = make_server();
     
-    REQUIRE( std::get< 2 >( tpl ).address() == std::get< 0 >( tpl ) );
-    REQUIRE( std::get< 2 >( tpl ).port   () == std::get< 1 >( tpl ) );
+    REQUIRE( std::get< 0 >( tpl ).address() == std::get< 1 >( tpl ) );
+    REQUIRE( std::get< 0 >( tpl ).port   () == std::get< 2 >( tpl ) );
     
     tpl = make_server();
     
-    REQUIRE( std::get< 2 >( tpl ).address() == std::get< 0 >( tpl ) );
-    REQUIRE( std::get< 2 >( tpl ).port   () == std::get< 1 >( tpl ) );
+    REQUIRE( std::get< 0 >( tpl ).address() == std::get< 1 >( tpl ) );
+    REQUIRE( std::get< 0 >( tpl ).port   () == std::get< 2 >( tpl ) );
 }
 
 // TODO: create & serve on non-main thread
