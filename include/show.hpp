@@ -119,8 +119,8 @@ namespace show // Utilities ////////////////////////////////////////////////////
         
         template< typename E, typename = void > class flags;
         
-        // This is designe for use with SHOW flag-like enum classes and does not
-        // safely support enum values with initializers
+        // This is designed for use with SHOW flag-like enum classes and does
+        // not safely support enum values with initializers
         template< typename E > class flags<
             E,
             typename std::enable_if< std::is_enum< E >::value >::type
@@ -163,15 +163,15 @@ namespace show // Utilities ////////////////////////////////////////////////////
             
             constexpr flags( value_type v ) : _value{ v } {}
         };
-        
-        template< typename E > flags< E > operator |( E lhs, E rhs )
-        {
-            return flags< E >{ lhs } | rhs;
-        }
-        template< typename E > flags< E > operator &( E lhs, E rhs )
-        {
-            return flags< E >{ lhs } & rhs;
-        }
+    }
+    
+    template< typename E > internal::flags< E > operator |( E lhs, E rhs )
+    {
+        return internal::flags< E >{ lhs } | rhs;
+    }
+    template< typename E > internal::flags< E > operator &( E lhs, E rhs )
+    {
+        return internal::flags< E >{ lhs } & rhs;
     }
 }
 

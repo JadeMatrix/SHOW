@@ -50,6 +50,8 @@ namespace show { namespace base64 // Declarations //////////////////////////////
     
     
     enum class flags { ignore_padding };
+    using ::show::operator |;
+    using ::show::operator &;
     
     
     std::string encode(
