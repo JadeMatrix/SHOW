@@ -22,7 +22,7 @@
 
 #include <algorithm>    // std::copy
 #include <cstring>      // std::memset
-#include <functional>   // std::functional
+#include <functional>   // std::function
 #include <limits>
 #include <stack>
 #include <sstream>
