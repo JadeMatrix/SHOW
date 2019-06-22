@@ -3,6 +3,7 @@
 #define SHOW_HPP
 
 
+#include <chrono>
 #include <cstring>      // std::strerror
 #include <iomanip>
 #include <map>
@@ -185,6 +186,8 @@ namespace show // Support types & constants ////////////////////////////////////
         using buffsize_type = ::ssize_t;
         
         constexpr char ascii_ack{ '\x06' };
+        
+        constexpr std::chrono::nanoseconds instant{ 0 };
     }
     
     enum class protocol
@@ -265,9 +268,9 @@ namespace show // Main classes /////////////////////////////////////////////////
         port_type          remote_port   () const { return _remote_port   ; }
         
         flags< wait_for_type > wait_for(
-            flags< wait_for_type > wf,
-            int                    timeout,
-            const std::string&     purpose
+            flags< wait_for_type >   wf,
+            std::chrono::nanoseconds timeout,
+            const std::string&       purpose
         );
         
     protected:
@@ -312,8 +315,15 @@ namespace show // Main classes /////////////////////////////////////////////////
         const std::string& server_address() const { return _serve_socket. local_address(); };
         port_type          server_port   () const { return _serve_socket. local_port   (); };
         
-        int timeout() const  { return _timeout    ; }
-        int timeout( int t ) { return _timeout = t; }
+        std::chrono::nanoseconds timeout() const { return _timeout; }
+        std::chrono::nanoseconds timeout( std::chrono::nanoseconds t )
+        {
+            return _timeout = t;
+        }
+        std::chrono::nanoseconds timeout( int t )
+        {
+            return _timeout = std::chrono::seconds{ t };
+        }
         
     protected:
         using buffer_type      = std::vector< char >;
@@ -321,12 +331,21 @@ namespace show // Main classes /////////////////////////////////////////////////
         
         static const buffer_size_type default_buffer_size{ 1024 };
         
-        internal::socket _serve_socket;
-        int              _timeout;
-        buffer_type      _get_buffer;
-        buffer_type      _put_buffer;
+        internal::socket         _serve_socket;
+        std::chrono::nanoseconds _timeout;
+        buffer_type              _get_buffer;
+        buffer_type              _put_buffer;
         
-        connection( internal::socket&& serve_socket, int timeout );
+        connection(
+            internal::socket&& serve_socket,
+            std::chrono::nanoseconds timeout
+        );
+        connection( internal::socket&& serve_socket, int timeout ) :
+            connection(
+                std::forward< internal::socket&& >( serve_socket ),
+                std::chrono::seconds{ timeout }
+            )
+        {}
         
         void flush();
         
@@ -443,8 +462,13 @@ namespace show // Main classes /////////////////////////////////////////////////
         server(
             const std::string& address,
             port_type          port,
-            int                timeout = -1
+            std::chrono::nanoseconds timeout
         );
+        server(
+            const std::string& address,
+            port_type          port,
+            int                timeout = -1
+        ) : server( address, port, std::chrono::seconds{ timeout } ) {}
         server( server&& );
         
         server& operator =( server&& );
@@ -454,12 +478,19 @@ namespace show // Main classes /////////////////////////////////////////////////
         const std::string& address() const { return _listen_socket.local_address(); }
         port_type          port()    const { return _listen_socket.local_port   (); }
         
-        int timeout() const  { return _timeout    ; }
-        int timeout( int t ) { return _timeout = t; }
+        std::chrono::nanoseconds timeout() const { return _timeout; }
+        std::chrono::nanoseconds timeout( std::chrono::nanoseconds t )
+        {
+            return _timeout = t;
+        }
+        std::chrono::nanoseconds timeout( int t )
+        {
+            return _timeout = std::chrono::seconds{ t };
+        }
         
     protected:
         internal::socket _listen_socket;
-        int _timeout;
+        std::chrono::nanoseconds _timeout;
     };
 }
 
@@ -644,20 +675,27 @@ namespace show // `show::internal::socket` implementation //////////////////////
     inline internal::flags<
         internal::socket::wait_for_type
     > internal::socket::wait_for(
-        flags< wait_for_type > wf,
-        int                    timeout,
-        const std::string&     purpose
+        flags< wait_for_type >   wf,
+        std::chrono::nanoseconds timeout,
+        const std::string&       purpose
     )
     {
-        if( timeout == 0 )
+        if( timeout == internal::instant )
             // 0-second timeouts must be handled in the code that called
             // `wait_for()`, as 0s will cause `pselect()` to error
             throw socket_error{
-                "0-second timeouts can't be handled by wait_for()"
+                "instant timeouts can't be handled by wait_for()"
             };
         
         fd_set read_descriptors, write_descriptors;
-        timespec timeout_spec{ timeout, 0 };
+        
+        auto timeout_seconds = std::chrono::duration_cast<
+            std::chrono::seconds
+        >( timeout );
+        timespec timeout_spec{
+            timeout_seconds.count(),
+            ( timeout - timeout_seconds ).count()
+        };
         
         bool r = wf & wait_for_type::read;
         bool w = wf & wait_for_type::write;
@@ -678,7 +716,7 @@ namespace show // `show::internal::socket` implementation //////////////////////
             r ? &read_descriptors  : NULL,
             w ? &write_descriptors : NULL,
             NULL,
-            timeout > 0 ? &timeout_spec : NULL,
+            timeout > internal::instant ? &timeout_spec : NULL,
             NULL
         );
         
@@ -874,8 +912,8 @@ namespace show // `show::connection` implementation ////////////////////////////
     }
     
     inline connection::connection(
-        internal::socket&& serve_socket,
-        int                timeout
+        internal::socket&&       serve_socket,
+        std::chrono::nanoseconds timeout
     ) :
         _serve_socket  { std::move( serve_socket ) },
         _get_buffer    ( default_buffer_size       ),
@@ -903,7 +941,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             if( to_send <= 0 )
                 break;
             
-            if( _timeout != 0 )
+            if( _timeout != internal::instant )
                 _serve_socket.wait_for(
                     internal::socket::wait_for_type::write,
                     _timeout,
@@ -956,7 +994,7 @@ namespace show // `show::connection` implementation ////////////////////////////
             
             while( bytes_read < 1 )
             {
-                if( _timeout != 0 )
+                if( _timeout != internal::instant )
                     _serve_socket.wait_for(
                         internal::socket::wait_for_type::read,
                         _timeout,
@@ -1740,7 +1778,7 @@ namespace show // `show::server` implementation ////////////////////////////////
     inline server::server(
         const std::string& address,
         port_type          port,
-        int                timeout
+        std::chrono::nanoseconds timeout
     ) :
         _listen_socket{ internal::socket::make_server( address, port ) },
         _timeout{ timeout }
@@ -1760,7 +1798,7 @@ namespace show // `show::server` implementation ////////////////////////////////
     
     inline connection server::serve()
     {
-        if( _timeout != 0 )
+        if( _timeout != internal::instant )
             _listen_socket.wait_for(
                 internal::socket::wait_for_type::read,
                 _timeout,

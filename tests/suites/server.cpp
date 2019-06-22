@@ -57,13 +57,13 @@ TEST_CASE( "server with custom port" )
 TEST_CASE( "server with indefinite serve by default" )
 {
     show::server test_server{ "::", 0 };
-    REQUIRE( test_server.timeout() == -1 );
+    REQUIRE( test_server.timeout() == std::chrono::seconds{ -1 } );
 }
 
 #ifdef SHOW_BUILD_BROKEN_UNIT_TESTS
 TEST_CASE( "server construct with indefinite timout" )
 {
-    int timeout{ -1 };
+    std::chrono::seconds timeout{ -1 };
     show::server test_server{ "::", 0, timeout };
     REQUIRE( test_server.timeout() == timeout );
     {
@@ -76,7 +76,7 @@ TEST_CASE( "server construct with indefinite timout" )
 // resolution for timeouts (for now)
 TEST_CASE( "server construct with immediate timout" * doctest::timeout( 0.25 ) )
 {
-    int timeout{ 0 };
+    std::chrono::seconds timeout{ 0 };
     show::server test_server{ "::", 0, timeout };
     REQUIRE( test_server.timeout() == timeout );
     REQUIRE_THROWS_AS(
@@ -87,7 +87,7 @@ TEST_CASE( "server construct with immediate timout" * doctest::timeout( 0.25 ) )
 
 TEST_CASE( "server construct with positive timout" * doctest::timeout( 1.1 ) )
 {
-    int timeout{ 1 };
+    std::chrono::seconds timeout{ 1 };
     show::server test_server{ "::", 0, timeout };
     REQUIRE( test_server.timeout() == timeout );
     REQUIRE_THROWS_AS(
@@ -98,7 +98,7 @@ TEST_CASE( "server construct with positive timout" * doctest::timeout( 1.1 ) )
 
 TEST_CASE( "server change to indefinite timout" )
 {
-    int timeout{ -1 };
+    std::chrono::seconds timeout{ -1 };
     show::server test_server{ "::", 0, 0 };
     test_server.timeout( timeout );
     REQUIRE( test_server.timeout() == timeout );
@@ -106,7 +106,7 @@ TEST_CASE( "server change to indefinite timout" )
 
 TEST_CASE( "server change to immediate timout" )
 {
-    int timeout{ 0 };
+    std::chrono::seconds timeout{ 0 };
     show::server test_server{ "::", 0 };
     test_server.timeout( timeout );
     REQUIRE( test_server.timeout() == timeout );
@@ -118,7 +118,7 @@ TEST_CASE( "server change to immediate timout" )
 
 TEST_CASE( "server change to positive timout" * doctest::timeout( 1.1 ) )
 {
-    int timeout{ 1 };
+    std::chrono::seconds timeout{ 1 };
     show::server test_server{ "::", 0 };
     test_server.timeout( timeout );
     REQUIRE( test_server.timeout() == timeout );

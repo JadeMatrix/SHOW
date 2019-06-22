@@ -138,8 +138,8 @@ TEST_CASE( "connection set independent indefinite timeout" )
     {
         auto test_connection = test_server.serve();
         
-        int old_server_timeout{ test_server.timeout() };
-        int new_server_timeout{ 0                     };
+        auto old_server_timeout = test_server.timeout();
+        decltype( old_server_timeout ) new_server_timeout{ 0 };
         
         REQUIRE( test_connection.timeout() == old_server_timeout );
         
@@ -147,7 +147,7 @@ TEST_CASE( "connection set independent indefinite timeout" )
         REQUIRE( test_connection.timeout() == old_server_timeout );
         
         test_connection.timeout( -1 );
-        REQUIRE( test_connection.timeout() == -1 );
+        REQUIRE( test_connection.timeout() == std::chrono::seconds{ -1 } );
     }
     catch( ... )
     {
@@ -184,8 +184,8 @@ TEST_CASE( "connection set independent immediate timeout" )
     {
         auto test_connection = test_server.serve();
         
-        int old_server_timeout{ test_server.timeout() };
-        int new_server_timeout{ 1                     };
+        auto old_server_timeout = test_server.timeout();
+        decltype( old_server_timeout ) new_server_timeout{ 1 };
         
         REQUIRE( test_connection.timeout() == old_server_timeout );
         
@@ -193,7 +193,7 @@ TEST_CASE( "connection set independent immediate timeout" )
         REQUIRE( test_connection.timeout() == old_server_timeout );
         
         test_connection.timeout( 0 );
-        REQUIRE( test_connection.timeout() == 0 );
+        REQUIRE( test_connection.timeout() == std::chrono::seconds{ 0 } );
     }
     catch( ... )
     {
@@ -230,8 +230,8 @@ TEST_CASE( "connection set independent positive timeout" )
     {
         auto test_connection = test_server.serve();
         
-        int old_server_timeout{ test_server.timeout() };
-        int new_server_timeout{ 0                     };
+        auto old_server_timeout = test_server.timeout();
+        decltype( old_server_timeout ) new_server_timeout{ 0 };
         
         REQUIRE( test_connection.timeout() == old_server_timeout );
         
@@ -239,7 +239,7 @@ TEST_CASE( "connection set independent positive timeout" )
         REQUIRE( test_connection.timeout() == old_server_timeout );
         
         test_connection.timeout( 1 );
-        REQUIRE( test_connection.timeout() == 1 );
+        REQUIRE( test_connection.timeout() == std::chrono::seconds{ 1 } );
     }
     catch( ... )
     {
