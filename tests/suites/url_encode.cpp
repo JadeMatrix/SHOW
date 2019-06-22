@@ -10,9 +10,17 @@ TEST_CASE( "URL-encode with no conversion" )
     REQUIRE( show::url_encode( "hello_world_0123" ) == "hello_world_0123");
 }
 
-TEST_CASE( "URL-encode space as \"+\"" )
+TEST_CASE( "URL-encode space as \"+\" by default" )
 {
     REQUIRE( show::url_encode( "hello world 0123" ) == "hello+world+0123" );
+}
+
+TEST_CASE( "URL-encode space as \"+\"" )
+{
+    REQUIRE( show::url_encode(
+        "hello world 0123",
+        show::url_flags::use_plus_space
+    ) == "hello+world+0123" );
 }
 
 TEST_CASE( "URL-encode space as \"%20\"" )
