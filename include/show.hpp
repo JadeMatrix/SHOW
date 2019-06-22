@@ -39,7 +39,7 @@
 // @SHOW_CPP_END
 
 
-namespace show // Constants ////////////////////////////////////////////////////
+namespace show // Version //////////////////////////////////////////////////////
 {
     namespace version
     {
@@ -184,7 +184,7 @@ namespace show // Support types & constants ////////////////////////////////////
         // POSIX `read()`
         using buffsize_type = ::ssize_t;
         
-        static const char ascii_ack{ '\x06' };
+        constexpr char ascii_ack{ '\x06' };
     }
     
     enum class protocol
