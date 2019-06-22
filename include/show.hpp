@@ -460,14 +460,14 @@ namespace show // Main classes /////////////////////////////////////////////////
     {
     public:
         server(
-            const std::string& address,
-            port_type          port,
+            std::string address,
+            port_type   port,
             std::chrono::nanoseconds timeout
         );
         server(
-            const std::string& address,
-            port_type          port,
-            int                timeout = -1
+            std::string address,
+            port_type   port,
+            int         timeout = -1
         ) : server( address, port, std::chrono::seconds{ timeout } ) {}
         server( server&& );
         
@@ -1776,11 +1776,14 @@ namespace show // `show::response` implementation //////////////////////////////
 namespace show // `show::server` implementation ////////////////////////////////
 {
     inline server::server(
-        const std::string& address,
-        port_type          port,
+        std::string address,
+        port_type   port,
         std::chrono::nanoseconds timeout
     ) :
-        _listen_socket{ internal::socket::make_server( address, port ) },
+        _listen_socket{ internal::socket::make_server(
+            std::move( address ),
+            port
+        ) },
         _timeout{ timeout }
     {}
     
