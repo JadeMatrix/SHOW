@@ -136,7 +136,6 @@ namespace show // Utilities ////////////////////////////////////////////////////
                 std::streambuf::char_type*,
                 std::streambuf::char_type*
             ) >                        setg_callback,
-            bool                     & segment_boundary_reached,
             std::function< void() >    parent_finished_callback
         );
     }
@@ -161,7 +160,7 @@ namespace show // `show::multipart::segment` implementation ////////////////////
         if( _finished )
             return traits_type::eof();
         
-        return internal::read_buffer_until_boundary(
+        auto got_c = internal::read_buffer_until_boundary(
             true,
             _parent -> _buffer,
             _parent -> boundary(),
@@ -174,11 +173,12 @@ namespace show // `show::multipart::segment` implementation ////////////////////
             ){
                 this -> setg( gbeg, gcurr, gend );
             },
-            _finished,
             [ this ](){
                 this -> _parent -> _state = state::FINISHED;
             }
         );
+        _finished = got_c != traits_type::not_eof( got_c );
+        return got_c;
     }
     
     inline multipart::segment::int_type multipart::segment::pbackfail(
@@ -507,11 +507,10 @@ namespace show // `show::multipart` implementation /////////////////////////////
         // \r (usually), \n, and two dashes followed by boundary then possibly
         // two more dashes
         std::string got_boundary( _boundary.size() + 6, '\0' );
-        bool end_of_pre_content{ false };
         // There will not be a (CR)LF before the first boundary if there is no
         // pre-boundary content to be ignored
         bool         crlf_start{ false };
-        do
+        while( true )
         {
             auto got_c = internal::read_buffer_until_boundary(
                 crlf_start,
@@ -524,7 +523,6 @@ namespace show // `show::multipart` implementation /////////////////////////////
                     std::streambuf::char_type* /*gcurr*/,
                     std::streambuf::char_type* /*gend*/
                 ){ /* Do nothing */ },
-                end_of_pre_content,
                 [ this ](){
                     this -> _state = state::FINISHED;
                 }
@@ -533,7 +531,6 @@ namespace show // `show::multipart` implementation /////////////////////////////
             if( std::streambuf::traits_type::not_eof( got_c ) != got_c )
                 break;
         }
-        while( !end_of_pre_content );
     }
     
     inline multipart::iterator multipart::begin()
@@ -572,7 +569,6 @@ namespace show // Utility functions implementation /////////////////////////////
             std::streambuf::char_type*,
             std::streambuf::char_type*
         ) >                        setg_callback,
-        bool                     & segment_boundary_reached,
         std::function< void() >    parent_finished_callback
     )
     {
@@ -655,7 +651,6 @@ namespace show // Utility functions implementation /////////////////////////////
                 "malformed multipart boundary"
             };
         
-        segment_boundary_reached = true;
         setg_callback(
             get_buffer,
             get_buffer,

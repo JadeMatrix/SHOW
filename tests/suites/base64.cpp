@@ -57,8 +57,17 @@ namespace
         '\xdf',
         '\xbf'
     };
+    
+    show::base64::dict_type dict_custom = show::base64::internal::fill_dict(
+        "1234567890 AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz\t"
+    );
 }
 
+
+TEST_CASE( "base64-encode empty string" )
+{
+    REQUIRE( show::base64::encode( "" ) == "" );
+}
 
 TEST_CASE( "base64-encode with no padding" )
 {
@@ -89,6 +98,14 @@ TEST_CASE( "base64-encode with URL-safe dictionary" )
         std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
         show::base64::dict_urlsafe
     ) == "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" );
+}
+
+TEST_CASE( "base64-encode with custom dictionary" )
+{
+    REQUIRE( show::base64::encode(
+        std::string( full_dict_bytes, sizeof( full_dict_bytes ) ),
+        dict_custom
+    ) == "1234567890 AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz\t" );
 }
 
 TEST_CASE( "base64-encode empty string" )
@@ -132,6 +149,11 @@ TEST_CASE( "base64-encode very long string" )
     );
 }
 
+TEST_CASE( "base64-decode empty string" )
+{
+    REQUIRE( show::base64::decode( "" ) == "" );
+}
+
 TEST_CASE( "base64-decode with no padding" )
 {
     REQUIRE( show::base64::decode( "MTIz" ) == "123" );
@@ -160,6 +182,14 @@ TEST_CASE( "base64-decode with URL-safe dictionary" )
     REQUIRE( show::base64::decode(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
         show::base64::dict_urlsafe
+    ) == std::string( full_dict_bytes, sizeof( full_dict_bytes ) ) );
+}
+
+TEST_CASE( "base64-decode with custom dictionary" )
+{
+    REQUIRE( show::base64::decode(
+        "1234567890 AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz\t",
+        dict_custom
     ) == std::string( full_dict_bytes, sizeof( full_dict_bytes ) ) );
 }
 
