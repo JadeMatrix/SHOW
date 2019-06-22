@@ -641,8 +641,9 @@ namespace show // `show::internal::socket` implementation //////////////////////
         return *this;
     }
     
-    inline internal::flags< internal::socket::wait_for_type >
-    internal::socket::wait_for(
+    inline internal::flags<
+        internal::socket::wait_for_type
+    > internal::socket::wait_for(
         flags< wait_for_type > wf,
         int                    timeout,
         const std::string&     purpose
