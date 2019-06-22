@@ -87,6 +87,10 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
         
         auto b64_size = ( ( o.size() + 2 ) / 3 ) * 4;
         
+        for( auto c : dict )
+            if( c == '=' )
+                throw std::invalid_argument{ "padding in base64 dictionary" };
+        
         for(
             std::string::size_type i{ 0 }, j{ 0 };
             i < b64_size;
@@ -182,7 +186,12 @@ namespace show { namespace base64 // Definitions ///////////////////////////////
         
         std::map< char, /*unsigned*/ char > reverse_lookup;
         for( /*unsigned*/ char i{ 0 }; i < 64; ++i )
-            reverse_lookup[ dict[ static_cast< std::size_t >( i ) ] ] = i;
+        {
+            auto c = dict[ static_cast< std::size_t >( i ) ];
+            if( c == '=' )
+                throw std::invalid_argument{ "padding in base64 dictionary" };
+            reverse_lookup[ c ] = i;
+        }
         
         auto get_hextet = [ &reverse_lookup ]( /*unsigned*/ char c ){
             if( c == '=' )

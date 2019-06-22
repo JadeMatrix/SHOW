@@ -278,3 +278,23 @@ TEST_CASE( "base64-decode fail on mid not in dictionary" )
         "character not in dictionary"
     );
 }
+
+TEST_CASE( "base64-decode fail encode on padding in dictionary" )
+{
+    auto dict_broken = dict_custom;
+    dict_broken[ 23 ] = '=';
+    REQUIRE_THROWS_WITH(
+        show::base64::encode( "", dict_broken ),
+        "padding in base64 dictionary"
+    );
+}
+
+TEST_CASE( "base64-decode fail decode on padding in dictionary" )
+{
+    auto dict_broken = dict_custom;
+    dict_broken[ 23 ] = '=';
+    REQUIRE_THROWS_WITH(
+        show::base64::decode( "", dict_broken ),
+        "padding in base64 dictionary"
+    );
+}
